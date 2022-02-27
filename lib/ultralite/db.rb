@@ -23,6 +23,7 @@ module Ultralite
 			self.cache_size = 2000
 		end
 		
+		# enforce immediate mode to avoid deadlocks for a small performance penalty
 		def transaction(mode = :immediate)
 			super(mode)
 		end
