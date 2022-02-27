@@ -1,0 +1,43 @@
+require 'ultralite'
+require 'sequel'
+require 'sequel/adapters/sqlite'
+
+module Sequel
+  module Ultralite
+  	include SQLite
+
+    ULTRALITE_TYPES = SQLITE_TYPES
+    
+    class Database < Sequel::SQLite::Database
+      
+      set_adapter_scheme :ultralite
+      
+      def connect(server)
+        opts = server_opts(server)
+        opts[:database] = ':memory:' if blank_object?(opts[:database])
+        sqlite3_opts = {}
+        sqlite3_opts[:readonly] = typecast_value_boolean(opts[:readonly]) if opts.has_key?(:readonly)
+        db = ::Ultralite::DB.new(opts[:database].to_s, sqlite3_opts)
+        db.busy_timeout(typecast_value_integer(opts.fetch(:timeout, 5000)))
+
+        if USE_EXTENDED_RESULT_CODES
+          db.extended_result_codes = true
+        end
+        
+        connection_pragmas.each{|s| log_connection_yield(s, db){db.execute_batch(s)}}
+        
+        class << db
+          attr_reader :prepared_statements
+        end
+        db.instance_variable_set(:@prepared_statements, {})
+        
+        db
+      end
+
+    end
+    
+    class Dataset < Sequel::SQLite::Dataset      
+    end
+    
+  end
+end
