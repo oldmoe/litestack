@@ -46,6 +46,22 @@ module ActiveRecord
 		  ADAPTER_NAME = "Ultralite"
 		end
 		
+		NATIVE_DATABASE_TYPES = {
+			primary_key:  "integer PRIMARY KEY NOT NULL",
+			string:       { name: "text" },
+			text:         { name: "text" },
+			integer:      { name: "integer" },
+			float:        { name: "real" },
+			decimal:      { name: "real" },
+			datetime:     { name: "text" },
+			time:         { name: "integer" },
+			date:         { name: "text" },
+			binary:       { name: "blob" },
+			boolean:      { name: "integer" },
+			json:         { name: "text" },
+                        unixtime:     { name: "integer" }
+		}
+		
 		private
 		
 	    def connect
