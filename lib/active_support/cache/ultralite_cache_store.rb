@@ -25,6 +25,7 @@ module ActiveSupport
       end
 
       def increment(key, amount = 1, options = nil)
+        key = key.to_s
         options = merged_options(options)
         #@cache.increment(key, amount, options[:expires_in])
         @cache.transaction(:immediate) do
@@ -64,24 +65,20 @@ module ActiveSupport
         @cache.max_size
       end
 
+      def stats
+        @cache.stats
+      end
+
       private
 
         # Read an entry from the cache.
         def read_entry(key, **options)
-          #if options and options[:raw]
-          #  @cache.get(key)
-          #else        
-            deserialize_entry(@cache.get(key))
-          #end
+          deserialize_entry(@cache.get(key))
         end
 
         # Write an entry to the cache.
         def write_entry(key, entry, **options)
-          #if options and options[:raw]
-          #  write_serialized_entry(key, entry.value, **options)
-          #else
-            write_serialized_entry(key, serialize_entry(entry, **options), **options)
-          #end
+          write_serialized_entry(key, serialize_entry(entry, **options), **options)
         end
 
         def write_serialized_entry(key, payload, **options)

@@ -10,7 +10,7 @@ def bench(msg, iterations=1000)
   end
   t2 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   time = ((t2 - t1)*1000).to_i.to_f / 1000 rescue 0
-  ips = ((iterations/time)*100).to_i.to_f / 100 rescue "infinity?"
+  ips = ((iterations/(t2-t1))*100).to_i.to_f / 100 rescue "infinity?"
   #{m: msg, t: time, ips: iteratinos/time, i: iterations}
   puts "finished in #{time} seconds (#{ips} ips)"
 end

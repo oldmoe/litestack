@@ -6,7 +6,7 @@ module Ultralite
 
 		DEFAULT_EXPIRY = 60 * 60 * 24 * 30 # one month default expiry
 		DEFAULT_SIZE = 128 * 1024 * 1024 # 128MB default size
-		MIN_SIZE = 64 #* 1024 # 32MB minimum cache size
+		MIN_SIZE = 32 * 1024 # 32MB minimum cache size
 		DEFAULT_PATH = "./ultralite.cache"
 
 		def initialize(options = {})
@@ -20,16 +20,17 @@ module Ultralite
 			  :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
 			  :limited_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)",
 			  :toucher => "UPDATE data SET  last_used = $1 WHERE id = $2",
-		  	:setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, strftime('%s','now') + $3,  strftime('%s','now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
-			  :INSERTer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, strftime('%s','now') + $3,  strftime('%s','now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <  strftime('%s','now')",
+		  	:setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
+			  :inserter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')",
 			  :finder => "SELECT id FROM data WHERE id = $1",
-			  :getter => "SELECT id, value, expires_in FROM data WHERE id = $1 AND expires_in > strftime('%s','now')",
+			  :getter => "SELECT id, value, expires_in FROM data WHERE id = $1",# AND expires_in >= strftime('%s','now')",
 			  :deleter => "delete FROM data WHERE id = $1 returning value",
-			  :incrementer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, strftime('%s','now') + $3, strftime('%s','now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in",
+			  :incrementer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in",
   			:counter => "SELECT count(*) FROM data",
 		  	:sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count"
 			  
 			}
+			@stats = {hit: 0, miss: 0}
 			@cache = create_store(@path)
 			prepare_statements
 			@bgdb = create_store(@path)
@@ -62,7 +63,7 @@ module Ultralite
 						end
 					rescue SQLite3::FullException
 						extra_pruner.execute!(0.2)
-						db.execute("vacuum")
+						#db.execute("vacuum")
 					end
 				end
 			end
@@ -92,7 +93,7 @@ module Ultralite
 				
 		def set(key, value, expires_in = nil)
 			key = key.to_s
-			expires_in = @expires_in unless expires_in
+			expires_in = @expires_in if expires_in.nil? or expires_in.zero?
 			begin
 			  @setter.execute!(key, value, expires_in)
 			rescue SQLite3::FullException
@@ -105,10 +106,12 @@ module Ultralite
 		
 		def set_unless_exists(key, value, expires_in = nil)
 			key = key.to_s
-			expires_in = @expires_in unless expires_in
+			expires_in = @expires_in if expires_in.nil? or expires_in.zero?
 			begin
-				@INSERTer.execute!(key, value, expires_in)
-				changes = @cache.changes
+			  transaction(:immediate) do
+				  @inserter.execute!(key, value, expires_in)
+				  changes = @cache.changes
+				end
 			rescue SQLite3::FullException
 			  @extra_pruner.execute!(0.2)
 				@cache.execute("vacuum")
@@ -118,12 +121,14 @@ module Ultralite
 		end
 		
 		def get(key)
-			key = key.to_s
+      key = key.to_s
 			record = @getter.execute!(key)[0]
 			if record
 				@last_visited << key
+				@stats[:hit] +=1
 				return record[1]
 			end
+			@stats[:miss] += 1
 			nil
 		end
 		
@@ -133,7 +138,8 @@ module Ultralite
 		end
 		
 		def increment(key, amount, expires_in = nil)
-			@incrementer.execute!(key.to_s, amount, expires_in ||= @expires_in)
+			expires_in = @expires_in unless expires_in
+			@incrementer.execute!(key.to_s, amount, expires_in)
 		end
 		
 		def decrement(key, amount, expires_in = nil)
@@ -160,7 +166,7 @@ module Ultralite
 		
 		def clear
 			@cache.execute("delete FROM data")
-			@cache.execute("vacuum")
+			#@cache.execute("vacuum")
 		end
 		
 		def close
@@ -169,6 +175,10 @@ module Ultralite
 		
 		def max_size
 		  @cache.get_first_value("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c")
+		end
+		
+		def stats
+		  @stats
 		end
 		
 		def transaction(mode)
