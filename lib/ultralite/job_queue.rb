@@ -8,6 +8,9 @@ require_relative './queue'
 # 2 - run them
 module Ultralite
   class JobQueue
+  
+    WORKER_SLEEP_INTERVAL = 2
+  
     def initialize(options = {})
       @queue = ::Ultralite::Queue.new # create new queue object
       @worker_count = options[:workers] ||= 1
@@ -38,18 +41,18 @@ module Ultralite
             job = Oj.load(job)
             klass = eval(job[0])
             begin
-              klass.new.perform(job[1])
+              klass.new.perform(*job[1])
             rescue Exception => e
               puts e
               puts e.message
               puts e.backtrace
             end
           end
-          sleep 2
+          sleep WORKER_SLEEP_INTERVAL
         end
       end
       
-      @workers.last.priority = -100 
+      @workers.last.priority = -1
     end
     
     

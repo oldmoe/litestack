@@ -7,19 +7,20 @@ module Ultralite
 	
 	  def self.included(klass)
       klass.extend(ClassMethods)
-      puts "I WAS INCLUDED"
 	  end
 	  
 	  module ClassMethods
-	    def perform_async(params, delay, queue)
-	      get_queue.push(self.name, params, delay, queue)	    
+	    def perform_async(*params)
+	      get_queue.push(self.name, params)	    
 	    end
 	    
 	    def perform_at(time, *params)
+	      delya = time - Time.now.to_i
 	      get_queue.push(self.name, params, delay, queue)	         
 	    end
 	    
 	    def perfrom_in(delay, *params)
+	      get_queue.push(self.name, params, delay, queue)	         
 	    end
 	    
 	    def mutex

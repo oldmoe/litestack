@@ -1,7 +1,7 @@
 require './bench'
 require 'ultralite'
 
-count = 10000
+count = 100000
 
 q = Ultralite::Queue.new
 

@@ -1,6 +1,7 @@
 require 'ultralite'
 require 'active_record'
 require 'active_record/connection_adapters/sqlite3_adapter'
+require 'active_record/tasks/sqlite_database_tasks'
 
 module ActiveRecord
 
@@ -43,35 +44,59 @@ module ActiveRecord
 	module ConnectionAdapters # :nodoc:
 
 		class UltraliteAdapter < SQLite3Adapter
+
 		  ADAPTER_NAME = "Ultralite"
-		end
-		
-		NATIVE_DATABASE_TYPES = {
-			primary_key:  "integer PRIMARY KEY NOT NULL",
-			string:       { name: "text" },
-			text:         { name: "text" },
-			integer:      { name: "integer" },
-			float:        { name: "real" },
-			decimal:      { name: "real" },
-			datetime:     { name: "text" },
-			time:         { name: "integer" },
-			date:         { name: "text" },
-			binary:       { name: "blob" },
-			boolean:      { name: "integer" },
-			json:         { name: "text" },
-                        unixtime:     { name: "integer" }
-		}
-		
-		private
-		
-	    def connect
-          @raw_connection = ::Ultralite::DB.new(
-            @config[:database].to_s,
-            @config.merge(results_as_hash: true)
-          )
-          configure_connection
+  
+      class << self
+        
+        def dbconsole(config, options = {})
+          args = []
+
+          args << "-#{options[:mode]}" if options[:mode]
+          args << "-header" if options[:header]
+          args << File.expand_path(config.database, Rails.respond_to?(:root) ? Rails.root : nil)
+
+          find_cmd_and_exec("sqlite3", *args)
         end
+        		
+      end
+
+		  NATIVE_DATABASE_TYPES = {
+			  primary_key:  "integer PRIMARY KEY NOT NULL",
+			  string:       { name: "text" },
+			  text:         { name: "text" },
+			  integer:      { name: "integer" },
+			  float:        { name: "real" },
+			  decimal:      { name: "real" },
+			  datetime:     { name: "text" },
+			  time:         { name: "integer" },
+			  date:         { name: "text" },
+			  binary:       { name: "blob" },
+			  boolean:      { name: "integer" },
+			  json:         { name: "text" },
+                          unixtime:     { name: "integer" }
+		  }
+		  
+		  private
+		  
+	      def connect
+            @raw_connection = ::Ultralite::DB.new(
+              @config[:database].to_s,
+              @config.merge(results_as_hash: true)
+            )
+            configure_connection
+        end
+		end
 
 	end
 	
+  module Tasks # :nodoc:
+    class UltraliteDatabaseTasks < SQLiteDatabaseTasks # :nodoc:
+    end
+    
+    module DatabaseTasks
+      register_task(/ultralite/,       "ActiveRecord::Tasks::UltraliteDatabaseTasks")
+
+    end
+	end
 end

@@ -1,8 +1,10 @@
-require 'sidekiq'
+require 'active_job'
 
-class SidekiqJob
-  include Sidekiq::Job
+
+class RailsJob < ActiveJob::Base
+  
   @@count = 0
+  
   def perform(count, time)
     @@count += 1  
     if @@count == count  
@@ -10,4 +12,5 @@ class SidekiqJob
       @@count = 0
     end
   end
+
 end

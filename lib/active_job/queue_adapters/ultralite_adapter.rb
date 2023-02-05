@@ -16,11 +16,11 @@ module ActiveJob
     
       def enqueue(job) # :nodoc:
         #job.provider_job_id = 
-        Job.perform_async(job.serialize, 0, job.queue_name)
+        Job.perform_async(job.serialize)
       end
 
       def enqueue_at(job, timestamp) # :nodoc:
-        Job.perform_async(job.serialize, timestamp, job.queue_name)
+        Job.perform_at(timestamp, job.serialize)
       end
 
       class Job # :nodoc:
@@ -35,7 +35,7 @@ module ActiveJob
   end
 end
 
-
+=begin
 ActiveJob::Base.queue_adapter = :ultralite
 $count = 10000
 class GuestsCleanupJob < ActiveJob::Base
@@ -50,3 +50,4 @@ $count.times do |i|
   GuestsCleanupJob.perform_later("clean", i+1, t)
 end
 sleep
+=end

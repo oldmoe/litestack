@@ -14,7 +14,7 @@ module ActiveSupport
       #prepend Strategy::LocalCache
 		  
       def self.supports_cache_versioning?
-        false
+        true
       end
 
       def initialize(options=nil)
