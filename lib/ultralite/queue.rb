@@ -2,26 +2,26 @@
 require 'ultralite'
 
 module Ultralite
-	
-	class Queue
+  
+  class Queue
 
-		DEFAULT_PATH = "./ultralite.queue"
-	  
-	  def initialize(options = {})
-			@path = options[:path] || DEFAULT_PATH
-			@queue = create_db(@path)
-			prepare
-	  end
-	  
-	  def create_db(path)
-	    db = SQLite3::Database.new(path)
-	    db.busy_handler{|i| sleep 0.0001}
-	    db.journal_mode = "WAL"
-	    db.synchronous = 1
-	    db.wal_autocheckpoint = 10000
-	    db.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(hex(randomblob(8)) || (strftime('%f') * 100)) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
+    DEFAULT_PATH = "./ultralite.queue"
+    
+    def initialize(options = {})
+      @path = options[:path] || DEFAULT_PATH
+      @queue = create_db(@path)
+      prepare
+    end
+    
+    def create_db(path)
+      db = SQLite3::Database.new(path)
+      db.busy_handler{|i| sleep 0.0001}
+      db.journal_mode = "WAL"
+      db.synchronous = 1
+      db.wal_autocheckpoint = 10000
+      db.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(hex(randomblob(8)) || (strftime('%f') * 100)) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
       db
-	  end
+    end
 
     def prepare
        @push = @queue.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
@@ -58,8 +58,8 @@ module Ultralite
     def size
       @queue.get_first_value("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count")
     end
-	end	# class Queue
-	
+  end  # class Queue
+  
 end # module Ultralite
 
 
