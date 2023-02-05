@@ -7,6 +7,7 @@ require_relative "ultralite/version"
 require_relative "ultralite/db"
 require_relative "ultralite/cache"
 require_relative "ultralite/queue"
+require_relative "ultralite/job_queue"
 require_relative "ultralite/job"
 
 # conditionally load integration with other libraries
