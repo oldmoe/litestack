@@ -34,20 +34,3 @@ module ActiveJob
     end
   end
 end
-
-=begin
-ActiveJob::Base.queue_adapter = :ultralite
-$count = 10000
-class GuestsCleanupJob < ActiveJob::Base
-  queue_as :default
- 
-  def perform(msg, index, t)
-    puts "performed #{index} #{msg} ops in #{Time.now.to_f - t} seconds" if index == $count
-  end
-end
-t = Time.now.to_f
-$count.times do |i|
-  GuestsCleanupJob.perform_later("clean", i+1, t)
-end
-sleep
-=end

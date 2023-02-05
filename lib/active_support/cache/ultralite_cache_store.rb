@@ -5,7 +5,6 @@ require "active_support/core_ext/array/extract_options"
 require "active_support/core_ext/numeric/time"
 require "active_support/cache"
 
-#require_relative "../../ultralite/cache.rb"
 
 module ActiveSupport
   module Cache
@@ -20,14 +19,13 @@ module ActiveSupport
       def initialize(options=nil)
         super
         @options[:return_full_record] = true
-        path = @options[:path] || ":memory:"
+        path = @options[:path] || "./tmp/cache/ultralite.cache"
       	@cache = ::Ultralite::Cache.new(@options)
       end
 
       def increment(key, amount = 1, options = nil)
         key = key.to_s
         options = merged_options(options)
-        #@cache.increment(key, amount, options[:expires_in])
         @cache.transaction(:immediate) do
           if value = read(key, options)
             value = value.to_i + amount

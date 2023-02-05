@@ -77,7 +77,7 @@ module Ultralite
 		
 		def create_store(path)
 			db = SQLite3::Database.new(path)
-			db.busy_handler{ sleep 0.0001 } 
+			db.busy_handler{|i| sleep 0.0001 } 
 			db.synchronous = 0
 			db.cache_size = 2000
 			db.execute("pragma journal_mode = WAL")

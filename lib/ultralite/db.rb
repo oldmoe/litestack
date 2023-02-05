@@ -28,7 +28,7 @@ module Ultralite
 			# version 3.37 is requirede for strict typing support and the newest json operators
 			raise Ultralite::Error if SQLite3::SQLITE_VERSION_NUMBER < 3037000
 			# time to wait to obtain a write lock before raising an exception
-			self.busy_handler{sleep 0.001} 
+			self.busy_handler{|i| sleep 0.001} 
 			# level of database durability, 2 = "FULL" (sync on every write), other values include 1 = "NORMAL" (sync every 1000 written pages) and 0 = "NONE"
 			self.synchronous = 1 
 			# Journal mode WAL allows for greater concurrency (many readers + one writer)
