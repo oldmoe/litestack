@@ -1,8 +1,17 @@
 # Ultralite
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/ultralite`. To experiment with that code, run `bin/console` for an interactive prompt.
+The ultimate IO toolkit for your Ruby applications. Ultralite containes a SQLite database adapter, a cache, a background job processing system and a full text search library. Ultralite provides integration with popular libraries, including:
 
-TODO: Delete this and the text above, and describe your gem
+- Sequel
+- ActiveRecord
+- ActiveSupport::Cache
+- ActvieJob
+
+With Ultralite you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
+
+- PostgreSQL
+- Redis
+- Sidekiq
 
 ## Installation
 
@@ -22,8 +31,34 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### Rails
 
+Ultralite provides tight Rails integration and can be configured as follows
+
+#### ActiveRecord
+
+In database.yml
+
+```yaml
+adapter: ultralite
+```
+
+#### Cache
+
+In your desired environment file (e.g. production.rb)
+
+```ruby
+config.cache_store = :ultralite_cache_store, {path: './path/to/your/cache/file'}
+```
+
+
+#### Jobs
+
+In your desired environment file (e.g. production.rb)
+
+```ruby
+config.active_job.queue_adapter = :ultralite
+```
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
