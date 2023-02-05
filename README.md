@@ -12,9 +12,6 @@ With Ultralite you only need to add a single gem to your app which would replace
 - PostgreSQL
 - Redis
 - Sidekiq
-- ElasticSearch
-- AnyCable
-- Puma server
 
 ## Installation
 
@@ -34,20 +31,34 @@ Or install it yourself as:
 
 ## Usage
 
-### SQL Database
+### Rails
 
-You can use the bundeled Ultralite::DB adapter directly, or if you are using Sequel or ActiveRecord you can use them with Ultralite as follows
+Ultralite provides tight Rails integration and can be configured as follows
 
-#### In ActiveRecord's database.yml
+#### ActiveRecord
+
+In database.yml
 
 ```yaml
 adapter: ultralite
 ```
 
-### Cache
+#### Cache
 
-### Jobs
+In your desired environment file (e.g. production.rb)
 
+```ruby
+config.cache_store = :ultralite_cache_store, {path: './path/to/your/cache/file'}
+```
+
+
+#### Jobs
+
+In your desired environment file (e.g. production.rb)
+
+```ruby
+config.active_job.queue_adapter = :ultralite
+```
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
