@@ -14,22 +14,30 @@ module ActiveJob
     #   Rails.application.config.active_job.queue_adapter = :ultralite
     class UltraliteAdapter
     
+      def initialize(options={})
+        # load options from config/ultralite.yaml
+        
+        @options = options 
+        Job.options = @options
+      end
+    
       def enqueue(job) # :nodoc:
-        #job.provider_job_id = 
+        Job.queue = job.queue_name
         Job.perform_async(job.serialize)
       end
 
       def enqueue_at(job, timestamp) # :nodoc:
+        Job.queue = job.queue_name
         Job.perform_at(timestamp, job.serialize)
       end
 
       class Job # :nodoc:
+        
         include ::Ultralite::Job
-        #class << self
-          def perform(job_data)
-            Base.execute job_data
-          end
-        #end
+  
+        def perform(job_data)
+          Base.execute job_data
+        end
       end
     end
   end

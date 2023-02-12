@@ -4,6 +4,7 @@ require 'ultralite'
 class UltraliteJob
   include Ultralite::Job
   @@count = 0
+#  self.queue = :normal
   def perform(count, time)
     @@count += 1  
     if @@count == count  

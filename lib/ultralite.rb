@@ -19,4 +19,15 @@ require_relative "railties/rails/commands/dbconsole" if defined? Rails
 
 module Ultralite
   class Error < StandardError; end
+  
+  def self.environment
+    @env ||= detect_environment
+  end
+  
+  def self.detect_environment
+    return :fiber_scheduler if Fiber.scheduler 
+    return :polyphony if defined? Polyphony
+    return :iodine if defined? Iodine
+    return :threaded 
+  end
 end

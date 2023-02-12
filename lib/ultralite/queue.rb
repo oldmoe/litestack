@@ -6,7 +6,6 @@ module Ultralite
   class Queue
 
     DEFAULT_PATH = "./ultralite.queue"
-    
     def initialize(options = {})
       @path = options[:path] || DEFAULT_PATH
       @queue = create_db(@path)
@@ -31,20 +30,17 @@ module Ultralite
     
     def push(value, delay=0, queue='default')
       result = @push.execute!(queue, delay, value)[0]
-      #return "#{result[0]}-#{result[1]}" if result
       return result[0] if result
     end
     
     def pop(queue='default')
       result = @pop.execute!(queue)[0]
-      #return ["#{result[0]}-#{result[1]}", result[2]] if result
       return result 
     end
     
     def delete(id, queue='default')
       fire_at, id = id.split("_")
       result = @deleter.execute!(queue, fire_at.to_i, id)[0]
-      #result = @deleter.execute!(id)[0]
     end
     
      def clear

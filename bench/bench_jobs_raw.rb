@@ -1,8 +1,15 @@
 require './bench'
 require './skjob.rb'
 require './uljob.rb'
+#require 'polyphony'
+#require 'async'
+require 'async/scheduler'
 
-count = 100000
+Fiber.set_scheduler Async::Scheduler.new
+
+puts "Ultralite: #{Ultralite.environment} environment detected!"
+
+count = 10000
 
 t = Time.now.to_f
 
@@ -18,4 +25,5 @@ bench("enqueuing ultralite jobs", count) do |i|
   UltraliteJob.perform_async(count, t)
 end
 
-sleep
+#sleep
+Fiber.scheduler.run

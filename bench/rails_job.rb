@@ -3,6 +3,8 @@ require 'active_job'
 
 class RailsJob < ActiveJob::Base
   
+#  queue_as :normal
+
   @@count = 0
   
   def perform(count, time)

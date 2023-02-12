@@ -11,11 +11,11 @@ module Ultralite
 	  
 	  module ClassMethods
 	    def perform_async(*params)
-	      get_queue.push(self.name, params)	    
+	      get_queue.push(self.name, params, 0, queue)	    
 	    end
 	    
 	    def perform_at(time, *params)
-	      delya = time - Time.now.to_i
+	      delay = time - Time.now.to_i
 	      get_queue.push(self.name, params, delay, queue)	         
 	    end
 	    
@@ -27,10 +27,27 @@ module Ultralite
 	      @@mutex ||= Mutex.new
 	    end
 	    
+	    def options
+        @@options ||= {}
+	    end
+	    
+	    def options=(options)
+        @@options = options
+      end
+      
+      def queue
+        @@queue ||= "default"
+      end
+      
+      def queue=(queue)
+        @@queue = queue.to_s
+      end
+      	    
 	    def get_queue
 	      unless $_ul_queue 
     	    mutex.synchronize do
-	          $_ul_queue = ::Ultralite::JobQueue.new
+    	      # we need to have a queue per queue path, rather than one global queue
+	          $_ul_queue = ::Ultralite::JobQueue.new(options) unless $_ul_queue
 	        end
 	      end
 	      $_ul_queue
