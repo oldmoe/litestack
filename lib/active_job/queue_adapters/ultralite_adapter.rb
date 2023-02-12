@@ -13,10 +13,11 @@ module ActiveJob
     #
     #   Rails.application.config.active_job.queue_adapter = :ultralite
     class UltraliteAdapter
-    
+      
+      DEFAULT_CONFIG_PATH = "./config/ultrajob.yaml"
+
       def initialize(options={})
-        # load options from config/ultralite.yaml
-        
+        options[:config_path] = DEFAULT_CONFIG_PATH unless options[:config_path]
         @options = options 
         Job.options = @options
       end
