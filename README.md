@@ -1,15 +1,17 @@
 # Ultralite
 
-LiteStack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
+Ultralite is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
 
 Compared to conventional approaches that require separate servers and databases, LiteStack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
-LiteStack provides integration with popular libraries, including:
+Ultralite provides integration with popular libraries, including:
 
+- Rack
 - Sequel
+- Rails
 - ActiveRecord
 - ActiveSupport::Cache
-- ActvieJob
+- ActiveJob
 
 With Ultralite you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
 
@@ -63,6 +65,15 @@ In your desired environment file (e.g. production.rb)
 ```ruby
 config.active_job.queue_adapter = :ultralite
 ```
+
+You can add more configuration in config/ultrajob.yml
+
+```yaml
+queues:
+    - [default 1]
+    - [urgent 5]
+    - [critical 10]
+```
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
@@ -71,7 +82,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/ultralite.
+Bug reports and pull requests are welcome on GitHub at https://github.com/oldmoe/ultralite.
 
 ## License
 
