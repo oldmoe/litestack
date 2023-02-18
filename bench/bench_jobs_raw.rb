@@ -7,6 +7,7 @@ require 'async/scheduler'
 
 Fiber.set_scheduler Async::Scheduler.new
 
+
 puts "Ultralite: #{Ultralite.environment} environment detected!"
 
 count = 10000
@@ -25,5 +26,7 @@ bench("enqueuing ultralite jobs", count) do |i|
   UltraliteJob.perform_async(count, t)
 end
 
-#sleep
 Fiber.scheduler.run
+
+sleep
+

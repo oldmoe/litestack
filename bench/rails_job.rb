@@ -3,7 +3,7 @@ require 'active_job'
 
 class RailsJob < ActiveJob::Base
   
-#  queue_as :normal
+  queue_as :default
 
   @@count = 0
   

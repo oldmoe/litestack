@@ -9,8 +9,9 @@ require_relative './queue'
 module Ultralite
   class JobQueue
   
-    WORKER_SLEEP_INTERVAL = 2
+    WORKER_SLEEP_INTERVAL = 1
     DEFAULT_CONFIG_PATH = "./ultrajob.yaml"
+    #DEFAULT_CONFIG_PATH = ":memory:"
       
     def self.queue
       @@queue ||= self.new
@@ -22,7 +23,7 @@ module Ultralite
       config = File.read(config_path) rescue nil
       @options.merge!(YAML.load(config)) if config
       @queue = ::Ultralite::Queue.new(@options) # create new queue object
-      @worker_count = options[:workers] ||= 4
+      @worker_count = options[:workers] ||= 1
       @workers = []
       # insure these are only created once per queue
       queues = @options["queues"] ||= [['default', 1]]
@@ -35,7 +36,6 @@ module Ultralite
       end
       priorities = pgroups.keys.sort.reverse
       @queues = priorities.collect{|p| [p, pgroups[p]]}
-      #p @queues
       @worker_count.times do
         create_worker
       end
@@ -62,16 +62,17 @@ module Ultralite
     end
     
     def create_worker
-      if Ultralite.environment == :fiber_scheduler
-        create_fiber_scheduler_worker
-      elsif Ultralite.environment == :polyphony
-        create_polyphony_worker
-      else
+      #if Ultralite.environment == :fiber_scheduler
+      #  create_fiber_scheduler_worker
+      #elsif Ultralite.environment == :polyphony
+      #  create_polyphony_worker
+      #else
         create_threaded_worker
-      end           
+      #end           
     end
 
     def process_queues(queue)
+      #sleep 0.25 # initial sleep to allow other components to ramp up 
       loop do
         processed = 0
         @queues.each do |level| # iterate through the levels
@@ -92,7 +93,7 @@ module Ultralite
                 puts e.backtrace
               end
               # give another contexts a chance to run here
-              switch
+              switch #if processed > 5
             end
           end
         end

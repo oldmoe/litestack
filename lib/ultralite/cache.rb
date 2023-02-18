@@ -19,7 +19,7 @@ module Ultralite
 			  :pruner => "DELETE FROM data WHERE expires_in <= $1",
 			  :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
 			  :limited_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)",
-			  :toucher => "UPDATE data SET  last_used = $1 WHERE id = $2",
+			  :toucher => "UPDATE data SET  last_used = unixepoch('now') WHERE id = $1",
 		  	:setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
 			  :inserter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')",
 			  :finder => "SELECT id FROM data WHERE id = $1",
@@ -33,37 +33,75 @@ module Ultralite
 			@stats = {hit: 0, miss: 0}
 			@cache = create_store(@path)
 			prepare_statements
-			@bgdb = create_store(@path)
-			@last_visited = ::Queue.new
-			@bgthread = spawn_bg_thread(@bgdb, @sql) 
+			@last_visited = {}
+			@bgthread = spawn_bg_worker(@cache, @sql) 
 		  @sql = nil #discard all the sql strings
 		end
 
-		def spawn_bg_thread(db, sql)
+    def spawn_bg_worker(db, sql)
+      #if Ultralite.environment == :fiber_scheduler
+      #  spawn_fiber_scheduler_worker(db, sql)
+      #elsif Ultralite.environment == :polyphony
+      #  spawn_polyphony_worker(db, sql)
+      #else
+  			db = create_store(@path)
+        spawn_threaded_worker(db, sql)
+      #end           
+    end
+
+    def spawn_polyhpony_worker(db, sql)    
+			spin do
+				round = 0
+				loop do
+					sleep 1
+					begin
+						db.transaction(:immediate) do
+							@last_visited.delete_if do |k|
+							  @toucher.execute!(k) || true
+							end
+							@pruner.execute! 						
+						end
+					rescue SQLite3::FullException
+						@extra_pruner.execute!(0.2)
+					end
+				end
+			end
+    end
+    
+    def spawn_fiber_scheduler_worker(db, sql)
+			Fiber.schedule do
+				loop do
+					sleep 1
+					begin
+						db.transaction(:immediate) do
+							@last_visited.delete_if do |k|
+							  @toucher.execute!(k) || true
+							end
+							@pruner.execute! 						
+						end
+					rescue SQLite3::FullException
+						@extra_pruner.execute!(0.2)
+					end
+				end
+			end
+    end
+
+		def spawn_threaded_worker(db, sql)
 			bg_thread = Thread.new do
 				pruner = db.prepare(sql[:pruner])
 				toucher = db.prepare(sql[:toucher])
 				extra_pruner = db.prepare(sql[:extra_pruner])
-				round = 0
 				loop do
 					sleep 1
-					time = Time.now.to_i
-					round += 1
 					begin
 						db.transaction(:immediate) do
-							keys = {}
-							while not @last_visited.empty?
-								keys[@last_visited.pop] = true
+							@last_visited.delete_if do |k|
+							  toucher.execute!(k) || true
 							end
-							keys.each{|k, v| toucher.execute!(time, k)}
-							# move new entries to the indexed state in bulk 1000 at a time
-							#indexer.execute!
-							#delete all expired entries
 							pruner.execute! 						
 						end
 					rescue SQLite3::FullException
 						extra_pruner.execute!(0.2)
-						#db.execute("vacuum")
 					end
 				end
 			end
@@ -124,7 +162,7 @@ module Ultralite
       key = key.to_s
 			record = @getter.execute!(key)[0]
 			if record
-				@last_visited << key
+				@last_visited[key] = true
 				@stats[:hit] +=1
 				return record[1]
 			end
