@@ -1,15 +1,14 @@
-require 'ultralite'
-require './bench'
 require 'redis'
 require 'sqlite3'
 #require 'polyphony'
 require 'async/scheduler'
+require_relative '../lib/ultralite'
+require_relative './bench'
 
 Fiber.set_scheduler Async::Scheduler.new
 
 Fiber.schedule do
   cache = Ultralite::Cache.new # default settings
-  #mem = Ultralite::Cache.new(path: ":memory:") # default settings
   redis = Redis.new # default settings
 
   values = []
@@ -30,10 +29,6 @@ Fiber.schedule do
       cache.set(keys[i], values[i])
     end
 
-   # bench("Ultralite memory cache writes", count) do |i|
-   #   mem.set(keys[i], values[i])
-   # end
-
     bench("Redis writes", count) do |i|
       redis.set(keys[i], values[i])
     end
@@ -42,10 +37,6 @@ Fiber.schedule do
     bench("Ultralite cache reads", count) do |i|
       cache.get(random_keys[i])
     end
-
-   # bench("Ultralite memory cache reads", count) do |i|
-   #   cache.get(random_keys[i])
-   # end
 
     bench("Redis reads", count) do |i|
       redis.get(random_keys[i])
@@ -57,16 +48,11 @@ Fiber.schedule do
 
 
   cache.set("somekey", 1)
-  #mem.set("somekey", 1)
   redis.set("somekey", 1)
 
   bench("Ultralite cache increment") do
     cache.increment("somekey", 1)
   end
-
-  #bench("Ultralite memory cache increment") do
-  #  mem.increment("somekey", 1)
-  #end
 
   bench("Redis increment") do
     redis.incr("somekey")

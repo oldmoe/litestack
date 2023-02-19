@@ -1,19 +1,17 @@
+#require 'polyphony'
+require 'async/scheduler'
 require './bench'
 require './skjob.rb'
 require './uljob.rb'
-#require 'polyphony'
-#require 'async'
-require 'async/scheduler'
 
 Fiber.set_scheduler Async::Scheduler.new
 
 
 puts "Ultralite: #{Ultralite.environment} environment detected!"
 
-count = 10000
+count = 1000
 
 t = Time.now.to_f
-
 # make sure sidekiq is started with skjob.rb as the job-     
 bench("enqueuing sidekiq jobs", count) do |i|
   SidekiqJob.perform_async(count, t)

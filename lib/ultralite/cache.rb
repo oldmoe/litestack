@@ -1,21 +1,24 @@
 # frozen_stringe_literal: true
 
+require_relative './env'
+
 module Ultralite
 
 	class Cache
 
-		DEFAULT_EXPIRY = 60 * 60 * 24 * 30 # one month default expiry
-		DEFAULT_SIZE = 128 * 1024 * 1024 # 128MB default size
-		MIN_SIZE = 32 * 1024 # 32MB minimum cache size
-		DEFAULT_PATH = "./ultralite.cache"
+    DEFAULT_OPTIONS = {
+      path: "./cache.db",
+      expiry: 60 * 60 * 24 * 30, # one month 
+      size: 128 * 1024 * 1024, #128MB 
+      min_size: 32 * 1024, #32MB
+      return_full_record: false #only return the payload
+    }
 
 		def initialize(options = {})
-			@path = options[:path] || DEFAULT_PATH
-			@size = options[:size].to_i rescue DEFAULT_SIZE
-			@size = MIN_SIZE if @size < MIN_SIZE
-			@expires_in = options[:expires_in] || DEFAULT_EXPIRY
-			@return_full_record = options[:return_full_record]
-			@sql = {
+		  @options = DEFAULT_OPTIONS.merge(options)
+		  @options[:size] = @options[:min_size] if @options[:size] < @options[:min_size]
+
+			sql = {
 			  :pruner => "DELETE FROM data WHERE expires_in <= $1",
 			  :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
 			  :limited_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)",
@@ -23,7 +26,7 @@ module Ultralite
 		  	:setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
 			  :inserter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')",
 			  :finder => "SELECT id FROM data WHERE id = $1",
-			  :getter => "SELECT id, value, expires_in FROM data WHERE id = $1",# AND expires_in >= strftime('%s','now')",
+			  :getter => "SELECT id, value, expires_in FROM data WHERE id = $1",
 			  :deleter => "delete FROM data WHERE id = $1 returning value",
 			  :incrementer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in",
   			:counter => "SELECT count(*) FROM data",
@@ -31,22 +34,22 @@ module Ultralite
 			  
 			}
 			@stats = {hit: 0, miss: 0}
-			@cache = create_store(@path)
-			prepare_statements
+			@cache = create_store(@options[:path])
+			prepare_statements(sql)
 			@last_visited = {}
-			@bgthread = spawn_bg_worker(@cache, @sql) 
-		  @sql = nil #discard all the sql strings
+			@bgthread = spawn_bg_worker(@cache, sql) 
+		  sql = nil #discard all the sql strings
 		end
 
     def spawn_bg_worker(db, sql)
-      #if Ultralite.environment == :fiber_scheduler
-      #  spawn_fiber_scheduler_worker(db, sql)
-      #elsif Ultralite.environment == :polyphony
-      #  spawn_polyphony_worker(db, sql)
-      #else
-  			db = create_store(@path)
+      if Ultralite.environment == :fiber
+        spawn_fiber_scheduler_worker(db, sql)
+      elsif Ultralite.environment == :polyphony
+        spawn_polyphony_worker(db, sql)
+      else
+  			db = create_store(@options[:path])
         spawn_threaded_worker(db, sql)
-      #end           
+      end           
     end
 
     def spawn_polyhpony_worker(db, sql)    
@@ -107,8 +110,8 @@ module Ultralite
 			end
 		end
 
-		def prepare_statements
-		  @sql.each_pair do |k, v|
+		def prepare_statements(sql)
+		  sql.each_pair do |k, v|
 		    self.instance_variable_set("@#{k.to_s}", @cache.prepare(v))
 		  end
 		end
@@ -119,9 +122,9 @@ module Ultralite
 			db.synchronous = 0
 			db.cache_size = 2000
 			db.execute("pragma journal_mode = WAL")
-			db.journal_size_limit = [(@size/2).to_i, MIN_SIZE].min
-			db.mmap_size = @size
-			db.max_page_count = @size 
+			db.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
+			db.mmap_size = @options[:size]
+			db.max_page_count = @options[:size] 
 			db.case_sensitive_like = true
 			db.execute("CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)")
 			db.execute("CREATE index if not exists expiry_index on data (expires_in)")
@@ -131,7 +134,7 @@ module Ultralite
 				
 		def set(key, value, expires_in = nil)
 			key = key.to_s
-			expires_in = @expires_in if expires_in.nil? or expires_in.zero?
+			expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
 			begin
 			  @setter.execute!(key, value, expires_in)
 			rescue SQLite3::FullException
@@ -144,7 +147,7 @@ module Ultralite
 		
 		def set_unless_exists(key, value, expires_in = nil)
 			key = key.to_s
-			expires_in = @expires_in if expires_in.nil? or expires_in.zero?
+			expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
 			begin
 			  transaction(:immediate) do
 				  @inserter.execute!(key, value, expires_in)
@@ -204,7 +207,6 @@ module Ultralite
 		
 		def clear
 			@cache.execute("delete FROM data")
-			#@cache.execute("vacuum")
 		end
 		
 		def close

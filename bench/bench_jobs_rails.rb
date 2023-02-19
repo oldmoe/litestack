@@ -1,13 +1,18 @@
 require './bench'
 require './rails_job.rb'
-require 'ultralite'
-require 'active_job/queue_adapters/ultralite_adapter'
 
-#require 'async/scheduler'
+puts "IN BENCH JOBS"
 
-#Fiber.set_scheduler Async::Scheduler.new
+require_relative '../lib/active_job/queue_adapters/ultralite_adapter'
 
-  count = 100000
+
+require 'async/scheduler'
+
+ActiveJob::Base.logger = Logger.new(IO::NULL)
+
+Fiber.set_scheduler Async::Scheduler.new
+
+  count = 1000
 
   RailsJob.queue_adapter = :sidekiq
   t = Time.now.to_f
@@ -24,6 +29,6 @@ require 'active_job/queue_adapters/ultralite_adapter'
     RailsJob.perform_later(count, t)
   end
 
-#Fiber.scheduler.run
+Fiber.scheduler.run
 
 sleep

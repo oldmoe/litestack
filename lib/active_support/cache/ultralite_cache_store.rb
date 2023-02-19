@@ -1,9 +1,9 @@
-require 'ultralite'
 require "delegate"
 require "active_support/core_ext/enumerable"
 require "active_support/core_ext/array/extract_options"
 require "active_support/core_ext/numeric/time"
 require "active_support/cache"
+require_relative '../../ultralite/cache.rb'
 
 
 module ActiveSupport
@@ -16,10 +16,9 @@ module ActiveSupport
         true
       end
 
-      def initialize(options=nil)
+      def initialize(options={})
         super
         @options[:return_full_record] = true
-        path = @options[:path] || "./tmp/cache/ultralite.cache"
       	@cache = ::Ultralite::Cache.new(@options)
       end
 

@@ -1,6 +1,5 @@
 require 'active_job'
 
-
 class RailsJob < ActiveJob::Base
   
   queue_as :default
@@ -8,9 +7,10 @@ class RailsJob < ActiveJob::Base
   @@count = 0
   
   def perform(count, time)
-    @@count += 1  
+    sleep 0.2
+    @@count += 1 
     if @@count == count  
-      puts "finished in #{Time.now.to_f - time} seconds (#{count / (Time.now.to_f - time)} jps)"
+      puts "[litestack] Finished in #{Time.now.to_f - time} seconds (#{count / (Time.now.to_f - time)} jps)"
       @@count = 0
     end
   end

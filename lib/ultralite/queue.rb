@@ -1,5 +1,6 @@
 # frozen_stringe_literal: true
-require 'ultralite'
+
+require_relative "./env"
 
 module Ultralite
   

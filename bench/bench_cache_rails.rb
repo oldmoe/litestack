@@ -1,10 +1,11 @@
-require 'ultralite'
 require 'active_support'
-require './bench'
+require_relative '../lib/ultralite/'
+require_relative './bench'
 
-cache = ActiveSupport::Cache.lookup_store(:ultralite_cache_store, {})
-mem = ActiveSupport::Cache.lookup_store(:ultralite_cache_store, {path: ":memory:"})
-redis = ActiveSupport::Cache.lookup_store(:redis_cache_store, {})
+cache = ActiveSupport::Cache::UltraliteCacheStore.new
+#cache = ActiveSupport::Cache.lookup_store(:ultralite_cache_store, {})
+redis = ActiveSupport::Cache::RedisCacheStore.new 
+#lookup_store(:redis_cache_store, {})
 
 values = []
 keys = []
@@ -24,10 +25,6 @@ count = 1000
     cache.write(keys[i], values[i])
   end
 
-  bench("Ultralite memory cache writes", count) do |i|
-    mem.write(keys[i], values[i])
-  end
-
   bench("Redis writes", count) do |i|
     redis.write(keys[i], values[i])
   end
@@ -35,10 +32,6 @@ count = 1000
   puts "== Reads =="
   bench("Ultralite cache reads", count) do |i|
     cache.read(random_keys[i])
-  end
-
-  bench("Ultralite memory cache reads", count) do |i|
-    mem.read(random_keys[i])
   end
 
   bench("Redis reads", count) do |i|
@@ -53,23 +46,14 @@ end
 
 
 cache.write("somekey", 1, raw: true)
-#puts cache.read("somekey", raw: true)
-
-mem.write("somekey", 1, raw: true)
-#puts mem.read("somekey", raw: true)
 
 redis.write("somekey", 1, raw: true)
-#puts redis.read("somekey", raw: true)
 
 puts "Benchmarks for incrementing integer values"
 puts "=========================================================="
 
 bench("Ultralite cache increment", count) do
   cache.increment("somekey", 1, raw: true)
-end
-
-bench("Ultralite memory cache increment", count) do
-  mem.increment("somekey", 1, raw: true)
 end
 
 bench("Redis increment", count) do

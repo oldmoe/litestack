@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "ultralite"
 require_relative '../../ultralite/job.rb'
 require "active_support/core_ext/enumerable"
 require "active_support/core_ext/array/access"
@@ -14,12 +13,17 @@ module ActiveJob
     #   Rails.application.config.active_job.queue_adapter = :ultralite
     class UltraliteAdapter
       
-      DEFAULT_CONFIG_PATH = "./config/ultrajob.yaml"
+      DEFAULT_OPTIONS = {
+        config_path: "./config/ultrajob.yml",
+        path: "../db/queue.db",
+        queues: [["default", 1, "spawn"]],
+        workers: 1
+      }      
+    
+      DEFAULT_CONFIG_PATH = "./config/ultrajob.yml"
 
       def initialize(options={})
-        options[:config_path] = DEFAULT_CONFIG_PATH unless options[:config_path]
-        @options = options 
-        Job.options = @options
+        Job.options = DEFAULT_OPTIONS.merge(options)
       end
     
       def enqueue(job) # :nodoc:

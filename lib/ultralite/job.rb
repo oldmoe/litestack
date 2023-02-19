@@ -1,4 +1,4 @@
-require 'ultralite'
+
 require_relative './job_queue'
 
 module Ultralite
@@ -45,9 +45,13 @@ module Ultralite
       	    
 	    def get_queue
 	      unless $_ul_queue 
-    	    mutex.synchronize do
-    	      # we need to have a queue per queue path, rather than one global queue
-	          $_ul_queue = ::Ultralite::JobQueue.new(options) unless $_ul_queue
+	        if Ultralite.environment != :fiber && Ultralite.environment != :polyphony
+      	    mutex.synchronize do
+      	      # we need to have a queue per queue path, rather than one global queue
+	            $_ul_queue = ::Ultralite::JobQueue.new(options) unless $_ul_queue
+	          end
+	        else
+	            $_ul_queue = ::Ultralite::JobQueue.new(options) unless $_ul_queue
 	        end
 	      end
 	      $_ul_queue
