@@ -1,10 +1,10 @@
-# Ultralite
+# litestack
 
-Ultralite is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
+litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
 
 Compared to conventional approaches that require separate servers and databases, LiteStack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
-Ultralite provides integration with popular libraries, including:
+litestack provides integration with popular libraries, including:
 
 - Rack
 - Sequel
@@ -13,7 +13,7 @@ Ultralite provides integration with popular libraries, including:
 - ActiveSupport::Cache
 - ActiveJob
 
-With Ultralite you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
+With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
 
 - PostgreSQL
 - Redis
@@ -24,7 +24,7 @@ With Ultralite you only need to add a single gem to your app which would replace
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'ultralite'
+gem 'litestack'
 ```
 
 And then execute:
@@ -33,7 +33,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install ultralite
+    $ gem install litestack
 
 ## Usage
 
