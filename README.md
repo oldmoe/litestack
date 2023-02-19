@@ -39,7 +39,7 @@ Or install it yourself as:
 
 ### Rails
 
-Ultralite provides tight Rails integration and can be configured as follows
+litestack provides tight Rails integration and can be configured as follows
 
 #### ActiveRecord
 
@@ -54,7 +54,7 @@ adapter: ultralite
 In your desired environment file (e.g. production.rb)
 
 ```ruby
-config.cache_store = :ultralite_cache_store, {path: './path/to/your/cache/file'}
+config.cache_store = :litecache, {path: './path/to/your/cache/file'}
 ```
 
 
@@ -63,10 +63,10 @@ config.cache_store = :ultralite_cache_store, {path: './path/to/your/cache/file'}
 In your desired environment file (e.g. production.rb)
 
 ```ruby
-config.active_job.queue_adapter = :ultralite
+config.active_job.queue_adapter = :litejob
 ```
 
-You can add more configuration in config/ultrajob.yml
+You can add more configuration in config/litejob.yml
 
 ```yaml
 queues:
