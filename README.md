@@ -82,7 +82,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/oldmoe/ultralite.
+Bug reports aree welcome on GitHub at https://github.com/oldmoe/ultralite. Please note that this is not an open contribution project and that we don't accept pull requests.
 
 ## License
 
