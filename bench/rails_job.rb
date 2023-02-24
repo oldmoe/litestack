@@ -7,10 +7,10 @@ class RailsJob < ActiveJob::Base
   @@count = 0
   
   def perform(count, time)
-    sleep 0.2
+    #sleep 1
     @@count += 1 
     if @@count == count  
-      puts "[litestack] Finished in #{Time.now.to_f - time} seconds (#{count / (Time.now.to_f - time)} jps)"
+      puts "[litejob] Finished in #{Time.now.to_f - time} seconds (#{count / (Time.now.to_f - time)} jps)"
       @@count = 0
     end
   end

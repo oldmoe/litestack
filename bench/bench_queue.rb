@@ -1,9 +1,9 @@
 require './bench'
-require 'ultralite'
+require_relative '../lib/litestack'
 
-count = 100000
+count = 1000
 
-q = Ultralite::Queue.new
+q = Litequeue.new({path: '../db/queue.db' })
 
 bench("enqueue", count) do |i|
   q.push i.to_s

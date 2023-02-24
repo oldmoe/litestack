@@ -1,11 +1,13 @@
 require 'active_support'
-require_relative '../lib/ultralite/'
+require_relative '../lib/litestack'
 require_relative './bench'
 
-cache = ActiveSupport::Cache::UltraliteCacheStore.new
-#cache = ActiveSupport::Cache.lookup_store(:ultralite_cache_store, {})
-redis = ActiveSupport::Cache::RedisCacheStore.new 
-#lookup_store(:redis_cache_store, {})
+cache = ActiveSupport::Cache::Litecache.new({path: '../db/rails_cache.db'})
+
+#can only use the lookup method when the gem is installed
+#cache = ActiveSupport::Cache.lookup_store(:litecache, {path: '../db/rails_cache.db'})
+
+redis = ActiveSupport::Cache.lookup_store(:redis_cache_store, {})
 
 values = []
 keys = []
@@ -21,7 +23,7 @@ count = 1000
   puts "Benchmarks for values of size #{size} bytes"
   puts "=========================================================="
   puts "== Writes =="
-  bench("Ultralite cache writes", count) do |i|
+  bench("litecache writes", count) do |i|
     cache.write(keys[i], values[i])
   end
 
@@ -30,7 +32,7 @@ count = 1000
   end
 
   puts "== Reads =="
-  bench("Ultralite cache reads", count) do |i|
+  bench("litecache reads", count) do |i|
     cache.read(random_keys[i])
   end
 
@@ -52,7 +54,7 @@ redis.write("somekey", 1, raw: true)
 puts "Benchmarks for incrementing integer values"
 puts "=========================================================="
 
-bench("Ultralite cache increment", count) do
+bench("litecache increment", count) do
   cache.increment("somekey", 1, raw: true)
 end
 

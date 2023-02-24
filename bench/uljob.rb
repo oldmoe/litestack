@@ -1,8 +1,8 @@
 require './bench'
-require 'ultralite'
+require '../lib/litestack'
 
-class UltraliteJob
-  include Ultralite::Job
+class MyJob
+  include Litejob
   @@count = 0
 #  self.queue = :normal
   def perform(count, time)

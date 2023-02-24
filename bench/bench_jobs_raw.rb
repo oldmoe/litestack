@@ -6,9 +6,6 @@ require './uljob.rb'
 
 Fiber.set_scheduler Async::Scheduler.new
 
-
-puts "Ultralite: #{Ultralite.environment} environment detected!"
-
 count = 1000
 
 t = Time.now.to_f
@@ -20,8 +17,8 @@ end
 puts "Don't forget to check the sidekiq log for processing time conclusion"
 
 t = Time.now.to_f
-bench("enqueuing ultralite jobs", count) do |i|
-  UltraliteJob.perform_async(count, t)
+bench("enqueuing litejobs", count) do |i|
+  MyJob.perform_async(count, t)
 end
 
 Fiber.scheduler.run
