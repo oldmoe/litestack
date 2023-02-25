@@ -52,10 +52,10 @@ litedb is a wrapper around SQLite3, offering a better default configuration that
 litedb can be used exactly as the SQLite3 gem, since litedb iherits from SQLite3
 
 ```ruby
-    db = Litedb.new(path_to_db)
-    db.execute("create table users(id integer primary key, name text)")
-    db.execute("insert into users(name) values (?)", "Hamada")
-    db.get_first_value("select count(*) from users") # => 1
+db = Litedb.new(path_to_db)
+db.execute("create table users(id integer primary key, name text)")
+db.execute("insert into users(name) values (?)", "Hamada")
+db.get_first_value("select count(*) from users") # => 1
 ```
 
 #### ActiveRecord
@@ -74,7 +74,7 @@ adapter: litedb
 litedb offers integration with the Sequel database toolkit and can be configured as follows
 
 ```ruby
-    DB = Sequel.conncet("litedb://path_to_db_file")    
+DB = Sequel.conncet("litedb://path_to_db_file")    
 ```
 
 ### Litecache
@@ -84,9 +84,9 @@ litecache is a high speed, low overhead caching library that uses SQLite as its 
 #### Raw litecache usage
 
 ```ruby
-    cache = Litecache.new(path: "path_to_file")
-    cache.set("key", "value")
-    cache.get("key") #=> "value"
+cache = Litecache.new(path: "path_to_file")
+cache.set("key", "value")
+cache.get("key") #=> "value"
 ```
 
 #### ActiveResource::Cache
@@ -105,27 +105,27 @@ litecache spawns a background thread for cleanup purposes. In case it detects th
 litejob is a fast and very efficient job queue processor for Ruby applications. It builds on top of SQLite as well, which provides transactional guarantees, persistence and exceptional performance. 
 
 #### Raw litejob usage
-```
-    # define your job class
-    class MyJob
-      inclue ::litejob
+```ruby
+# define your job class
+class MyJob
+  include ::litejob
       
-      queue = :default
+  queue = :default
       
-      # must implement perform, with any number of params
-      def perform(params)
-        # do stuff
-      end
-    end
+  # must implement perform, with any number of params
+  def perform(params)
+    # do stuff
+  end
+end
     
-    #schedule a job asynchronusly
-    MyJob.perform_async(params)
+#schedule a job asynchronusly
+MyJob.perform_async(params)
     
-    #schedule a job at a certain time
-    MyJob.perform_at(time, params)
+#schedule a job at a certain time
+MyJob.perform_at(time, params)
     
-    #schedule a job after a certain delay
-    MyJob.perform_after(delay, params)
+#schedule a job after a certain delay
+MyJob.perform_after(delay, params)
 ```
 
 #### ActiveJob
