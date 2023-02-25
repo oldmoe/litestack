@@ -14,7 +14,7 @@ litestack provides integration with popular libraries, including:
 - ActiveSupport::Cache
 - ActiveJob
 
-With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
+With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using litestack will no longer need the following services:
 
 - PostgreSQL
 - Redis
