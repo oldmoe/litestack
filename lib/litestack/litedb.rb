@@ -37,7 +37,7 @@ class Litedb < ::SQLite3::Database
     # impose a limit on the WAL file to prevent unlimited growth (with a negative impact on read performance as well)
     self.journal_size_limit = 64 * 1024 * 1024
     # set the global memory map so all processes can share data
-    self.mmap_size = 128 * 1024 * 1024
+    self.mmap_size = 128 * 1024 * 1024 
     # increase the local connection cache to 2000 pages
     self.cache_size = 2000
   end
