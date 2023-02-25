@@ -150,7 +150,7 @@ The queues need to include a name and a priority (a number between 1 and 10) and
 
 ## Contributing
 
-Bug reports aree welcome on GitHub at https://github.com/oldmoe/ultralite. Please note that this is not an open contribution project and that we don't accept pull requests.
+Bug reports aree welcome on GitHub at https://github.com/oldmoe/litestack. Please note that this is not an open contribution project and that we don't accept pull requests.
 
 ## License
 
