@@ -1,4 +1,4 @@
-require 'ultralite'
+require_relative '../../litestack/litedb'
 require 'active_record'
 require 'active_record/connection_adapters/sqlite3_adapter'
 require 'active_record/tasks/sqlite_database_tasks'
@@ -7,7 +7,7 @@ module ActiveRecord
 
 	module ConnectionHandling # :nodoc:
 
-		def ultralite_connection(config)
+		def litedb_connection(config)
 
 			config = config.symbolize_keys
 
@@ -25,12 +25,12 @@ module ActiveRecord
 				Dir.mkdir(dirname) unless File.directory?(dirname)
 			end
 
-			db = Ultralite::DB.new(
+			db = ::Litedb.new(
 				config[:database].to_s,
 				config.merge(results_as_hash: true)
 			)
 
-			ConnectionAdapters::UltraliteAdapter.new(db, logger, nil, config)
+			ConnectionAdapters:::LitedbAdapter.new(db, logger, nil, config)
 			
 		rescue Errno::ENOENT => error
 			if error.message.include?("No such file or directory")
@@ -43,9 +43,9 @@ module ActiveRecord
 
 	module ConnectionAdapters # :nodoc:
 
-		class UltraliteAdapter < SQLite3Adapter
+		class LitedbAdapter < SQLite3Adapter
 
-		  ADAPTER_NAME = "Ultralite"
+		  ADAPTER_NAME = "litedb"
   
       class << self
         
@@ -80,7 +80,7 @@ module ActiveRecord
 		  private
 		  
 	      def connect
-            @raw_connection = ::Ultralite::DB.new(
+            @raw_connection = ::Litedb.new(
               @config[:database].to_s,
               @config.merge(results_as_hash: true)
             )
@@ -91,11 +91,11 @@ module ActiveRecord
 	end
 	
   module Tasks # :nodoc:
-    class UltraliteDatabaseTasks < SQLiteDatabaseTasks # :nodoc:
+    class LitedbDatabaseTasks < SQLiteDatabaseTasks # :nodoc:
     end
     
     module DatabaseTasks
-      register_task(/ultralite/,       "ActiveRecord::Tasks::UltraliteDatabaseTasks")
+      register_task(/ultralite/,       "ActiveRecord::Tasks::LitedbDatabaseTasks")
 
     end
 	end

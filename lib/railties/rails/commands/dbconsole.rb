@@ -41,7 +41,7 @@ module Rails
         ENV["PGSSLROOTCERT"]  = config[:sslrootcert].to_s if config[:sslrootcert]
         find_cmd_and_exec("psql", db_config.database)
 
-      when "sqlite3", "ultralite"
+      when "sqlite3", "litedb"
         args = []
 
         args << "-#{@options[:mode]}" if @options[:mode]
