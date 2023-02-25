@@ -1,7 +1,7 @@
 # all components should require the support module
 require_relative 'litesupport'
 
-# Litedb inherits from the SQLite3::Database class and addes a few initialization options
+# Litedb inherits from the SQLite3::Database class and adds a few initialization options
 class Litedb < ::SQLite3::Database
 
   # overrride the original initilaizer to allow for connection configuration
