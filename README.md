@@ -1,7 +1,7 @@
 ![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
 
 
-litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
+litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It exploits the power and embeddedness of SQLite to include a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
 
 Compared to conventional approaches that require separate servers and databases, LiteStack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
@@ -14,11 +14,15 @@ litestack provides integration with popular libraries, including:
 - ActiveSupport::Cache
 - ActiveJob
 
-With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using Ultralite will no longer need the following services:
+With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using litestack will no longer need the following services:
 
 - PostgreSQL
 - Redis
 - Sidekiq
+
+To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
+
+Litestack is still pretty young and under heavy development, but you are welcome to give it a try today!.
 
 ## Installation
 
@@ -44,7 +48,7 @@ litestack currently offers three main components
 - litecache
 - litejob
 
-### litedb
+> ![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_logo_teal.png?raw=true)
 
 litedb is a wrapper around SQLite3, offering a better default configuration that is tuned for concurrency and performance. Out of the box, litedb works seamlessly between multiple processes without database locking errors. lite db can be used in multiple ways, including:
 
@@ -53,6 +57,7 @@ litedb is a wrapper around SQLite3, offering a better default configuration that
 litedb can be used exactly as the SQLite3 gem, since litedb iherits from SQLite3
 
 ```ruby
+require 'litestack'
 db = Litedb.new(path_to_db)
 db.execute("create table users(id integer primary key, name text)")
 db.execute("insert into users(name) values (?)", "Hamada")
@@ -78,13 +83,15 @@ litedb offers integration with the Sequel database toolkit and can be configured
 DB = Sequel.conncet("litedb://path_to_db_file")    
 ```
 
-### litecache
+
+> ![litecache](https://github.com/oldmoe/litestack/blob/master/assets/litecache_logo_teal.png?raw=true)
 
 litecache is a high speed, low overhead caching library that uses SQLite as its backend. litecache can be accessed from multiple processes on the same machine seamlessly. It also has features like key expiry, LRU based eviction and increment/decrement of integer values.
 
 #### Direct litecache usage
 
 ```ruby
+require 'litestack'
 cache = Litecache.new(path: "path_to_file")
 cache.set("key", "value")
 cache.get("key") #=> "value"
@@ -101,12 +108,13 @@ This provides a transparent integration that uses the Rails caching interface
 
 litecache spawns a background thread for cleanup purposes. In case it detects that the current environment has *Fiber::Scheduler* or *Polyphony* loaded it will spawn a fiber instead, saving on both memory and CPU cycles.
 
-### litejob
+> ![litejob](https://github.com/oldmoe/litestack/blob/master/assets/litejob_logo_teal.png?raw=true)
 
 litejob is a fast and very efficient job queue processor for Ruby applications. It builds on top of SQLite as well, which provides transactional guarantees, persistence and exceptional performance. 
 
 #### Direct litejob usage
 ```ruby
+require 'litestack'
 # define your job class
 class MyJob
   include ::litejob
