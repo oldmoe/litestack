@@ -46,7 +46,7 @@ litestack provides tight Rails integration and can be configured as follows
 In database.yml
 
 ```yaml
-adapter: ultralite
+adapter: litedb
 ```
 
 #### Cache
@@ -72,13 +72,10 @@ You can add more configuration in config/litejob.yml
 queues:
     - [default 1]
     - [urgent 5]
-    - [critical 10]
+    - [critical 10 "spawn"]
 ```
-## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+The queues need to include a name and a priority (a number between 1 and 10) and can also optionally add the token "spawn", which means every job will run it its own concurrency context (thread or fiber)
 
 ## Contributing
 
