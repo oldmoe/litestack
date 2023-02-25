@@ -30,7 +30,7 @@ module ActiveRecord
 				config.merge(results_as_hash: true)
 			)
 
-			ConnectionAdapters:::LitedbAdapter.new(db, logger, nil, config)
+			ConnectionAdapters::LitedbAdapter.new(db, logger, nil, config)
 			
 		rescue Errno::ENOENT => error
 			if error.message.include?("No such file or directory")
