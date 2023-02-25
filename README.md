@@ -78,7 +78,7 @@ litedb offers integration with the Sequel database toolkit and can be configured
 DB = Sequel.conncet("litedb://path_to_db_file")    
 ```
 
-### Litecache
+### litecache
 
 litecache is a high speed, low overhead caching library that uses SQLite as its backend. litecache can be accessed from multiple processes on the same machine seamlessly. It also has features like key expiry, LRU based eviction and increment/decrement of integer values.
 
