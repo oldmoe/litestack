@@ -2,6 +2,8 @@ require 'sqlite3'
 
 module Litesupport
 
+  class Error < StandardError; End
+  
   # cache the environment we are running in
   # it is an error to change the environment for a process 
   # or for a child forked from that process
