@@ -1,7 +1,7 @@
 ![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
 
 
-litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
+litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It exploits the power and embeddedness of SQLite to include a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
 
 Compared to conventional approaches that require separate servers and databases, LiteStack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
