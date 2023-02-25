@@ -47,7 +47,7 @@ litestack currently offers three main components
 
 litedb is a wrapper around SQLite3, offering a better default configuration that is tuned for concurrency and performance. Out of the box, litedb works seamlessly between multiple processes without database locking errors. lite db can be used in multiple ways, including:
 
-#### Raw litedb usage
+#### Direct litedb usage
 
 litedb can be used exactly as the SQLite3 gem, since litedb iherits from SQLite3
 
@@ -81,7 +81,7 @@ DB = Sequel.conncet("litedb://path_to_db_file")
 
 litecache is a high speed, low overhead caching library that uses SQLite as its backend. litecache can be accessed from multiple processes on the same machine seamlessly. It also has features like key expiry, LRU based eviction and increment/decrement of integer values.
 
-#### Raw litecache usage
+#### Direct litecache usage
 
 ```ruby
 cache = Litecache.new(path: "path_to_file")
@@ -104,7 +104,7 @@ litecache spawns a background thread for cleanup purposes. In case it detects th
 
 litejob is a fast and very efficient job queue processor for Ruby applications. It builds on top of SQLite as well, which provides transactional guarantees, persistence and exceptional performance. 
 
-#### Raw litejob usage
+#### Direct litejob usage
 ```ruby
 # define your job class
 class MyJob
