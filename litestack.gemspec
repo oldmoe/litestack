@@ -5,19 +5,18 @@ require_relative "lib/litestack/version"
 Gem::Specification.new do |spec|
   spec.name = "litestack"
   spec.version = Litestack::VERSION
-  spec.authors = ["Mohamed Ali"]
-  spec.email = ["mohamed@hey.com"]
+  spec.authors = ["Mohamed Hassan"]
+  spec.email = ["oldmoe@gmail.com"]
 
-  spec.summary = "It's a database, it's a cache, it's a queue!"
-  spec.homepage = "http://www.test.com"
+  spec.summary = "A SQLite based, lightning fast, super efficient and dead simple to setup and use database, cache and job queue for Ruby and Rails applications!"
+  spec.homepage = "http://github.com/oldmoe/litestack"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
 
-  spec.metadata["allowed_push_host"] = "TODO: Set to your gem server 'https://example.com'"
-
+  spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "http://source.com"
-  spec.metadata["changelog_uri"] = "http://log.com"
+  spec.metadata["source_code_uri"] = spec.homepage
+  spec.metadata["changelog_uri"] = "http://github.com/oldmoe/litestack/CHANEGELOG.md"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
@@ -28,7 +27,7 @@ Gem::Specification.new do |spec|
   end
   spec.bindir = "bin"
   #spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
-  spec.require_paths = ["lib", "lib/ultralite"]
+  spec.require_paths = ["lib", "lib/litestack"]
 
   spec.add_dependency "sqlite3"
   spec.add_dependency "oj"
