@@ -20,6 +20,8 @@ With litestack you only need to add a single gem to your app which would replace
 - Redis
 - Sidekiq
 
+To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
+
 ## Installation
 
 Add this line to your application's Gemfile:
