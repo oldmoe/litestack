@@ -1,4 +1,5 @@
-# litestack
+![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
+
 
 litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It includes a full-fledged SQL database, a fast cache, a robust job queue, and a simple yet performant full-text search all in a single package.
 
@@ -77,7 +78,7 @@ litedb offers integration with the Sequel database toolkit and can be configured
 DB = Sequel.conncet("litedb://path_to_db_file")    
 ```
 
-### Litecache
+### litecache
 
 litecache is a high speed, low overhead caching library that uses SQLite as its backend. litecache can be accessed from multiple processes on the same machine seamlessly. It also has features like key expiry, LRU based eviction and increment/decrement of integer values.
 
