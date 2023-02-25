@@ -1,4 +1,4 @@
-# Why litestack?
+# Why Litestack?
 
 If you're developing a Ruby web application, you may be wondering which database, caching, and job queueing solution is right for you. While there are many options out there, Litestack stands out as a top choice for its performance benefits, ease of setup and administration, resource efficiency, and potential cost savings.
 
