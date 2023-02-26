@@ -228,6 +228,8 @@ class Litecache
               end
               @stmts[:pruner].execute!             
             end
+          rescue SQLite3::BusyException
+            retry
           rescue SQLite3::FullException
             @stmts[:extra_pruner].execute!(0.2)
           end
