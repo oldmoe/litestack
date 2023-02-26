@@ -11,7 +11,10 @@ These are not real life scenarios and I hope I will be able to produce some inte
 Post.find(id) #ActiveRecord
 Post[id] #Sequel
 ```
-This maps to "SELECT * FROM posts WHERE id = ?"
+This produces
+```sql
+SELECT * FROM posts WHERE id = ?
+```
 
 |Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
 |-:|-:|-:|-:|-:|
@@ -25,7 +28,10 @@ This maps to "SELECT * FROM posts WHERE id = ?"
 ```ruby
 Post.where(user_id: id).limit(5) # ActiveRecord and Sequel
 ```
-This maps to "SELECT * FROM posts WHERE user_id = ? LIMIT 5"
+This produces
+```sql
+SELECT * FROM posts WHERE user_id = ? LIMIT 5
+```
 
 |Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
 |-:|-:|-:|-:|-:|
@@ -40,7 +46,10 @@ This maps to "SELECT * FROM posts WHERE user_id = ? LIMIT 5"
 Post.update(id, {updated_at: updated_at} # ActiveRecord
 Post[id].update({updated_at: updated_at}) # Sequel
 ```
-This maps to "Update posts SET updated_at = ? WHERE id = ?"
+This produces
+```sql
+Update posts SET updated_at = ? WHERE id = ?
+```
 
 |Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
 |-:|-:|-:|-:|-:|
