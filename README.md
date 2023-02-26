@@ -5,6 +5,9 @@ litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all
 
 Compared to conventional approaches that require separate servers and databases, LiteStack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
+You can read more about why litestack can be a good choice for your next web application **[here](WHYLITESTACK.md)**, you might also be interested in litestack **[benchmarks](BENCHMARKS.md)**.
+
+
 litestack provides integration with popular libraries, including:
 
 - Rack
@@ -16,9 +19,9 @@ litestack provides integration with popular libraries, including:
 
 With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using litestack will no longer need the following services:
 
-- PostgreSQL
-- Redis
-- Sidekiq
+- Database Server (e.g. PostgreSQL, MySQL)
+- Cache Server (e.g. Redis, Memcached)
+- Job Processor (e.g. Sidekiq, Goodjob)
 
 To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
 
