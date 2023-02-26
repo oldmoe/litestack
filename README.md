@@ -53,7 +53,7 @@ litestack currently offers three main components
 
 > ![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_logo_teal.png?raw=true)
 
-litedb is a wrapper around SQLite3, offering a better default configuration that is tuned for concurrency and performance. Out of the box, litedb works seamlessly between multiple processes without database locking errors. lite db can be used in multiple ways, including:
+litedb is a wrapper around SQLite3, offering a better default configuration that is tuned for concurrency and performance. Out of the box, litedb works seamlessly between multiple processes without database locking errors. litedb can be used in multiple ways, including:
 
 #### Direct litedb usage
 
@@ -69,7 +69,7 @@ db.get_first_value("select count(*) from users") # => 1
 
 #### ActiveRecord
 
-litesd provides tight Rails/ActiveRecord integration and can be configured as follows
+litedb provides tight Rails/ActiveRecord integration and can be configured as follows
 
 In database.yml
 
@@ -162,7 +162,7 @@ The queues need to include a name and a priority (a number between 1 and 10) and
 
 ## Contributing
 
-Bug reports aree welcome on GitHub at https://github.com/oldmoe/litestack. Please note that this is not an open contribution project and that we don't accept pull requests.
+Bug reports are welcome on GitHub at https://github.com/oldmoe/litestack. Please note that this is not an open contribution project and that we don't accept pull requests.
 
 ## License
 
