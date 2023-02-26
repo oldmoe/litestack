@@ -32,7 +32,7 @@ class Litejobqueue
   DEFAULT_OPTIONS = {
     config_path: "./litejob.yml",
     path: "./queue.db",
-    queues: [["default", 1, "spawn"]],
+    queues: [["default", 5]],
     workers: 1,
     sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 3.125]
   }

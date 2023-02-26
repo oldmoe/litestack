@@ -1,15 +1,17 @@
 #require 'polyphony'
 require 'async/scheduler'
 require './bench'
-require './skjob.rb'
-require './uljob.rb'
 
 Fiber.set_scheduler Async::Scheduler.new
 
-count = 1000
+count = 10000
+require './skjob.rb'
+require './uljob.rb'
+
+puts Litesupport.environment
 
 t = Time.now.to_f
-# make sure sidekiq is started with skjob.rb as the job-     
+puts "make sure sidekiq is started with skjob.rb as the job"     
 bench("enqueuing sidekiq jobs", count) do |i|
   SidekiqJob.perform_async(count, t)
 end
