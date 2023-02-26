@@ -16,6 +16,8 @@ This ease of setup and configuration is due to Litestack's design philosophy, wh
 
 This simplicity is a significant advantage for developers, as it allows them to focus on writing code and delivering features rather than dealing with the complexities of database and infrastructure management. By simplifying the setup process, Litestack can help reduce the time and cost required to get your application up and running, enabling you to focus on delivering value to your users.
 
+That's not to say we hate on complex solutions, actually, we believe complexity has its place, elsewhere!.
+
 ## Simple can be cutting edge
 Another benefit of Litestack is its deep integration with state of the art Ruby IO libraries like Async and Polyphony. This allows for even greater performance improvements and improved efficiency, as these libraries can help manage concurrency and parallelism in your web application.
 
