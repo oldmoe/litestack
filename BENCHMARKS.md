@@ -58,7 +58,7 @@ Update posts SET updated_at = ? WHERE id = ?
 |4|481 q/s|693 q/s|704 q/s|2.3K q/s|
 |8|898 q/s|748 q/s|1.2K q/s|2.4K q/s|
 
-It is clear the Litedb enjoys a clear advantage for reads and is very competitive for updates until many processes are relentlessly trying to write at the same time non stop.
+It is clear the Litedb enjoys a significant advantage for reads and is very competitive for updates until many processes are relentlessly trying to write at the same time non stop.
 For most applications, even with higher level of concurrency, Litedb will scale super well for reads and provide a very good baseline for writes.
 
 > ![litecache](https://github.com/oldmoe/litestack/blob/master/assets/litecache_logo_teal.png?raw=true)
