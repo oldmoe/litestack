@@ -19,9 +19,9 @@ litestack provides integration with popular libraries, including:
 
 With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using litestack will no longer need the following services:
 
-- PostgreSQL
-- Redis
-- Sidekiq
+- Database Server (e.g. PostgreSQL, MySQL)
+- Cache Server (e.g. Redis, Memcached)
+- Job Processor (e.g. Sidekiq, Goodjob)
 
 To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
 
