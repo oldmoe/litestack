@@ -16,7 +16,7 @@ This produces
 SELECT * FROM posts WHERE id = ?
 ```
 
-|Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
+|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|1.3K q/s|6.5K q/s|1.8K q/s|17.4K q/s|
 |2|2.6K q/s|13.9K q/s|3.5K q/s|33.2K q/s|
@@ -33,7 +33,7 @@ This produces
 SELECT * FROM posts WHERE user_id = ? LIMIT 5
 ```
 
-|Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
+|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|345 q/s|482 q/s|937 q/s|1.1K q/s|
 |2|751 q/s|848 q/s|1.3K q/s|2.3K q/s|
@@ -51,14 +51,14 @@ This produces
 Update posts SET updated_at = ? WHERE id = ?
 ```
 
-|Prcoess Count|ActiveRecord:PostgreSQL|ActiveRecord:litedb|Sequel:PostgreSQL|Sequel:litedb|
+|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|125 q/s|484 q/s|129 q/s|2.1K q/s|
 |2|265 q/s|576 q/s|333 q/s|2.5K q/s|
 |4|481 q/s|693 q/s|704 q/s|2.3K q/s|
 |8|898 q/s|748 q/s|1.2K q/s|2.4K q/s|
 
-It is clear the Litedb enjoys a clear advantage for reads and is very competitive for updates until many processes are relentlessly trying to write at the same time non stop.
+It is clear the Litedb enjoys a significant advantage for reads and is very competitive for updates until many processes are relentlessly trying to write at the same time non stop.
 For most applications, even with higher level of concurrency, Litedb will scale super well for reads and provide a very good baseline for writes.
 
 > ![litecache](https://github.com/oldmoe/litestack/blob/master/assets/litecache_logo_teal.png?raw=true)
