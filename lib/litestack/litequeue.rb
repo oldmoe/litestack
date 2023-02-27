@@ -50,11 +50,7 @@ class Litequeue
   
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
   def pop(queue='default')
-    result = nil
-    Litesupport.synchronize do
-      result = @pop.execute!(queue)[0]
-    end
-    result 
+    @pop.execute!(queue)[0]
   end
   
   # delete an item from the queue

@@ -58,21 +58,23 @@ class Litecache
   def initialize(options = {})
     @options = DEFAULT_OPTIONS.merge(options)
     @options[:size] = @options[:min_size] if @options[:size] < @options[:min_size]
-    @cache = create_store
-    @stmts = {
-      :pruner => @cache.prepare("DELETE FROM data WHERE expires_in <= $1"),
-      :extra_pruner => @cache.prepare("DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))"),
-      :limited_pruner => @cache.prepare("DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)"),
-      :toucher => @cache.prepare("UPDATE data SET  last_used = unixepoch('now') WHERE id = $1"),
-      :setter => @cache.prepare("INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in"),
-      :inserter => @cache.prepare("INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')"),
-      :finder => @cache.prepare("SELECT id FROM data WHERE id = $1"),
-      :getter => @cache.prepare("SELECT id, value, expires_in FROM data WHERE id = $1"),
-      :deleter => @cache.prepare("delete FROM data WHERE id = $1 returning value"),
-      :incrementer => @cache.prepare("INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in"),
-      :counter => @cache.prepare("SELECT count(*) FROM data"),
-      :sizer => @cache.prepare("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count") 
+    @sql = {
+      :pruner => "DELETE FROM data WHERE expires_in <= $1",
+      :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
+      :limited_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)",
+      :toucher => "UPDATE data SET  last_used = unixepoch('now') WHERE id = $1",
+      :setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
+      :inserter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')",
+      :finder => "SELECT id FROM data WHERE id = $1",
+      :getter => "SELECT id, value, expires_in FROM data WHERE id = $1",
+      :deleter => "delete FROM data WHERE id = $1 returning value",
+      :incrementer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in",
+      :counter => "SELECT count(*) FROM data",
+      :sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count" 
     }
+    @cache = create_store
+    @stmts = {}
+    @sql.each_pair{|k, v| @stmts[k] = @cache.prepare(v)}
     @stats = {hit: 0, miss: 0}
     @last_visited = {}
     @running = true
@@ -83,14 +85,12 @@ class Litecache
   def set(key, value, expires_in = nil)
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
-    Litesupport.synchronize do
-      begin
-        @stmts[:setter].execute!(key, value, expires_in)
-      rescue SQLite3::FullException
-        @stmts[:extra_pruner].execute!(0.2)
-        @cache.execute("vacuum")
-        retry
-      end
+    begin
+      @stmts[:setter].execute!(key, value, expires_in)
+    rescue SQLite3::FullException
+      @stmts[:extra_pruner].execute!(0.2)
+      @cache.execute("vacuum")
+      retry
     end
     return true
   end
@@ -99,17 +99,15 @@ class Litecache
   def set_unless_exists(key, value, expires_in = nil)
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
-    Litesupport.synchronize do
-      begin
-        transaction(:immediate) do
-          @stmts[:inserter].execute!(key, value, expires_in)
-          changes = @cache.changes
-        end
-      rescue SQLite3::FullException
-        @stmts[:extra_pruner].execute!(0.2)
-        @cache.execute("vacuum")
-        retry
+    begin
+      transaction(:immediate) do
+        @stmts[:inserter].execute!(key, value, expires_in)
+        changes = @cache.changes
       end
+    rescue SQLite3::FullException
+      @stmts[:extra_pruner].execute!(0.2)
+      @cache.execute("vacuum")
+      retry
     end
     return changes > 0
   end
@@ -118,11 +116,7 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    record = nil
-    Litesupport.synchronize do
-      record = @stmts[:getter].execute!(key)[0]
-    end
-    if record
+    if record = @stmts[:getter].execute!(key)[0]
       @last_visited[key] = true
       @stats[:hit] +=1
       return record[1]
@@ -133,18 +127,14 @@ class Litecache
   
   # delete a key, value pair from the cache
   def delete(key)
-    Litesupport.synchronize do
-      @stmts[:deleter].execute!(key)
-      return @cache.changes > 0
-    end
+    @stmts[:deleter].execute!(key)
+    return @cache.changes > 0
   end
   
   # increment an integer value by amount, optionally add an expiry value (in seconds)
   def increment(key, amount, expires_in = nil)
     expires_in = @expires_in unless expires_in
-    Litesupport.synchronize do
-      @stmts[:incrementer].execute!(key.to_s, amount, expires_in)
-    end
+    @stmts[:incrementer].execute!(key.to_s, amount, expires_in)
   end
   
   # decrement an integer value by amount, optionally add an expiry value (in seconds)
@@ -154,43 +144,35 @@ class Litecache
   
   # delete all entries in the cache up limit (ordered by LRU), if no limit is provided approximately 20% of the entries will be deleted
   def prune(limit=nil)
-    Litesupport.synchronize do
-      if limit and limit.is_a? Integer
-        @stmts[:limited_pruner].execute!(limit)
-      elsif limit and limit.is_a? Float
-        @stmts[:extra_pruner].execute!(limit)
-      else
-        @stmts[:pruner].execute!      
-      end
+    if limit and limit.is_a? Integer
+      @stmts[:limited_pruner].execute!(limit)
+    elsif limit and limit.is_a? Float
+      @stmts[:extra_pruner].execute!(limit)
+    else
+      @stmts[:pruner].execute!      
     end
   end
   
   # return the number of key, value pairs in the cache
   def count
-    Litesupport.synchronize do
-      @stmts[:counter].execute!.to_a[0][0]
-    end
+    @stmts[:counter].execute!.to_a[0][0]
   end
   
   # return the actual size of the cache file
   def size
-    Litesupport.synchronize do
-      @stmts[:sizer].execute!.to_a[0][0]
-    end
+    @stmts[:sizer].execute!.to_a[0][0]
   end
   
   # delete all key, value pairs in the cache
   def clear
-    Litesupport.synchronize do  
-      @cache.execute("delete FROM data")
-    end
+    @cache.execute("delete FROM data")
   end
   
   # close the connection to the cache file
   def close
     @running = false
     #Litesupport.synchronize do
-      #@cache.close
+    @cache.close
     #end
   end
   
@@ -219,23 +201,31 @@ class Litecache
   
   def spawn_worker
     Litesupport.spawn do
+      # create a specific cache instance for this worker
+      # to overcome SQLite3 Database is locked error
+      cache = create_store
+      stmts = {}
+      [:toucher, :pruner, :extra_pruner].each do |stmt|
+        stmts[stmt] = cache.prepare(@sql[stmt])
+      end
       while @running
         Litesupport.synchronize do
           begin
-            @cache.transaction(:immediate) do
-              @last_visited.delete_if do |k|
-                @stmts[:toucher].execute!(k) || true
+            cache.transaction(:immediate) do
+              @last_visited.delete_if do |k| # there is a race condition here, but not a serious one
+                stmts[:toucher].execute!(k) || true
               end
-              @stmts[:pruner].execute!             
+              stmts[:pruner].execute!             
             end
           rescue SQLite3::BusyException
             retry
           rescue SQLite3::FullException
-            @stmts[:extra_pruner].execute!(0.2)
+            stmts[:extra_pruner].execute!(0.2)
           end
         end
         sleep @options[:sleep_interval]
       end
+      cache.close
     end
   end
   

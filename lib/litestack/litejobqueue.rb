@@ -41,7 +41,7 @@ class Litejobqueue
   
   # a method that returns a single instance of the job queue
   # for use by Litejob
-  def self.queue(options = {})
+  def self.jobqueue(options = {})
     @@queue ||= Litesupport.synchronize{self.new(options)}
   end
 
@@ -58,8 +58,8 @@ class Litejobqueue
   def initialize(options = {})
     @options = DEFAULT_OPTIONS.merge(options)
     @worker_sleep_index = 0
-    config = YAML.load_file(@options[:config_path]) rescue {} #an empty hash won't hurt
-    config.each_key do |k| # symbolize keys
+    config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
+    config.keys.each do |k| # symbolize keys
       config[k.to_sym] = config[k]
       config.delete k
     end
@@ -116,14 +116,16 @@ class Litejobqueue
   # create a worker according to environment
   def create_worker
     Litesupport.spawn do
-      Litesupport.switch
+      # we create a queue object specific to this worker here
+      # this way we can survive potential SQLite3 Database is locked errors
+      queue = Litequeue.new(@options)
       loop do
         processed = 0
         @queues.each do |level| # iterate through the levels
           level[1].each do |q| # iterate through the queues in the level
             index = 0
             max = level[0]
-            while index < max && payload = @queue.pop(q[0])  
+            while index < max && payload = queue.pop(q[0])  
               processed += 1
               index += 1
               begin

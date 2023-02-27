@@ -43,21 +43,21 @@ module Litejob
   private
   def self.included(klass)
     klass.extend(ClassMethods)
-    klass.get_queue
+    klass.get_jobqueue
   end
   
   module ClassMethods
     def perform_async(*params)
-      get_queue.push(self.name, params, 0, queue)      
+      get_jobqueue.push(self.name, params, 0, queue)      
     end
     
     def perform_at(time, *params)
       delay = time - Time.now.to_i
-      get_queue.push(self.name, params, delay, queue)           
+      get_jobqueue.push(self.name, params, delay, queue)           
     end
     
     def perfrom_in(delay, *params)
-      get_queue.push(self.name, params, delay, queue)           
+      get_jobqueue.push(self.name, params, delay, queue)           
     end
         
     def options
@@ -76,8 +76,8 @@ module Litejob
       @@queue_name = queue_name.to_s
     end
           
-    def get_queue
-      Litejobqueue.queue(options)
+    def get_jobqueue
+      Litejobqueue.jobqueue(options)
     end
   end
     

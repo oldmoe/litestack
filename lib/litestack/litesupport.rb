@@ -37,11 +37,14 @@ module Litesupport
   def self.switch
     if self.environment == :fiber
       Fiber.scheduler.yield
+      true
     elsif self.environment == :polyphony
       Fiber.current.schedule
       Thread.current.switch_fiber
+      true
     else
       # do nothing in case of thread, switching will auto-happen
+      false
     end   
   end
   
@@ -66,7 +69,7 @@ module Litesupport
   # common db object options
   def self.create_db(path)
     db = SQLite3::Database.new(path)
-    db.busy_handler{ sleep 0.001 }
+    db.busy_handler{ switch || sleep(0.001) }
     db.journal_mode = "WAL"
     db
   end
