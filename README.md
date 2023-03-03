@@ -83,7 +83,7 @@ adapter: litedb
 litedb offers integration with the Sequel database toolkit and can be configured as follows
 
 ```ruby
-DB = Sequel.conncet("litedb://path_to_db_file")    
+DB = Sequel.connect("litedb://path_to_db_file")
 ```
 
 
