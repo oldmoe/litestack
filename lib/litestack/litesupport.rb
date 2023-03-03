@@ -33,6 +33,18 @@ module Litesupport
     # we should never reach here
   end
   
+  def self.detect_context
+    if environment == :fiber || environment == :poylphony
+      Fiber.current.storage
+    else
+      Thread.current
+    end
+  end
+  
+  def self.context
+    @ctx ||= detect_context
+  end
+  
   # switch the execution context to allow others to run
   def self.switch
     if self.environment == :fiber
@@ -71,7 +83,65 @@ module Litesupport
     db = SQLite3::Database.new(path)
     db.busy_handler{ switch || sleep(0.001) }
     db.journal_mode = "WAL"
+    db.instance_variable_set(:@stmts, {})
+    class << db
+      attr_reader :stmts
+    end
     db
+  end
+  
+  class Mutex
+  
+    def initialize
+      @mutex = Thread::Mutex.new
+    end
+    
+    def synchronize(&block)
+      if Litesupport.environment == :threaded || Litesupport.environment == :iodine
+        @mutex.synchronize{ block.call }
+      else
+        block.call
+      end
+    end
+  
+  end
+  
+  class Pool
+  
+    def initialize(count, &block)
+      @count = count
+      @block = block
+      @resources = []
+      @mutex = Litesupport::Mutex.new
+      @count.times do
+        resource = @mutex.synchronize{ block.call }
+        @resources << [resource, :free]
+      end
+    end
+    
+    def acquire
+      acquired = false
+      result = nil
+      while !acquired do
+        @mutex.synchronize do
+          if resource = @resources.find{|r| r[1] == :free}
+            resource[1] = :busy
+            begin
+              result = yield resource[0]
+            rescue Exception => e
+              raise e
+            ensure
+              resource[1] = :free
+              acquired = true
+              return nil              
+            end
+          end
+        end
+        sleep 0.0001 unless acquired
+      end
+      result
+    end
+    
   end
   
 end  

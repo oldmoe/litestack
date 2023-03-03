@@ -1,9 +1,9 @@
 require 'minitest/autorun'
-require 'ultralite'
+require '../lib/litestack/litequeue.rb'
 
 class TestQueue < Minitest::Test
   def setup
-    @queue = Ultralite::Queue.new
+    @queue = Litequeue.new
     @queue.clear
   end
 
@@ -15,7 +15,7 @@ class TestQueue < Minitest::Test
     @queue.clear
     assert @queue.count == 0    
   end
-   
+
   def test_depletion
     assert @queue.count == 0
     10.times do

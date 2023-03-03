@@ -72,9 +72,7 @@ class Litecache
       :counter => "SELECT count(*) FROM data",
       :sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count" 
     }
-    @cache = create_store
-    @stmts = {}
-    @sql.each_pair{|k, v| @stmts[k] = @cache.prepare(v)}
+    @cache = Litesupport::Pool.new(1){create_db}
     @stats = {hit: 0, miss: 0}
     @last_visited = {}
     @running = true
@@ -85,12 +83,14 @@ class Litecache
   def set(key, value, expires_in = nil)
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
-    begin
-      @stmts[:setter].execute!(key, value, expires_in)
-    rescue SQLite3::FullException
-      @stmts[:extra_pruner].execute!(0.2)
-      @cache.execute("vacuum")
-      retry
+    @cache.acquire do |cache|
+      begin
+        cache.stmts[:setter].execute!(key, value, expires_in)
+      rescue SQLite3::FullException
+        cache.stmts[:extra_pruner].execute!(0.2)
+        cache.execute("vacuum")
+        retry
+      end
     end
     return true
   end
@@ -99,15 +99,18 @@ class Litecache
   def set_unless_exists(key, value, expires_in = nil)
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
-    begin
-      transaction(:immediate) do
-        @stmts[:inserter].execute!(key, value, expires_in)
-        changes = @cache.changes
+    changes = 0
+    @cache.acquire do |cache|
+      begin
+        transaction(:immediate) do
+          cache.stmts[:inserter].execute!(key, value, expires_in)
+          changes = @cache.changes
+        end
+      rescue SQLite3::FullException
+        cache.stmts[:extra_pruner].execute!(0.2)
+        cache.execute("vacuum")
+        retry
       end
-    rescue SQLite3::FullException
-      @stmts[:extra_pruner].execute!(0.2)
-      @cache.execute("vacuum")
-      retry
     end
     return changes > 0
   end
@@ -116,7 +119,7 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    if record = @stmts[:getter].execute!(key)[0]
+    if record = @cache.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
       @last_visited[key] = true
       @stats[:hit] +=1
       return record[1]
@@ -127,14 +130,18 @@ class Litecache
   
   # delete a key, value pair from the cache
   def delete(key)
-    @stmts[:deleter].execute!(key)
-    return @cache.changes > 0
+    changes = 0
+    @cache.aquire do |cache|
+      cache.stmts[:deleter].execute!(key)
+      changes = cache.changes
+    end
+    return changes > 0
   end
   
   # increment an integer value by amount, optionally add an expiry value (in seconds)
   def increment(key, amount, expires_in = nil)
     expires_in = @expires_in unless expires_in
-    @stmts[:incrementer].execute!(key.to_s, amount, expires_in)
+    @cache.acquire{|cache| cache.stmts[:incrementer].execute!(key.to_s, amount, expires_in) }
   end
   
   # decrement an integer value by amount, optionally add an expiry value (in seconds)
@@ -144,43 +151,43 @@ class Litecache
   
   # delete all entries in the cache up limit (ordered by LRU), if no limit is provided approximately 20% of the entries will be deleted
   def prune(limit=nil)
-    if limit and limit.is_a? Integer
-      @stmts[:limited_pruner].execute!(limit)
-    elsif limit and limit.is_a? Float
-      @stmts[:extra_pruner].execute!(limit)
-    else
-      @stmts[:pruner].execute!      
+    @cache.acquire do |cache|
+      if limit and limit.is_a? Integer
+        cache.stmts[:limited_pruner].execute!(limit)
+      elsif limit and limit.is_a? Float
+        cache.stmts[:extra_pruner].execute!(limit)
+      else
+        cache.stmts[:pruner].execute!      
+      end
     end
   end
   
   # return the number of key, value pairs in the cache
   def count
-    @stmts[:counter].execute!.to_a[0][0]
+    @cache.acquire{|cache| cache.stmts[:counter].execute!.to_a[0][0] }
   end
   
   # return the actual size of the cache file
   def size
-    @stmts[:sizer].execute!.to_a[0][0]
+    @cache.acquire{|cache| cache.stmts[:sizer].execute!.to_a[0][0] }
   end
   
   # delete all key, value pairs in the cache
   def clear
-    @cache.execute("delete FROM data")
+    @cache.acquire{|cache| cache.execute("delete FROM data") }
   end
   
   # close the connection to the cache file
   def close
     @running = false
     #Litesupport.synchronize do
-    @cache.close
+    @cache.acquire{|cache| cache.close }
     #end
   end
   
   # return the maximum size of the cache
   def max_size
-    Litesupport.synchronize do
-      @cache.get_first_value("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c")
-    end
+    @cache.acquire{|cache| cache.get_first_value("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c") }
   end
   
   # hits and misses for get operations performed over this particular connection (not cache wide)
@@ -192,8 +199,10 @@ class Litecache
 
   # low level access to SQLite transactions, use with caution
   def transaction(mode)
-    @cache.transaction(mode) do
-      yield
+    @cache.acquire do |cache|
+      cache.transaction(mode) do
+        yield
+      end
     end
   end
 
@@ -201,35 +210,29 @@ class Litecache
   
   def spawn_worker
     Litesupport.spawn do
-      # create a specific cache instance for this worker
-      # to overcome SQLite3 Database is locked error
-      cache = create_store
-      stmts = {}
-      [:toucher, :pruner, :extra_pruner].each do |stmt|
-        stmts[stmt] = cache.prepare(@sql[stmt])
-      end
       while @running
-        Litesupport.synchronize do
+        @cache.acquire do |cache|
           begin
             cache.transaction(:immediate) do
               @last_visited.delete_if do |k| # there is a race condition here, but not a serious one
-                stmts[:toucher].execute!(k) || true
+                cache.stmts[:toucher].execute!(k) || true
               end
-              stmts[:pruner].execute!             
+              cache.stmts[:pruner].execute!             
             end
           rescue SQLite3::BusyException
             retry
           rescue SQLite3::FullException
-            stmts[:extra_pruner].execute!(0.2)
+            cache.stmts[:extra_pruner].execute!(0.2)
+          rescue Exception
+            # database is closed
           end
         end
         sleep @options[:sleep_interval]
       end
-      cache.close
     end
   end
   
-  def create_store
+  def create_db
     db = Litesupport.create_db(@options[:path])
     db.synchronous = 0
     db.cache_size = 2000
@@ -240,6 +243,7 @@ class Litecache
     db.execute("CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)")
     db.execute("CREATE index if not exists expiry_index on data (expires_in)")
     db.execute("CREATE index if not exists last_used_index on data (last_used)")
+    @sql.each_pair{|k, v| db.stmts[k] = db.prepare(v)}
     db
   end
   

@@ -9,7 +9,7 @@ Fiber.set_scheduler Async::Scheduler.new
 Fiber.scheduler.run
 
 require_relative '../lib/litestack'
-
+#require 'litestack'
 
 cache = Litecache.new({path: '../db/cache.db'}) # default settings
 redis = Redis.new # default settings

@@ -5,11 +5,11 @@ count = 1000
 
 q = Litequeue.new({path: '../db/queue.db' })
 
-bench("enqueue", count) do |i|
+bench("Litequeue enqueue", count) do |i|
   q.push i.to_s
 end
 
-bench("dequeue", count) do |i|
+bench("Litequeue dequeue", count) do |i|
   q.pop  
 end
 

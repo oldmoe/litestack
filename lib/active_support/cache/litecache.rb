@@ -25,12 +25,14 @@ module ActiveSupport
       def increment(key, amount = 1, options = nil)
         key = key.to_s
         options = merged_options(options)
-        @cache.transaction(:immediate) do
+        # todo: fix me
+        # this is currently a hack to avoid dealing with Rails cache encoding and decoding
+        #@cache.transaction(:immediate) do
           if value = read(key, options)
             value = value.to_i + amount
             write(key, value, options)
           end
-        end
+        #end
       end
 
       def decrement(key, amount = 1, options = nil)

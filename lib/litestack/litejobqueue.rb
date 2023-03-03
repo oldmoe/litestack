@@ -116,16 +116,13 @@ class Litejobqueue
   # create a worker according to environment
   def create_worker
     Litesupport.spawn do
-      # we create a queue object specific to this worker here
-      # this way we can survive potential SQLite3 Database is locked errors
-      queue = Litequeue.new(@options)
       loop do
         processed = 0
         @queues.each do |level| # iterate through the levels
           level[1].each do |q| # iterate through the queues in the level
             index = 0
             max = level[0]
-            while index < max && payload = queue.pop(q[0])  
+            while index < max && payload = @queue.pop(q[0]) # fearlessly use the same queue object 
               processed += 1
               index += 1
               begin
