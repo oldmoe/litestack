@@ -152,9 +152,9 @@ You can add more configuration in litejob.yml (or config/litejob.yml if you are 
 
 ```yaml
 queues:
-    - [default 1]
-    - [urgent 5]
-    - [critical 10 "spawn"]
+    - [default, 1]
+    - [urgent, 5]
+    - [critical, 10, "spawn"]
 ```
 
 The queues need to include a name and a priority (a number between 1 and 10) and can also optionally add the token "spawn", which means every job will run it its own concurrency context (thread or fiber)
