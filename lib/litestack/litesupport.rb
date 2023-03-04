@@ -133,7 +133,6 @@ module Litesupport
             ensure
               resource[1] = :free
               acquired = true
-              return nil              
             end
           end
         end
