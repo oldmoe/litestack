@@ -1,4 +1,5 @@
 require 'sqlite3'
+require 'hiredis'
 
 module Litesupport
 
@@ -11,6 +12,11 @@ module Litesupport
     @env ||= detect_environment
   end
   
+  def self.max_contexts
+    return 50 if environment == :fiber || environment == :polyphony
+    5    
+  end
+    
   # identify which environment we are running in
   # we currently support :fiber, :polyphony, :iodine & :threaded
   # in the future we might want to expand to other environments
@@ -55,7 +61,7 @@ module Litesupport
       Thread.current.switch_fiber
       true
     else
-      # do nothing in case of thread, switching will auto-happen
+      #Thread.pass
       false
     end   
   end
@@ -124,7 +130,7 @@ module Litesupport
       result = nil
       while !acquired do
         @mutex.synchronize do
-          if resource = @resources.find{|r| r[1] == :free}
+          if resource = @resources.find{|r| r[1] == :free }
             resource[1] = :busy
             begin
               result = yield resource[0]
@@ -136,7 +142,7 @@ module Litesupport
             end
           end
         end
-        sleep 0.0001 unless acquired
+        sleep 0.001 unless acquired
       end
       result
     end

@@ -52,8 +52,10 @@ class Litequeue
   alias_method :"<<", :push
   
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
-  def pop(queue='default')
-    @queue.acquire {|q| q.stmts[:pop].execute!(queue)[0] }
+  def pop(queue='default', limit = 1)
+   res = @queue.acquire {|q| res = q.stmts[:pop].execute!(queue, limit)[0] }
+   #return res[0] if res.length == 1
+   #res
   end
   
   # delete an item from the queue
@@ -90,7 +92,7 @@ class Litequeue
     db.mmap_size = @options[:mmap_size]
     db.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(hex(randomblob(8)) || (strftime('%f') * 100)) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
     db.stmts[:push] = db.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
-    db.stmts[:pop] = db.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) = (SELECT queue, min(fire_at), id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) limit 1) RETURNING fire_at || '-' || id, value")
+    db.stmts[:pop] = db.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) IN (SELECT queue, fire_at, id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) ORDER BY fire_at ASC LIMIT ifnull($2, 1)) RETURNING fire_at || '-' || id, value")
     db.stmts[:delete] = db.prepare("DELETE FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at = $2 AND id = $3 RETURNING value")
     db
   end
