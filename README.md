@@ -120,7 +120,7 @@ litejob is a fast and very efficient job queue processor for Ruby applications. 
 require 'litestack'
 # define your job class
 class MyJob
-  include ::litejob
+  include ::Litejob
       
   queue = :default
       
