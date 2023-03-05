@@ -4,12 +4,13 @@ require '../lib/litestack'
 class MyJob
   include Litejob
   @@count = 0
-#  self.queue = :normal
-  def perform(count, time)
-    #sleep 0.1
+  #self.queue = :default
+  def perform(count, time, sleep_interval = nil)
+    sleep sleep_interval if sleep_interval  
     @@count += 1
     if @@count == count  
-      puts "UL finished in #{Time.now.to_f - time} seconds (#{count / (Time.now.to_f - time)} jps)"
+      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      STDERR.puts "Litejob finished in #{now - time} seconds (#{count / (now - time)} jps)"
     end
   end
 end
