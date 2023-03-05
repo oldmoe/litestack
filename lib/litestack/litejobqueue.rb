@@ -78,10 +78,6 @@ class Litejobqueue
     end
     @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
     @workers = @options[:workers].times.collect{ create_worker } 
-    # this is the new work distribution mode, not finished
-    #@q = Thread::Queue.new
-    #@workers = @options[:workers].times.collect{Worker.new(@q).run} 
-    #@poller = create_poller
   end
   
   # push a job to the queue
@@ -111,8 +107,8 @@ class Litejobqueue
   #   jobqueue.delete(id)    
   def delete(id)
     job = @queue.delete(id)
+    @logger.info("[litejob]:[DEL] job: #{job}")
     Oj.load(job) if job
-    #@logger.info("[litejob]:[DEL] id: #{id}")
     job
   end
   
@@ -126,7 +122,7 @@ class Litejobqueue
       yield
     end
   end  
-  
+    
   # create a worker according to environment
   def create_worker
     Litesupport.spawn do
@@ -178,97 +174,6 @@ class Litejobqueue
         end
       end
     end
-  end 
-  
-  # part of the new work distribution mode, not finished
-  
-  def create_poller
-    Litesupport.spawn do
-      worker_sleep_index = 0
-      loop do
-        processed = 0
-        @queues.each do |level| # iterate through the levels
-          level[1].each do |q| # iterate through the queues in the level
-            index = 0
-            max = level[0]
-            while index < max && payloads = @queue.pop(q[0], @q.num_waiting) # fearlessly use the same queue object 
-              if payloads[0].is_a? Array
-                payloads.each do |pl| 
-                  pl << q[1]
-                  @q.push(pl) 
-                end
-                processed += payloads.length
-                index += payloads.length
-              elsif !payloads.empty?
-                payloads << q[1]
-                @q.push(payloads)
-                processed += 1
-                index += 1
-              else
-                #processed += 1
-                index += 1
-              end
-              #Litesupport.switch #give other contexts a chance to run here
-            end
-          end
-        end
-        if processed == 0 
-          sleep @options[:sleep_intervals][worker_sleep_index]      
-          worker_sleep_index += 1 if worker_sleep_index < @options[:sleep_intervals].length - 1          
-        else
-          worker_sleep_index = 0 # reset the index
-        end    
-      end
-    end
-  end
-
-  class Worker
-    
-    def initialize(q)
-      @q = q
-      @running = false
-    end
-    
-    def run
-      @running = true
-      @loop = Litesupport.spawn do
-        while @running
-          payload = @q.pop # blocking
-          begin
-            id, job, spawn = payload[0], payload[1], payload[3]
-            job = Oj.load(job)
-            klass = eval(job[0])
-            schedule(spawn) do # run the job in a new context
-              begin
-                klass.new.perform(*job[1])
-              rescue Exception => e
-                puts e
-                puts e.message
-                puts e.backtrace
-              end
-            end
-          rescue Exception => e
-            puts e
-            puts e.message
-            puts e.backtrace
-          end          
-        end
-      end
-      self
-    end
-    
-    def schedule(spawn = false, &block)
-      if spawn
-        Litesupport.spawn &block
-      else
-        yield
-      end
-    end  
-
-    
-    def stop
-      @running = false
-    end
-  end    
+  end  
   
 end

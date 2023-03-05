@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.1.7] - 2022-03-05
+
+- Code cleanup, removal of references to older name
+- Fix for the litedb rake tasks (thanks: netmute)
+- More fixes for the new concurrency model
+- Introduced a logger for the Litejobqueue (doesn't work with Polyphony, fix should come soon)
+
 ## [0.1.6] - 2022-03-03
 
 - Revamped the locking model, more robust, minimal performance hit
