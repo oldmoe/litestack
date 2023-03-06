@@ -26,7 +26,7 @@ require_relative './litejobqueue'
 #Or perform it at a specific time:
 #  EasyJob.perform_at(time, params) # perform a job at a specific time
 #Or perform it after a certain delay:
-#  EasyJob.perform_in(delay, params) # perform a job after a certain delay
+#  EasyJob.perform_in(delay_in_seconds, params) # perform a job after a certain delay
 #You can also specify a specific queue to be used
 #  class EasyJob
 #    include ::Litejob
@@ -56,8 +56,8 @@ module Litejob
       get_jobqueue.push(self.name, params, delay, queue)           
     end
     
-    def perfrom_in(delay, *params)
-      get_jobqueue.push(self.name, params, delay, queue)           
+    def perform_in(delay_in_seconds, *params)
+      get_jobqueue.push(self.name, params, delay_in_seconds, queue)           
     end
         
     def options

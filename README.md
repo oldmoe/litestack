@@ -137,7 +137,7 @@ MyJob.perform_async(params)
 MyJob.perform_at(time, params)
     
 #schedule a job after a certain delay
-MyJob.perform_after(delay, params)
+MyJob.perform_in(delay_in_seconds, params)
 ```
 
 #### ActiveJob
