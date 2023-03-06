@@ -1,5 +1,4 @@
 require 'sqlite3'
-require 'hiredis'
 
 module Litesupport
 
