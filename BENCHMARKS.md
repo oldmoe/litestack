@@ -67,7 +67,7 @@ For testing the cache we attempted to try writing and reading different payload 
 
 ### Write
 
-|Payload Size (bytes)|Redis|litecahce|
+|Payload Size (bytes)|Redis|litecache|
 |-:|-:|-:|
 |10|4.2K q/s|11.0K q/s|
 |100|4.7K q/s|11.6K q/s|
