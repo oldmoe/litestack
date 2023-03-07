@@ -56,8 +56,12 @@ module Litejob
       get_jobqueue.push(self.name, params, delay, queue)           
     end
     
-    def perfrom_in(delay, *params)
+    def perform_in(delay, *params)
       get_jobqueue.push(self.name, params, delay, queue)           
+    end
+
+    def perform_after(delay, *params)
+      perform_in(delay, *params)
     end
         
     def options
