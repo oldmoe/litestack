@@ -24,8 +24,6 @@ if env == "t" # threaded
 elsif env == "a" # async
   require 'async/scheduler'
   Fiber.set_scheduler Async::Scheduler.new
-elsif env == "p" # polyphony
-  require 'polyphony'
 end
 
 require './uljob.rb'

@@ -3,7 +3,7 @@ require '../lib/litestack/litequeue.rb'
 
 class TestQueue < Minitest::Test
   def setup
-    @queue = Litequeue.new
+    @queue = Litequeue.new({path: ":memory:"})
     @queue.clear
   end
 
@@ -40,6 +40,8 @@ class TestQueue < Minitest::Test
     sleep 1
     assert @queue.pop != nil
   end  
+  
+  
 
 end
 

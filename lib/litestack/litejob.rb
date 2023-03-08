@@ -43,7 +43,7 @@ module Litejob
   private
   def self.included(klass)
     klass.extend(ClassMethods)
-    klass.get_jobqueue
+    #klass.get_jobqueue
   end
   
   module ClassMethods
@@ -52,7 +52,7 @@ module Litejob
     end
     
     def perform_at(time, *params)
-      delay = time - Time.now.to_i
+      delay = time.to_i - Time.now.to_i
       get_jobqueue.push(self.name, params, delay, queue)           
     end
     
@@ -63,25 +63,26 @@ module Litejob
     def perform_after(delay, *params)
       perform_in(delay, *params)
     end
-        
-    def options
-      @@options ||= {}
+
+    def process_jobs
+      get_jobqueue
     end
-    
-    def options=(options)
-      @@options = options
-    end
-    
+       
+    def delete(id, queue_name=nil) 
+      queue_name ||= queue
+      get_jobqueue.delete(id, queue)
+    end  
+         
     def queue
-      @@queue_name ||= "default"
+      @@queue ||= "default"
     end
     
     def queue=(queue_name)
-      @@queue_name = queue_name.to_s
+      @@queue = queue_name.to_s
     end
           
     def get_jobqueue
-      Litejobqueue.jobqueue(options)
+      Litejobqueue.jobqueue
     end
   end
     

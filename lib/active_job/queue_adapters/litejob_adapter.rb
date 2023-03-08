@@ -16,12 +16,16 @@ module ActiveJob
       DEFAULT_OPTIONS = {
         config_path: "./config/litejob.yml",
         path: "../db/queue.db",
-        queues: [["default", 1, "spawn"]],
-        workers: 1
+        queues: [["default", 1]],
+        logger: nil, # Rails performs its logging already
+        retries: 5, # It is recommended to stop retries at the Rails level
+        workers: 5
       }      
     
       def initialize(options={})
-        Job.options = DEFAULT_OPTIONS.merge(options)
+        # we currently don't honour individual options per job class
+        # possible in the future?
+        # Job.options = DEFAULT_OPTIONS.merge(options)
       end
     
       def enqueue(job) # :nodoc:

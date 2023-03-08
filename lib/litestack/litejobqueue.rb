@@ -34,11 +34,18 @@ class Litejobqueue
     path: "./queue.db",
     queues: [["default", 1]],
     workers: 5,
-    logger: STDOUT,
+    retries: 5, 
+    retry_delay: 60,
+    retry_delay_multiplier: 10,
+    dead_job_retention: 10 * 24 * 3600,
+    gc_sleep_interval: 7200, 
+    logger: 'STDOUT',
     sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 1.0, 2.0]
   }
   
   @@queue = nil
+  
+  attr_reader :running
   
   # a method that returns a single instance of the job queue
   # for use by Litejob
@@ -64,11 +71,23 @@ class Litejobqueue
       config.delete k
     end
     @options.merge!(config)
+    @options.merge!(options) # make sure options passed to initialize trump everything else
+
     @queue = Litequeue.new(@options) # create a new queue object
+    
+    # create logger
     if @options[:logger].respond_to? :info
       @logger = @options[:logger] 
-    else
+    elsif @options[:logger] == 'STDOUT'
+      @logger = Logger.new(STDOUT)      
+    elsif @options[:logger] == 'STDERR'
+      @logger = Logger.new(STDERR)      
+    elsif @options[:logger].nil?
+      @logger = Logger.new(IO::NULL)      
+    elsif @options[:logger].is_a? String 
       @logger = Logger.new(@options[:logger])
+    else
+      @logger = Logger.new(IO::NULL)      
     end
     # group and order queues according to their priority
     pgroups = {}
@@ -77,7 +96,25 @@ class Litejobqueue
       pgroups[q[1]] << [q[0], q[2] == "spawn"]
     end
     @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
-    @workers = @options[:workers].times.collect{ create_worker } 
+    @running = true
+    @workers = @options[:workers].times.collect{ create_worker }
+    
+    @gc = create_garbage_collector
+    @jobs_in_flight = 0
+    @mutex = Litesupport::Mutex.new
+    
+    at_exit do
+      @running = false
+      puts "--- Litejob detected an exit attempt, cleaning up"
+      index = 0
+      while @jobs_in_flight > 0 and index < 5
+        puts "--- Waiting for #{@jobs_in_flight} jobs to finish"
+        sleep 1
+        index += 1
+      end
+      puts " --- Exiting with #{@jobs_in_flight} jobs in flight"
+    end
+  
   end
   
   # push a job to the queue
@@ -89,10 +126,9 @@ class Litejobqueue
   #   jobqueue = Litejobqueue.new
   #   jobqueue.push(EasyJob, params) # the job will be performed asynchronously
   def push(jobclass, params, delay=0, queue=nil)
-    payload = Oj.dump([jobclass, params])
-    #res = 
+    payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue})
     res = @queue.push(payload, delay, queue)
-    @logger.info("[litejob]:[ENQ] id: #{res} class: #{jobclass}")
+    @logger.info("[litejob]:[ENQ] id: #{res} job: #{jobclass}")
     res
   end
   
@@ -104,15 +140,41 @@ class Litejobqueue
   #   end
   #   jobqueue = Litejobqueue.new
   #   id = jobqueue.push(EasyJob, params, 10) # queue for processing in 10 seconds
-  #   jobqueue.delete(id)    
-  def delete(id)
-    job = @queue.delete(id)
+  #   jobqueue.delete(id, 'default')    
+  def delete(id, queue=nil)
+    job = @queue.delete(id, queue)
     @logger.info("[litejob]:[DEL] job: #{job}")
-    Oj.load(job) if job
+    job = Oj.load(job[0]) if job
     job
   end
   
+  # delete all jobs in a certain named queue
+  # or delete all jobs if the queue name is nil
+  def clear(queue=nil)
+    @queue.clear(queue)
+  end
+  
+  # stop the queue object (does not delete the jobs in the queue)
+  # specifically useful for testing
+  def stop
+    @running = false
+    @@queue = nil
+  end
+  
+  
+  def count(queue=nil)
+    @queue.count(queue)
+  end
+  
   private
+  
+  def job_started
+    Litesupport.synchronize(@mutex){@jobs_in_flight += 1}
+  end
+  
+  def job_finished
+    Litesupport.synchronize(@mutex){@jobs_in_flight -= 1}
+  end
   
   # optionally run a job in its own context
   def schedule(spawn = false, &block)
@@ -126,14 +188,8 @@ class Litejobqueue
   # create a worker according to environment
   def create_worker
     Litesupport.spawn do
-      if @options[:logger].respond_to? :info
-        logger = @options[:logger] 
-      else
-        logger = Logger.new(@options[:logger])
-      end
       worker_sleep_index = 0
-      i = 0
-      loop do
+      while @running do
         processed = 0
         @queues.each do |level| # iterate through the levels
           level[1].each do |q| # iterate through the queues in the level
@@ -145,22 +201,34 @@ class Litejobqueue
               begin
                 id, job = payload[0], payload[1]
                 job = Oj.load(job)
-                logger.info "[litejob]:[DEQ] id: #{id} class: #{job[0]}" 
-                klass = eval(job[0])
+                # first capture the original job id                
+                job[:id] = id if job[:retries].to_i == @options[:retries].to_i
+                @logger.info "[litejob]:[DEQ] job:#{job}" 
+                klass = eval(job[:klass])
                 schedule(q[1]) do # run the job in a new context
+                  job_started #(Litesupport.current_context)
                   begin
-                    klass.new.perform(*job[1])
-                    logger.info "[litejob]:[END] id: #{id} class: #{job[0]}" 
+                    klass.new.perform(*job[:params])
+                    @logger.info "[litejob]:[END] job:#{job}" 
                   rescue Exception => e
-                    puts e
-                    puts e.message
-                    puts e.backtrace
+                    # we can retry the failed job now
+                    if job[:retries] == 0
+                      @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
+                      @queue.push(Oj.dump(job), @options[:dead_job_retention], '_dead')
+                    else
+                      retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job[:retries]) * @options[:retry_delay] 
+                      job[:retries] -=  1
+                      @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retrying in #{retry_delay}"
+                      @queue.push(Oj.dump(job), retry_delay, q[0])
+                      @logger.info "[litejob]:[ENQ] job: #{job} enqueued"
+                    end
                   end
+                  job_finished #(Litesupport.current_context)
                 end
               rescue Exception => e
-                puts e
-                puts e.message
-                puts e.backtrace
+                # this is an error in the extraction of job info
+                # retrying here will not be useful
+                @logger.error "[litejob]:[ERR] failed to extract job info for: #{payload} with #{e}:#{e.message}"
               end
               Litesupport.switch #give other contexts a chance to run here
             end
@@ -175,5 +243,21 @@ class Litejobqueue
       end
     end
   end  
+  
+  # create a gc for dead jobs
+  def create_garbage_collector
+    Litesupport.spawn do
+      while @running do
+        while jobs = @queue.pop('_dead', 100)
+          if jobs[0].is_a? Array
+            @logger.info "[litejob]:[DEL] garbage collector deleted #{jobs.length} dead jobs"
+          else
+            @logger.info "[litejob]:[DEL] garbage collector deleted 1 dead job"
+          end
+        end
+        sleep @options[:gc_sleep_interval]      
+      end
+    end
+  end
   
 end

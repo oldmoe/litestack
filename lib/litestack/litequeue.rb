@@ -53,9 +53,10 @@ class Litequeue
   
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
   def pop(queue='default', limit = 1)
-   res = @queue.acquire {|q| res = q.stmts[:pop].execute!(queue, limit)[0] }
-   #return res[0] if res.length == 1
-   #res
+   res = @queue.acquire {|q| res = q.stmts[:pop].execute!(queue, limit) }
+   return res[0] if res.length == 1
+   return nil if res.empty?
+   res
   end
   
   # delete an item from the queue
@@ -64,7 +65,7 @@ class Litequeue
   #   queue.delete(id) # => "somevalue"
   #   queue.pop # => nil
   def delete(id, queue='default')
-    fire_at, id = id.split("_")
+    fire_at, id = id.split("-")
     result = @queue.acquire{|q| q.stmts[:delete].execute!(queue, fire_at.to_i, id)[0] } 
   end
   
@@ -81,6 +82,13 @@ class Litequeue
   # return the size of the queue file on disk
   def size
     @queue.acquire{|q| q.get_first_value("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count") }
+  end
+  
+  def close
+    @queue.acquire do |q| 
+      q.stmts.each_pair {|k, v| q.stmts[k].close }
+      q.close
+    end
   end
 
   private  

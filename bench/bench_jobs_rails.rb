@@ -1,21 +1,13 @@
 require './bench'
-require 'async/scheduler'
+
+count = ARGV[0].to_i rescue 1000
+env = ARGV[1] || "t"
+delay = ARGV[2].to_f rescue 0
+
 
 #ActiveJob::Base.logger = Logger.new(IO::NULL)
 
-
-Fiber.set_scheduler Async::Scheduler.new
-
-require_relative '../lib/active_job/queue_adapters/litejob_adapter'
-
-ActiveSupport::IsolatedExecutionState.isolation_level = :fiber
-
 require './rails_job.rb'
-
-
-puts Litesupport.environment
-
-count = 1000
 
 RailsJob.queue_adapter = :sidekiq
 t = Time.now.to_f
@@ -26,13 +18,27 @@ end
 
 puts "Don't forget to check the sidekiq log for processing time conclusion"
 
+
+# Litejob bench
+###############
+
+if env == "a" # threaded
+  require 'async/scheduler'
+  Fiber.set_scheduler Async::Scheduler.new
+  ActiveSupport::IsolatedExecutionState.isolation_level = :fiber
+end
+
+require_relative '../lib/active_job/queue_adapters/litejob_adapter'
+puts Litesupport.environment
+
 RailsJob.queue_adapter = :litejob
 t = Time.now.to_f
 bench("enqueuing litejobs", count) do 
   RailsJob.perform_later(count, t)
 end
 
-Fiber.scheduler.run
-
+if env == "a" # threaded
+  Fiber.scheduler.run
+end
 
 sleep

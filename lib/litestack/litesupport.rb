@@ -37,8 +37,8 @@ module Litesupport
     end
     # we should never reach here
   end
-  
-  def self.detect_context
+    
+  def self.context
     if environment == :fiber || environment == :poylphony
       Fiber.current.storage
     else
@@ -46,8 +46,12 @@ module Litesupport
     end
   end
   
-  def self.context
-    @ctx ||= detect_context
+  def self.current_context
+    if environment == :fiber || environment == :poylphony
+      Fiber.current
+    else
+      Thread.current
+    end
   end
   
   # switch the execution context to allow others to run
@@ -110,6 +114,21 @@ module Litesupport
     end
   
   end
+   
+  module Forkable
+    
+    def _fork(*args)
+      ppid = Process.pid
+      result = super      
+      if Process.pid != ppid
+        # trigger a restart of all connections owned by Litesupport::Pool
+      end
+      result
+    end
+    
+  end
+
+  #::Process.singleton_class.prepend(::Litesupport::Forkable)
   
   class Pool
   
@@ -125,6 +144,7 @@ module Litesupport
     end
     
     def acquire
+      # check for pid changes
       acquired = false
       result = nil
       while !acquired do
