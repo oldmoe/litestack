@@ -113,6 +113,8 @@ litecache spawns a background thread for cleanup purposes. In case it detects th
 
 > ![litejob](https://github.com/oldmoe/litestack/blob/master/assets/litejob_logo_teal.png?raw=true)
 
+More info about Litejob can be found in the [litejob guide](https://github.com/oldmoe/litestack/wiki/Litejob-guide)
+
 litejob is a fast and very efficient job queue processor for Ruby applications. It builds on top of SQLite as well, which provides transactional guarantees, persistence and exceptional performance. 
 
 #### Direct litejob usage
