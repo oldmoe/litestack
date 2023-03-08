@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+## [0.1.8] - 2022-03-08
+
+- More code cleanups, more test coverage
+- Retry support for jobs in Litejob
+- Job storage and garbage collection for failed jobs
+- Initial graceful shutdown support for Litejob (incomplete)
+- More configuration options for Litejob
+
 ## [0.1.7] - 2022-03-05
 
 - Code cleanup, removal of references to older name
