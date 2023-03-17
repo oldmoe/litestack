@@ -2,6 +2,7 @@
 
 # all components should require the support module
 require_relative 'litesupport'
+require_relative 'litemetric'
 
 ##
 #Litecache is a caching library for Ruby applications that is built on top of SQLite. It is designed to be simple to use, very fast, and feature-rich, providing developers with a reliable and efficient way to cache data.
@@ -15,6 +16,8 @@ require_relative 'litesupport'
 #Overall, Litecache is a powerful and flexible caching library that provides automatic key expiry, LRU removal, and integer value increment/decrement capabilities. Its fast performance and simple API make it an excellent choice for Ruby applications that need a reliable and efficient way to cache data.
 
 class Litecache
+
+  include Litemetric::Measurable
 
   # the default options for the cache
   # can be overriden by passing new options in a hash 
@@ -34,7 +37,8 @@ class Litecache
     mmap_size: 128 * 1024 * 1024, #128MB
     min_size: 32 * 1024, #32MB
     return_full_record: false, #only return the payload
-    sleep_interval: 1 # 1 second
+    sleep_interval: 1, # 1 second
+    metrics: true
   }
   
   # creates a new instance of Litecache
@@ -73,9 +77,10 @@ class Litecache
       :sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count" 
     }
     @cache = Litesupport::Pool.new(1){create_db}
-    @stats = {hit: 0, miss: 0}
+    #@stats = {hit: 0, miss: 0}
     @last_visited = {}
     @running = true
+    collect if @options[:metrics]
     @bgthread = spawn_worker 
   end
   
@@ -86,6 +91,7 @@ class Litecache
     @cache.acquire do |cache|
       begin
         cache.stmts[:setter].execute!(key, value, expires_in)
+        capture(:write)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -106,6 +112,7 @@ class Litecache
           cache.stmts[:inserter].execute!(key, value, expires_in)
           changes = @cache.changes
         end
+        capture(:write)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -121,10 +128,12 @@ class Litecache
     key = key.to_s
     if record = @cache.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
       @last_visited[key] = true
-      @stats[:hit] +=1
+      #@stats[:hit] +=1
+      capture(:hit)
       return record[1]
     end
-    @stats[:miss] += 1
+    capture(:miss)
+    #@stats[:miss] += 1
     nil
   end
   
@@ -207,6 +216,10 @@ class Litecache
   end
 
   private 
+  
+  def metrics_identifier
+    @identifier ||= "#{self.class.name}#{@options[:path]}"
+  end
   
   def spawn_worker
     Litesupport.spawn do

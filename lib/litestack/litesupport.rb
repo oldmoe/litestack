@@ -167,5 +167,31 @@ module Litesupport
     end
     
   end
-  
+     
+  module ForkListener
+    def self.listeners
+      @listeners ||= []
+    end
+    
+    def self.listen(&block)
+      listeners << block
+    end
+  end
+
+  module Forkable
+      
+    def _fork(*args)
+      ppid = Process.pid
+      result = super
+      if Process.pid != ppid && [:threaded, :iodine].include?(Litesupport.environment)
+        ForkListener.listeners.each{|l| l.call }
+      end
+      result
+    end
+    
+  end
+      
 end  
+
+Process.singleton_class.prepend(Litesupport::Forkable)
+
