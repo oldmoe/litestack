@@ -1,7 +1,4 @@
 # frozen_stringe_literal: true
-require 'logger'
-require 'oj'
-require 'yaml'
 
 require_relative './litequeue'
 require_relative './litemetric'
@@ -14,7 +11,7 @@ require_relative './litemetric'
 #Litejobqueue also integrates well with various I/O frameworks like Async and Polyphony, making it a great choice for Ruby applications that use these frameworks. It provides a #simple and easy-to-use API for adding jobs to the queue and for processing them.
 #
 #Overall, LiteJobQueue is an excellent choice for Ruby applications that require a lightweight, embedded job queueing and processing system that is fast, efficient, and easy to use.
-class Litejobqueue
+class Litejobqueue < Litequeue
 
   include Litemetric::Measurable
 
@@ -52,6 +49,8 @@ class Litejobqueue
   
   attr_reader :running
   
+  alias_method :_push, :push
+  
   # a method that returns a single instance of the job queue
   # for use by Litejob
   def self.jobqueue(options = {})
@@ -69,14 +68,8 @@ class Litejobqueue
   #   jobqueue = Litejobqueue.new
   #   
   def initialize(options = {})
-    @options = DEFAULT_OPTIONS.merge(options)
-    config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
-    config.keys.each do |k| # symbolize keys
-      config[k.to_sym] = config[k]
-      config.delete k
-    end
-    @options.merge!(config)
-    @options.merge!(options) # make sure options passed to initialize trump everything else
+
+    super(options)
     
     # group and order queues according to their priority
     pgroups = {}
@@ -86,18 +79,6 @@ class Litejobqueue
     end
 
     @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
-
-    setup
-    
-    collect if @options[:metrics] # start collecting data for this class/db
-        
-    at_exit do
-      exit_callback
-    end
-    
-    Litesupport::ForkListener.listen do
-      setup
-    end
   
   end
   
@@ -111,7 +92,7 @@ class Litejobqueue
   #   jobqueue.push(EasyJob, params) # the job will be performed asynchronously
   def push(jobclass, params, delay=0, queue=nil)
     payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue})
-    res = @queue.push(payload, delay, queue)
+    res = _push(payload, delay, queue)
     capture(:enqueue)
     @logger.info("[litejob]:[ENQ] id: #{res} job: #{jobclass}")
     res
@@ -127,7 +108,7 @@ class Litejobqueue
   #   id = jobqueue.push(EasyJob, params, 10) # queue for processing in 10 seconds
   #   jobqueue.delete(id, 'default')    
   def delete(id, queue=nil)
-    job = @queue.delete(id, queue)
+    job = super(id, queue)
     @logger.info("[litejob]:[DEL] job: #{job}")
     job = Oj.load(job[0]) if job
     job
@@ -144,12 +125,9 @@ class Litejobqueue
   def stop
     @running = false
     @@queue = nil
+    close
   end
   
-  
-  def count(queue=nil)
-    @queue.count(queue)
-  end
   
   private
 
@@ -170,8 +148,8 @@ class Litejobqueue
   end
 
   def setup
-    @queue = Litequeue.new(@options) # create a new queue object
-
+    #@queue = Litequeue.new(@options) # create a new queue object
+    super
     # create logger
     if @options[:logger].respond_to? :info
       @logger = @options[:logger] 
@@ -186,7 +164,7 @@ class Litejobqueue
     else
       @logger = Logger.new(IO::NULL)      
     end
-    @running = true
+    #@running = true
     @jobs_in_flight = 0
     @workers = @options[:workers].times.collect{ create_worker }    
     @gc = create_garbage_collector
@@ -203,7 +181,7 @@ class Litejobqueue
   
   # return a hash encapsulating the info about the current jobqueue
   def snapshot
-    @queue.info
+    info
   end
   
   # optionally run a job in its own context
@@ -225,7 +203,7 @@ class Litejobqueue
           level[1].each do |q| # iterate through the queues in the level
             index = 0
             max = level[0]
-            while index < max && payload = @queue.pop(q[0], 1) # fearlessly use the same queue object 
+            while index < max && payload = pop(q[0], 1) # fearlessly use the same queue object 
               capture(:dequeue)
               processed += 1
               index += 1
@@ -246,13 +224,13 @@ class Litejobqueue
                     capture(:fail)
                     if job[:retries] == 0
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
-                      @queue.push(Oj.dump(job), @options[:dead_job_retention], '_dead')
+                      _push(Oj.dump(job), @options[:dead_job_retention], '_dead')
                     else
                       capture(:retry)
                       retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job[:retries]) * @options[:retry_delay] 
                       job[:retries] -=  1
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retrying in #{retry_delay}"
-                      @queue.push(Oj.dump(job), retry_delay, q[0])
+                      _push(Oj.dump(job), retry_delay, q[0])
                       @logger.info "[litejob]:[ENQ] job: #{job} enqueued"
                     end
                   end
@@ -281,7 +259,7 @@ class Litejobqueue
   def create_garbage_collector
     Litesupport.spawn do
       while @running do
-        while jobs = @queue.pop('_dead', 100)
+        while jobs = pop('_dead', 100)
           if jobs[0].is_a? Array
             @logger.info "[litejob]:[DEL] garbage collector deleted #{jobs.length} dead jobs"
           else

@@ -18,10 +18,12 @@ class Litequeue
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
   #   sync: 1 -> sync only when checkpointing
   
+  include Litesupport::Liteconnection
+  
   DEFAULT_OPTIONS = {
     path: "./queue.db",
     mmap_size: 32 * 1024,
-    sync: 1
+    sync: 0
   }
 
   # create a new instance of the litequeue object
@@ -33,8 +35,7 @@ class Litequeue
   #   queue.pop # => "somevalue"
   
   def initialize(options = {})
-    @options = DEFAULT_OPTIONS.merge(options)
-    @queue = Litesupport::Pool.new(1){create_db} # delegate the db creation to the litepool
+    init(options)
   end
    
   # push an item to the queue, optionally specifying the queue name (defaults to default) and after how many seconds it should be ready to pop (defaults to zero)
@@ -95,34 +96,20 @@ class Litequeue
     end
     {size: size, count: count, info: counts}
   end
-  
-  def close
-    @queue.acquire do |q| 
-      q.stmts.each_pair {|k, v| q.stmts[k].close }
-      q.close
-    end
-  end
 
   private  
-  
-  def run_stmt(stmt, *args)
-    @queue.acquire{|q| q.stmts[stmt].execute!(*args) }
-  end
-
-  def run_sql(sql, *args)
-    @queue.acquire{|q| q.execute(sql, *args) }
-  end
-    
-  def create_db
-    db = Litesupport.create_db(@options[:path])
-    db.synchronous = @options[:sync]
-    db.wal_autocheckpoint = 10000 
-    db.mmap_size = @options[:mmap_size]
-    db.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(CAST((strftime('%f') * 1000) AS INTEGER) || hex(randomblob(8))) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
-    db.stmts[:push] = db.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
-    db.stmts[:pop] = db.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) IN (SELECT queue, fire_at, id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) ORDER BY fire_at ASC LIMIT ifnull($2, 1)) RETURNING fire_at || '-' || id, value")
-    db.stmts[:delete] = db.prepare("DELETE FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at = $2 AND id = $3 RETURNING value")
-    db
+      
+  def create_connection
+    conn = super
+    #db = Litesupport.create_db(@options[:path])
+    #db.synchronous = @options[:sync]
+    conn.wal_autocheckpoint = 10000 
+    #conn.mmap_size = @options[:mmap_size]
+    conn.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(CAST((strftime('%f') * 1000) AS INTEGER) || hex(randomblob(8))) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
+    conn.stmts[:push] = conn.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
+    conn.stmts[:pop] = conn.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) IN (SELECT queue, fire_at, id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) ORDER BY fire_at ASC LIMIT ifnull($2, 1)) RETURNING fire_at || '-' || id, value")
+    conn.stmts[:delete] = conn.prepare("DELETE FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at = $2 AND id = $3 RETURNING value")
+    conn
   end
 
 end  

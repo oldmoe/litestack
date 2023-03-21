@@ -9,6 +9,7 @@ require_relative './litesupport'
 class Litemetric
 
   include Singleton
+  include Litesupport::Liteconnection
   
   DEFAULT_OPTIONS = {
     config_path: "./litemetric.yml",
@@ -19,24 +20,7 @@ class Litemetric
   }
 
   def initialize(options = {})
-    @options = DEFAULT_OPTIONS.merge(options)
-    config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
-    config.keys.each do |k| # symbolize keys
-      config[k.to_sym] = config[k]
-      config.delete k
-    end
-    @options.merge!(config)
-    @options.merge!(options) # make sure options passed to initialize trump everything else
-    setup
-
-    at_exit do
-      exit_callback
-    end
-    
-    Litesupport::ForkListener.listen do
-      setup
-    end
-
+    init(options)
   end
   
   def register(identifier)
@@ -45,7 +29,15 @@ class Litemetric
   end
     
   def capture(id, event, value=nil)
-    hour = current_hour
+    if event.is_a? Array
+      event.each{|e| capture_single_event(id, e, value=nil)}
+    else
+      capture_single_event(id, event, value=nil)
+    end
+  end
+  
+  def capture_single_event(id, event, value=nil)
+    hour = current_hour # should that be 5 minutes?
     if @metrics[id][event]
       if @metrics[id][event][hour]
         @metrics[id][event][hour][:count] += 1
@@ -88,19 +80,10 @@ class Litemetric
   end
 
   def setup
-    @running = true
-    @db = Litesupport::Pool.new(1){create_db} # delegate the db creation to the litepool
+    super
     @metrics = {}
     @registered = {}
     @flusher = create_flusher
-  end
-
-  def run_stmt(stmt, *args)
-    @db.acquire{|db| db.stmts[stmt].execute!(*args) }
-  end
-
-  def run_sql(sql, *args)
-    @db.acquire{|db| db.execute(sql, *args) }
   end
 
   def current_hour
@@ -109,12 +92,12 @@ class Litemetric
   
   def flush
     to_delete = []
-    @db.acquire do |db|
-      db.transaction(:immediate) do
+    @conn.acquire do |conn|
+      conn.transaction(:immediate) do
         @metrics.each_pair do |id, event_hash|
           event_hash.each_pair do |event, hour_hash|
             hour_hash.each_pair do |hour, data|
-              db.stmts[:upsert].execute!(id, event.to_s, hour, data[:count], data[:value]) if data 
+              conn.stmts[:upsert].execute!(id, event.to_s, hour, data[:count], data[:value]) if data 
               hour_hash[hour] = nil #{count: 0, value: nil}
               to_delete << [id, event, hour]
             end      
@@ -128,24 +111,22 @@ class Litemetric
     end
   end
      
-  def create_db
-    db = Litesupport.create_db(@options[:path])
-    db.synchronous = @options[:sync]
-    db.wal_autocheckpoint = 10000 
-    db.mmap_size = @options[:mmap_size]
-    db.execute("CREATE TABLE IF NOT EXISTS events(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of hour')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
-    db.execute("CREATE TABLE IF NOT EXISTS events_summary(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of day')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
-    db.stmts[:report] = db.prepare("SELECT * FROM events WHERE id = $1 AND name = $2 ORDER BY created_at ASC")
-    db.stmts[:ids_from_summary] = db.prepare("SELECT id, sum(count) AS count FROM events_summary WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
-    db.stmts[:ids_from_events] = db.prepare("SELECT id, sum(count) AS count FROM events WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
-    db.stmts[:events_from_summary] = db.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events_summary WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
-    db.stmts[:events_from_events] = db.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
-    db.stmts[:event_data] = db.prepare("SELECT count, value, created_at FROM events WHERE id = $1 AND name = $2 AND created_at >= unixepoch('now', 'start of day', '-7 days') ORDER BY created_at")
-    db.stmts[:upsert] = db.prepare("INSERT INTO events(id, name, created_at, count, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT(id, name, created_at) DO UPDATE SET count = count + EXCLUDED.count, value = coalesce(EXCLUDED.value, value, coalesce(value, EXCLUDED.value, value + EXCLUDED.value))")
-    db.stmts[:summarize] = db.prepare("INSERT INTO events_summary(id, name, created_at, count, value) SELECT id, name, unixepoch(created_at, 'unixepoch', 'start of day') as day, sum(count), sum(value) FROM events WHERE created_at > (SELECT max(created_at) from events_summary) AND created_at < unixepoch('now', 'start of day') GROUP BY id, name, day")
-    db.stmts[:purge_events] = db.prepare("DELETE FROM events WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
-    db.stmts[:purge_summary] = db.prepare("DELETE FROM events_summary WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
-    db
+  def create_connection
+    conn = super
+    conn.wal_autocheckpoint = 10000 
+    conn.execute("CREATE TABLE IF NOT EXISTS events(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of hour')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
+    conn.execute("CREATE TABLE IF NOT EXISTS events_summary(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of day')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
+    conn.stmts[:report] = conn.prepare("SELECT * FROM events WHERE id = $1 AND name = $2 ORDER BY created_at ASC")
+    conn.stmts[:ids_from_summary] = conn.prepare("SELECT id, sum(count) AS count FROM events_summary WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
+    conn.stmts[:ids_from_events] = conn.prepare("SELECT id, sum(count) AS count FROM events WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
+    conn.stmts[:events_from_summary] = conn.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events_summary WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
+    conn.stmts[:events_from_events] = conn.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
+    conn.stmts[:event_data] = conn.prepare("SELECT count, value, created_at FROM events WHERE id = $1 AND name = $2 AND created_at >= unixepoch('now', 'start of day', '-7 days') ORDER BY created_at")
+    conn.stmts[:upsert] = conn.prepare("INSERT INTO events(id, name, created_at, count, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT(id, name, created_at) DO UPDATE SET count = count + EXCLUDED.count, value = coalesce(EXCLUDED.value, value, coalesce(value, EXCLUDED.value, value + EXCLUDED.value))")
+    conn.stmts[:summarize] = conn.prepare("INSERT INTO events_summary(id, name, created_at, count, value) SELECT id, name, unixepoch(created_at, 'unixepoch', 'start of day') as day, sum(count), sum(value) FROM events WHERE created_at > (SELECT max(created_at) from events_summary) AND created_at < unixepoch('now', 'start of day') GROUP BY id, name, day")
+    conn.stmts[:purge_events] = conn.prepare("DELETE FROM events WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
+    conn.stmts[:purge_summary] = conn.prepare("DELETE FROM events_summary WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
+    conn
   end
   
   def create_flusher
@@ -162,7 +143,7 @@ end
 class Litemetric
   module Measurable
             
-    def collect
+    def collect_metrics
       @metric = Litemetric.instance
       @metric.register(metrics_identifier)
     end

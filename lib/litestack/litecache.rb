@@ -17,6 +17,7 @@ require_relative 'litemetric'
 
 class Litecache
 
+  include Litesupport::Liteconnection
   include Litemetric::Measurable
 
   # the default options for the cache
@@ -32,6 +33,7 @@ class Litecache
 
   DEFAULT_OPTIONS = {
     path: "./cache.db",
+    sync: 0,
     expiry: 60 * 60 * 24 * 30, # one month 
     size: 128 * 1024 * 1024, #128MB 
     mmap_size: 128 * 1024 * 1024, #128MB
@@ -60,8 +62,7 @@ class Litecache
   #   litecache.close # optional, you can safely kill the process
   
   def initialize(options = {})
-    @options = DEFAULT_OPTIONS.merge(options)
-    @options[:size] = @options[:min_size] if @options[:size] < @options[:min_size]
+
     @sql = {
       :pruner => "DELETE FROM data WHERE expires_in <= $1",
       :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
@@ -76,19 +77,23 @@ class Litecache
       :counter => "SELECT count(*) FROM data",
       :sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count" 
     }
-    @cache = Litesupport::Pool.new(1){create_db}
-    #@stats = {hit: 0, miss: 0}
+  
+    init(options)
+    
+    #@options = DEFAULT_OPTIONS.merge(options)
+    @options[:size] = @options[:min_size] if @options[:size] < @options[:min_size]
+        
+    #@cache = Litesupport::Pool.new(1){create_db}
     @last_visited = {}
-    @running = true
-    collect if @options[:metrics]
-    @bgthread = spawn_worker 
+    #@running = true
+    collect_metrics if @options[:metrics]
   end
   
   # add a key, value pair to the cache, with an optional expiry value (number of seconds)      
   def set(key, value, expires_in = nil)
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
-    @cache.acquire do |cache|
+    @conn.acquire do |cache|
       begin
         cache.stmts[:setter].execute!(key, value, expires_in)
         capture(:write)
@@ -106,11 +111,11 @@ class Litecache
     key = key.to_s
     expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
     changes = 0
-    @cache.acquire do |cache|
+    @conn.acquire do |cache|
       begin
         transaction(:immediate) do
           cache.stmts[:inserter].execute!(key, value, expires_in)
-          changes = @cache.changes
+          changes = cache.changes
         end
         capture(:write)
       rescue SQLite3::FullException
@@ -126,21 +131,19 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    if record = @cache.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
+    if record = @conn.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
       @last_visited[key] = true
-      #@stats[:hit] +=1
       capture(:hit)
       return record[1]
     end
     capture(:miss)
-    #@stats[:miss] += 1
     nil
   end
   
   # delete a key, value pair from the cache
   def delete(key)
     changes = 0
-    @cache.aquire do |cache|
+    @conn.aquire do |cache|
       cache.stmts[:deleter].execute!(key)
       changes = cache.changes
     end
@@ -150,7 +153,7 @@ class Litecache
   # increment an integer value by amount, optionally add an expiry value (in seconds)
   def increment(key, amount, expires_in = nil)
     expires_in = @expires_in unless expires_in
-    @cache.acquire{|cache| cache.stmts[:incrementer].execute!(key.to_s, amount, expires_in) }
+    @conn.acquire{|cache| cache.stmts[:incrementer].execute!(key.to_s, amount, expires_in) }
   end
   
   # decrement an integer value by amount, optionally add an expiry value (in seconds)
@@ -160,7 +163,7 @@ class Litecache
   
   # delete all entries in the cache up limit (ordered by LRU), if no limit is provided approximately 20% of the entries will be deleted
   def prune(limit=nil)
-    @cache.acquire do |cache|
+    @conn.acquire do |cache|
       if limit and limit.is_a? Integer
         cache.stmts[:limited_pruner].execute!(limit)
       elsif limit and limit.is_a? Float
@@ -173,42 +176,34 @@ class Litecache
   
   # return the number of key, value pairs in the cache
   def count
-    @cache.acquire{|cache| cache.stmts[:counter].execute!.to_a[0][0] }
+    run_stmt(:counter)[0][0]
   end
   
   # return the actual size of the cache file
   def size
-    @cache.acquire{|cache| cache.stmts[:sizer].execute!.to_a[0][0] }
+    run_stmt(:sizer)[0][0]
   end
   
   # delete all key, value pairs in the cache
   def clear
-    @cache.acquire{|cache| cache.execute("delete FROM data") }
+    run_sql("delete FROM data")
   end
   
   # close the connection to the cache file
   def close
     @running = false
-    #Litesupport.synchronize do
-    @cache.acquire{|cache| cache.close }
-    #end
+    super
   end
   
   # return the maximum size of the cache
   def max_size
-    @cache.acquire{|cache| cache.get_first_value("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c") }
+    run_sql("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c")[0][0]
   end
   
-  # hits and misses for get operations performed over this particular connection (not cache wide)
-  # 
-  #   litecache.stats # => {hit: 543, miss: 31} 
-  def stats
-    @stats
-  end
-
   # low level access to SQLite transactions, use with caution
-  def transaction(mode)
-    @cache.acquire do |cache|
+  def transaction(mode, acquire=true)
+    return cache.transaction(mode){yield} unless acquire
+    @conn.acquire do |cache|
       cache.transaction(mode) do
         yield
       end
@@ -217,14 +212,19 @@ class Litecache
 
   private 
   
+  def setup
+    super # create connection
+    @bgthread = spawn_worker # create backgroud pruner thread
+  end
+  
   def metrics_identifier
-    @identifier ||= "#{self.class.name}#{@options[:path]}"
+    @identifier ||= "#{self.class.name}" # "#{@options[:path]}"
   end
   
   def spawn_worker
     Litesupport.spawn do
       while @running
-        @cache.acquire do |cache|
+        @conn.acquire do |cache|
           begin
             cache.transaction(:immediate) do
               @last_visited.delete_if do |k| # there is a race condition here, but not a serious one
@@ -245,19 +245,17 @@ class Litecache
     end
   end
   
-  def create_db
-    db = Litesupport.create_db(@options[:path])
-    db.synchronous = 0
-    db.cache_size = 2000
-    db.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
-    db.mmap_size = @options[:mmap_size]
-    db.max_page_count = (@options[:size] / db.page_size).to_i
-    db.case_sensitive_like = true
-    db.execute("CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)")
-    db.execute("CREATE index if not exists expiry_index on data (expires_in)")
-    db.execute("CREATE index if not exists last_used_index on data (last_used)")
-    @sql.each_pair{|k, v| db.stmts[k] = db.prepare(v)}
-    db
+  def create_connection
+    conn = super 
+    conn.cache_size = 2000
+    conn.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
+    conn.max_page_count = (@options[:size] / conn.page_size).to_i
+    conn.case_sensitive_like = true
+    conn.execute("CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)")
+    conn.execute("CREATE index if not exists expiry_index on data (expires_in)")
+    conn.execute("CREATE index if not exists last_used_index on data (last_used)")
+    @sql.each_pair{|k, v| conn.stmts[k] = conn.prepare(v)}
+    conn
   end
   
 end
