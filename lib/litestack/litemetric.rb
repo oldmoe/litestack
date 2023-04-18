@@ -16,60 +16,95 @@ class Litemetric
     path: "./metrics.db",
     sync: 1,
     mmap_size: 16 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
-    flush_interval: 60 # flush data every 1 minute
+    flush_interval: 10, # flush data every 1 minute
+    summarize_interval: 10 # summarize data every 1 minute
   }
 
+  RESOLUTIONS = {
+    minute: 300, # 5 minutes (highest resolution)
+    hour: 3600, # 1 hour
+    day: 24*3600, # 1 day
+    week: 7*24*3600 # 1 week (lowest resolution)
+  }
+
+  # :nodoc: 
   def initialize(options = {})
     init(options)
   end
   
+  # registers a class for metrics to be collected
   def register(identifier)
     @registered[identifier] = true   
     @metrics[identifier] = {} unless @metrics[identifier]
+    run_stmt(:register_topic, identifier) # it is safe to call register topic multiple times with the same identifier
   end
+  
+  ## event capturing
+  ##################
     
-  def capture(id, event, value=nil)
-    if event.is_a? Array
-      event.each{|e| capture_single_event(id, e, value=nil)}
+  def capture(topic, event, key, value=nil)
+    if key.is_a? Array
+      key.each{|k| capture_single_key(topic, event, k, value)}
     else
-      capture_single_event(id, event, value=nil)
+      capture_single_key(topic, event, key, value)
     end
   end
   
-  def capture_single_event(id, event, value=nil)
-    hour = current_hour # should that be 5 minutes?
-    if @metrics[id][event]
-      if @metrics[id][event][hour]
-        @metrics[id][event][hour][:count] += 1
-        @metrics[id][event][hour][:value] += value unless value.nil?
-      else # new hour
-        @metrics[id][event][hour] = {count: 1, value: value}
+  def capture_single_key(topic, event, key, value=nil)
+    @mutex.synchronize do
+      time_slot = current_time_slot # should that be 5 minutes?
+      topic_slot = @metrics[topic]
+      if event_slot = topic_slot[event]
+        if key_slot = event_slot[key]
+          if key_slot[time_slot]
+            key_slot[time_slot][:count] += 1
+            key_slot[time_slot][:value] += value unless value.nil?
+          else # new time slot
+            key_slot[time_slot] = {count: 1, value: value}
+          end
+        else
+          event_slot[key] = {time_slot => {count: 1, value: value}}
+        end
+      else # new event
+        topic_slot[event] = {key => {time_slot => {count: 1, value: value}}}
       end
-    else # new event
-      @metrics[id][event] = {}
-      @metrics[id][event][hour] = {count: 1, value: value}
     end
   end
+  
 
-  def ids
-    res = run_stmt(:ids_from_summary).to_a
-    if res.empty?
-      res = run_stmt(:ids_from_events).to_a
-    end
-    res
+  ## event reporting
+  ##################
+  
+  def topics
+    run_stmt(:list_topics).to_a
   end
 
-  def events(id)
-    res = run_stmt(:events_from_summary, id).to_a
-    if res.empty?
-      res = run_stmt(:events_from_events, id).to_a
-    end
-    res
+  def event_names(resolution, topic)
+    run_stmt(:list_event_names, resolution, topic).to_a
   end
 
-  def event(id, name)
-    run_stmt(:event_data, id, name).to_a
+  def keys(resolution, topic, event_name)
+    run_stmt(:list_event_keys, resolution, topic, event_name).to_a
   end
+
+  def event_data(resolution, topic, event_name, key)
+    run_stmt(:list_events_by_key, resolution, topic, event_name, key).to_a
+  end
+  
+  ## summarize data
+  #################  
+
+  def summarize
+    run_stmt(:summarize_events, RESOLUTIONS[:hour], "hour", "minute") 
+    run_stmt(:summarize_events, RESOLUTIONS[:day], "day", "hour") 
+    run_stmt(:summarize_events, RESOLUTIONS[:week], "week", "day")
+    run_stmt(:delete_events, "minute", RESOLUTIONS[:hour]*1) 
+    run_stmt(:delete_events, "hour", RESOLUTIONS[:day]*1) 
+    run_stmt(:delete_events, "day", RESOLUTIONS[:week]*1) 
+  end
+
+  ## background stuff
+  ###################
 
   private
 
@@ -84,86 +119,97 @@ class Litemetric
     @metrics = {}
     @registered = {}
     @flusher = create_flusher
+    @summarizer = create_summarizer
+    @mutex = Litesupport::Mutex.new
   end
 
-  def current_hour
-    (Time.now.to_i / 3600) * 3600
+  def current_time_slot
+    (Time.now.to_i / 300) * 300 # every 5 minutes 
   end
   
   def flush
     to_delete = []
     @conn.acquire do |conn|
       conn.transaction(:immediate) do
-        @metrics.each_pair do |id, event_hash|
-          event_hash.each_pair do |event, hour_hash|
-            hour_hash.each_pair do |hour, data|
-              conn.stmts[:upsert].execute!(id, event.to_s, hour, data[:count], data[:value]) if data 
-              hour_hash[hour] = nil #{count: 0, value: nil}
-              to_delete << [id, event, hour]
+        @metrics.each_pair do |topic, event_hash|
+          event_hash.each_pair do |event, key_hash|
+            key_hash.each_pair do |key, time_hash|
+              time_hash.each_pair do |time, data|
+                conn.stmts[:capture_event].execute!(topic, event.to_s, key, time, data[:count], data[:value]) if data 
+                time_hash[time] = nil 
+                to_delete << [topic, event, key, time]
+              end
             end      
           end      
         end
       end
     end
     to_delete.each do |r| 
-      @metrics[r[0]][r[1]].delete(r[2])
+      @metrics[r[0]][r[1]][r[2]].delete(r[3])
+      @metrics[r[0]][r[1]].delete(r[2]) if @metrics[r[0]][r[1]][r[2]].empty? 
       @metrics[r[0]].delete(r[1]) if @metrics[r[0]][r[1]].empty? 
     end
-  end
+  end  
      
   def create_connection
     conn = super
-    conn.wal_autocheckpoint = 10000 
-    conn.execute("CREATE TABLE IF NOT EXISTS events(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of hour')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
-    conn.execute("CREATE TABLE IF NOT EXISTS events_summary(id TEXT NOT NULL, name TEXT NOT NULL, count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, value INTEGER, created_at INTEGER DEFAULT(strftime('%s', 'now', 'start of day')) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(id, name, created_at) ) WITHOUT ROWID")
-    conn.stmts[:report] = conn.prepare("SELECT * FROM events WHERE id = $1 AND name = $2 ORDER BY created_at ASC")
-    conn.stmts[:ids_from_summary] = conn.prepare("SELECT id, sum(count) AS count FROM events_summary WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
-    conn.stmts[:ids_from_events] = conn.prepare("SELECT id, sum(count) AS count FROM events WHERE created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id ORDER BY count")
-    conn.stmts[:events_from_summary] = conn.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events_summary WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
-    conn.stmts[:events_from_events] = conn.prepare("SELECT name, sum(count) AS count, sum(value) AS sum FROM events WHERE id = $1 AND created_at >= unixepoch('now', 'start of day', '-7 days') GROUP BY id, name ORDER BY count DESC")
-    conn.stmts[:event_data] = conn.prepare("SELECT count, value, created_at FROM events WHERE id = $1 AND name = $2 AND created_at >= unixepoch('now', 'start of day', '-7 days') ORDER BY created_at")
-    conn.stmts[:upsert] = conn.prepare("INSERT INTO events(id, name, created_at, count, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT(id, name, created_at) DO UPDATE SET count = count + EXCLUDED.count, value = coalesce(EXCLUDED.value, value, coalesce(value, EXCLUDED.value, value + EXCLUDED.value))")
-    conn.stmts[:summarize] = conn.prepare("INSERT INTO events_summary(id, name, created_at, count, value) SELECT id, name, unixepoch(created_at, 'unixepoch', 'start of day') as day, sum(count), sum(value) FROM events WHERE created_at > (SELECT max(created_at) from events_summary) AND created_at < unixepoch('now', 'start of day') GROUP BY id, name, day")
-    conn.stmts[:purge_events] = conn.prepare("DELETE FROM events WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
-    conn.stmts[:purge_summary] = conn.prepare("DELETE FROM events_summary WHERE created_at < unixepoch('now', 'start of day', '-1 year')")
+    conn.wal_autocheckpoint = 10000
+    sql = YAML.load_file("#{__dir__}/litemetric.sql.yml")
+    version = sql["version"].to_f
+    sql["schema"].each { |k, v| conn.execute(v) }
+    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
   end
   
   def create_flusher
     Litesupport.spawn do
       while @running do
-        flush
         sleep @options[:flush_interval]
+        @mutex.synchronize do
+          flush
+        end
       end      
-    end
+    end 
+  end
+  
+  def create_summarizer
+    Litesupport.spawn do
+      while @running do
+        sleep @options[:summarize_interval]
+        summarize
+      end      
+    end 
   end
        
 end
+
+## Measurable Module
+####################
 
 class Litemetric
   module Measurable
             
     def collect_metrics
-      @metric = Litemetric.instance
-      @metric.register(metrics_identifier)
+      @litemetric = Litemetric.instance
+      @litemetric.register(metrics_identifier)
     end
 
     def metrics_identifier
       self.class.name # override in included classes
     end
 
-    def capture(event, value=nil)
-      return unless @metric
-      @metric.capture(metrics_identifier, event, value)
+    def capture(event, key, value=nil)
+      return unless @litemetric
+      @litemetric.capture(metrics_identifier, event, key, value)
     end
     
-    def measure(event)
-      return yield unless @metric
+    def measure(event, key)
+      return yield unless @litemetric
       t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC) 
       res = yield
       t2 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      value = ( t2 - t1 ) * 1000 # capture time in milliseconds
-      capture(event, value)
+      value = (( t2 - t1 ) * 1000).round # capture time in milliseconds
+      capture(event, key, value)
       res  
     end    
     

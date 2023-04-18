@@ -33,6 +33,7 @@ class Litecache
 
   DEFAULT_OPTIONS = {
     path: "./cache.db",
+    config_path: "./litecache.yml",
     sync: 0,
     expiry: 60 * 60 * 24 * 30, # one month 
     size: 128 * 1024 * 1024, #128MB 
@@ -216,11 +217,7 @@ class Litecache
     super # create connection
     @bgthread = spawn_worker # create backgroud pruner thread
   end
-  
-  def metrics_identifier
-    @identifier ||= "#{self.class.name}" # "#{@options[:path]}"
-  end
-  
+    
   def spawn_worker
     Litesupport.spawn do
       while @running

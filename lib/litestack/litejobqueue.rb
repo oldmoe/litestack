@@ -131,10 +131,6 @@ class Litejobqueue < Litequeue
   
   private
 
-  def metrics_identifier
-    @identifier ||= "#{self.class.name}:#{@options[:path]}"
-  end
-
   def exit_callback
     @running = false # stop all workers
     puts "--- Litejob detected an exit, cleaning up"
@@ -148,23 +144,7 @@ class Litejobqueue < Litequeue
   end
 
   def setup
-    #@queue = Litequeue.new(@options) # create a new queue object
     super
-    # create logger
-    if @options[:logger].respond_to? :info
-      @logger = @options[:logger] 
-    elsif @options[:logger] == 'STDOUT'
-      @logger = Logger.new(STDOUT)      
-    elsif @options[:logger] == 'STDERR'
-      @logger = Logger.new(STDERR)      
-    elsif @options[:logger].nil?
-      @logger = Logger.new(IO::NULL)      
-    elsif @options[:logger].is_a? String 
-      @logger = Logger.new(@options[:logger])
-    else
-      @logger = Logger.new(IO::NULL)      
-    end
-    #@running = true
     @jobs_in_flight = 0
     @workers = @options[:workers].times.collect{ create_worker }    
     @gc = create_garbage_collector

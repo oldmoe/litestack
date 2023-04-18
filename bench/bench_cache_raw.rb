@@ -8,7 +8,7 @@ require 'async/scheduler'
 Fiber.set_scheduler Async::Scheduler.new
 Fiber.scheduler.run
 
-require_relative '../lib/litestack'
+require_relative '../lib/litestack/litecache'
 #require 'litestack'
 
 cache = Litecache.new({path: '../db/cache.db'}) # default settings
@@ -25,12 +25,22 @@ count.times { keys << random_str(10) }
   end
   
   random_keys = keys.shuffle
+  
+  GC.compact
+  
   puts "Benchmarks for values of size #{size} bytes"
   puts "=========================================================="
   puts "== Writes =="
   bench("litecache writes", count) do |i|
     cache.set(keys[i], values[i])
   end
+
+  #bench("file writes", count) do |i|
+  #  f = File.open("../files/#{keys[i]}.data", 'w+')
+  #  f.write(values[i])
+  #  f.close
+  #end
+  
 
   bench("Redis writes", count) do |i|
     redis.set(keys[i], values[i])
@@ -41,12 +51,18 @@ count.times { keys << random_str(10) }
     cache.get(random_keys[i])
   end
 
+  #bench("file reads", count) do |i|
+  #  data = File.read("../files/#{keys[i]}.data")
+  #end
+
   bench("Redis reads", count) do |i|
     redis.get(random_keys[i])
   end
   puts "=========================================================="
 
   values = []
+  
+  
 end
 
 
@@ -64,5 +80,5 @@ end
 cache.clear
 redis.flushdb
 
-sleep
+#sleep
 

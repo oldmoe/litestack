@@ -1,3 +1,5 @@
+# frozen_stringe_literal: true
+
 require 'sqlite3'
 require 'logger'
 require 'oj'
@@ -226,9 +228,18 @@ module Litesupport
     
     def configure(options = {})
       # detect environment (production, development, etc.)
+      env = "development"
+      if defined? Rails
+        env = ENV["RAILS_ENV"]
+      elsif ENV["RACK_ENV"]
+        env = ENV["RACK_ENV"]  
+      elsif ENV["APP_ENV"]
+        env = ENV["RACK_ENV"]
+      end      
       defaults = self.class::DEFAULT_OPTIONS rescue {}
       @options = defaults.merge(options)
       config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
+      config = config[env] if config[env] # if there is a config for the current environment defined then use it, otherwise use the top level declaration
       config.keys.each do |k| # symbolize keys
         config[k.to_sym] = config[k]
         config.delete k
@@ -239,7 +250,17 @@ module Litesupport
     
     def setup
       @conn = create_pooled_connection
+      @logger = create_logger
       @running = true
+    end
+    
+    def create_logger
+      @options[:logger] = nil unless @options[:logger]
+      return @options[:logger] if @options[:logger].respond_to? :info
+      return Logger.new(STDOUT) if @options[:logger] == 'STDOUT'
+      return Logger.new(STDERR) if @options[:logger] == 'STDERR'
+      return Logger.new(@options[:logger]) if @options[:logger].is_a? String 
+      return Logger.new(IO::NULL)         
     end
     
     def exit_callback
@@ -261,7 +282,7 @@ module Litesupport
     # common db object options
     def create_connection
       conn = SQLite3::Database.new(@options[:path])
-      conn.busy_handler{ switch || sleep(0.0001) }
+      conn.busy_handler{ Litesupport.switch || sleep(0.0001) }
       conn.journal_mode = "WAL"
       conn.synchronous = @options[:sync] || 1
       conn.mmap_size = @options[:mmap_size] || 0

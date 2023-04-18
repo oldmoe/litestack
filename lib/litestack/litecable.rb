@@ -9,7 +9,7 @@ require 'oj'
 
 class Litecable
 
-  include Litesupport::Liteconncetion
+  include Litesupport::Liteconnection
   include Litemetric::Measurable
 
 
@@ -57,11 +57,7 @@ class Litecable
   end
 
   private 
-  
-  def metrics_identifier
-    @identifier ||= "#{self.class.name}-#{Base64.endoce64(@options[:path])}"
-  end
-  
+    
   def setup
     super # create connection
     @pid = Process.pid

@@ -1,6 +1,12 @@
 require 'minitest/autorun'
 require '../lib/litestack/litejob.rb'
 
+class Litejobqueue
+  def at_exit
+    # do nothing
+  end
+end
+
 class MyJob
 
   @@attempts = {}
@@ -20,7 +26,7 @@ class TestQueue < Minitest::Test
   def test_push
     @jobqueue.push(MyJob.name, [Time.now.to_i], 0, 'test')
     assert @jobqueue.count != 0
-    sleep 0.3
+    sleep 0.1
     assert @jobqueue.count == 0    
   end
 

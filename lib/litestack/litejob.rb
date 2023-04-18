@@ -43,7 +43,7 @@ module Litejob
   private
   def self.included(klass)
     klass.extend(ClassMethods)
-    #klass.get_jobqueue
+    klass.get_jobqueue
   end
   
   module ClassMethods
@@ -80,9 +80,13 @@ module Litejob
     def queue=(queue_name)
       @@queue = queue_name.to_s
     end
+
+    def options
+      @options ||= self::DEFAULT_OPTIONS rescue {}
+    end
           
     def get_jobqueue
-      Litejobqueue.jobqueue
+      Litejobqueue.jobqueue(options)
     end
   end
     

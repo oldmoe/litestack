@@ -1,0 +1,70 @@
+version: 1.0
+schema:
+  create_topics: >
+    CREATE TABLE IF NOT EXISTS topics(
+      name text PRIMARY KEY NOT NULL
+    ) WITHOUT ROWID; 
+  create_events: >
+    CREATE TABLE IF NOT EXISTS events(
+      topic text NOT NULL references topics(name) ON DELETE CASCADE, 
+      name TEXT NOT NULL, 
+      key TEXT NOT NULL, 
+      count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, 
+      value INTEGER, 
+      minimum INTEGER, 
+      maximum INTEGER, 
+      created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL, 
+      resolution TEXT DEFAULT('minute') NOT NULL, 
+      PRIMARY KEY(resolution, topic, name, key, created_at)
+    ) WITHOUT ROWID;
+  
+  create_index_on_event: CREATE INDEX IF NOT EXISTS events_by_resolution ON events(resolution, created_at);
+
+stmts:
+  # register topic
+  register_topic: INSERT INTO topics VALUES (?) ON CONFLICT DO NOTHING;
+
+  capture_event: >
+    INSERT INTO events(topic, name, key, created_at, count, value, minimum, maximum) VALUES ($1, $2, $3, $4, $5, $6, $6, $6) 
+    ON CONFLICT DO 
+    UPDATE SET count = count + EXCLUDED.count, value = value + EXCLUDED.value, minimum = min(minimum, EXCLUDED.minimum), maximum = max(maximum, EXCLUDED.maximum) 
+  
+  # requires an index on (resolution, created_at)
+  summarize_events: >
+    INSERT INTO events (topic, name, key, count, value, minimum, maximum, created_at, resolution ) SELECT 
+      topic, 
+      name, 
+      key, 
+      sum(count) as count, 
+      sum(value) as value, 
+      min(minimum) as minimum, 
+      max(maximum) as maximum, 
+      (created_at/$1)*$1 as created,  
+      $2 
+    FROM events WHERE resolution = $3 AND created_at < (unixepoch()/$1)*$1 GROUP BY topic, name, key, created ON CONFLICT DO UPDATE 
+    SET count = count + EXCLUDED.count, value = value + EXCLUDED.value, minimum = min(minimum, EXCLUDED.minimum), maximum = max(maximum, EXCLUDED.maximum); 
+
+  # requires an index on (resolution, created_at)
+  delete_events: DELETE FROM events WHERE resolution = $3 AND created_at < (unixepoch() - $4);
+
+  # select topics from the topics table
+  list_topics: SELECT name FROM topics;
+
+  # requires an index on (resolution, topic, name)
+  list_event_names: >
+    SELECT name, sum(count) as count, count(distinct name) as name, sum(value) as value, min(minimum), max(maximum) 
+    FROM events WHERE resolution = ? AND topic = ? GROUP BY name ORDER BY count;
+
+  # requires an index on (resolution, topic, name, key)
+  list_event_keys: >
+    SELECT key, sum(count) as count, sum(value) as value, min(minimum), max(maximum)
+    FROM events WHERE resolution = ? AND topic = ? AND name = ? GROUP BY key ORDER BY count;
+  
+  # requires an index on (resolution, topic, name, key, created_at)
+  list_events_by_key: > 
+    SELECT * FROM events WHERE resolution = $1 AND topic = $2 AND name = $3 AND key = $4 ORDER BY created_at ASC;    
+    
+  # requires an index on (resolution, topic, name, key, created_at)
+  list_all_events: >
+    SELECT * FROM events WHERE resolution = ? AND topic = ? ORDER BY name, key, created_at ASC;
+ 
