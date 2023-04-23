@@ -38,6 +38,7 @@ class TestQueue < Minitest::Test
     @jobqueue.delete(id, 'test')
     assert @jobqueue.count == 0    
   end  
+#=begin
 
   def test_push_with_delay
     assert @jobqueue.count == 0
@@ -66,6 +67,6 @@ class TestQueue < Minitest::Test
     assert @jobqueue.count != 0
     @jobqueue.clear    
   end
-
+#=end
 end
 

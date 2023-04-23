@@ -17,6 +17,7 @@ module ActionCable
         mmap_size: 16 * 1024 * 1024, # 16MB of memory hold hot messages
         expire_after: 10, # remove messages older than 10 seconds
         listen_interval: 0.005, # check new messages every 5 milliseconds
+        metrics: false
       }
 
       def initialize(server, logger=nil)

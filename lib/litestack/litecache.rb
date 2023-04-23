@@ -41,7 +41,7 @@ class Litecache
     min_size: 32 * 1024, #32MB
     return_full_record: false, #only return the payload
     sleep_interval: 1, # 1 second
-    metrics: true
+    metrics: false
   }
   
   # creates a new instance of Litecache
@@ -97,7 +97,7 @@ class Litecache
     @conn.acquire do |cache|
       begin
         cache.stmts[:setter].execute!(key, value, expires_in)
-        capture(:write)
+        capture(:write, key)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -118,7 +118,7 @@ class Litecache
           cache.stmts[:inserter].execute!(key, value, expires_in)
           changes = cache.changes
         end
-        capture(:write)
+        capture(:write, key)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -134,10 +134,10 @@ class Litecache
     key = key.to_s
     if record = @conn.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
       @last_visited[key] = true
-      capture(:hit)
+      capture(:hit, key)
       return record[1]
     end
-    capture(:miss)
+    capture(:miss, key)
     nil
   end
   

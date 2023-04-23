@@ -42,7 +42,7 @@ class Litejobqueue < Litequeue
     gc_sleep_interval: 7200, 
     logger: 'STDOUT',
     sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 1.0, 2.0],
-    metrics: true 
+    metrics: false 
   }
   
   @@queue = nil
@@ -69,6 +69,7 @@ class Litejobqueue < Litequeue
   #   
   def initialize(options = {})
 
+    @queues = [] # a place holder to allow workers to process
     super(options)
     
     # group and order queues according to their priority
@@ -77,9 +78,7 @@ class Litejobqueue < Litequeue
       pgroups[q[1]] = [] unless pgroups[q[1]]
       pgroups[q[1]] << [q[0], q[2] == "spawn"]
     end
-
     @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
-  
   end
   
   # push a job to the queue
@@ -93,7 +92,7 @@ class Litejobqueue < Litequeue
   def push(jobclass, params, delay=0, queue=nil)
     payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue})
     res = _push(payload, delay, queue)
-    capture(:enqueue)
+    capture(:enqueue, queue)
     @logger.info("[litejob]:[ENQ] id: #{res} job: #{jobclass}")
     res
   end
@@ -116,15 +115,15 @@ class Litejobqueue < Litequeue
   
   # delete all jobs in a certain named queue
   # or delete all jobs if the queue name is nil
-  def clear(queue=nil)
-    @queue.clear(queue)
-  end
+  #def clear(queue=nil)
+    #@queue.clear(queue)
+  #end
   
   # stop the queue object (does not delete the jobs in the queue)
   # specifically useful for testing
   def stop
     @running = false
-    @@queue = nil
+    #@@queue = nil
     close
   end
   
@@ -179,12 +178,14 @@ class Litejobqueue < Litequeue
       worker_sleep_index = 0
       while @running do
         processed = 0
+        #puts 1
+        #puts @queues
         @queues.each do |level| # iterate through the levels
           level[1].each do |q| # iterate through the queues in the level
             index = 0
             max = level[0]
             while index < max && payload = pop(q[0], 1) # fearlessly use the same queue object 
-              capture(:dequeue)
+              capture(:dequeue, q[0])
               processed += 1
               index += 1
               begin
@@ -197,16 +198,16 @@ class Litejobqueue < Litequeue
                 schedule(q[1]) do # run the job in a new context
                   job_started #(Litesupport.current_context)
                   begin
-                    measure(:perform){ klass.new.perform(*job[:params]) }
+                    measure(:perform, q[0]){ klass.new.perform(*job[:params]) }
                     @logger.info "[litejob]:[END] job:#{job}" 
                   rescue Exception => e
                     # we can retry the failed job now
-                    capture(:fail)
+                    capture(:fail, q[0])
                     if job[:retries] == 0
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
                       _push(Oj.dump(job), @options[:dead_job_retention], '_dead')
                     else
-                      capture(:retry)
+                      capture(:retry, q[0])
                       retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job[:retries]) * @options[:retry_delay] 
                       job[:retries] -=  1
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retrying in #{retry_delay}"

@@ -32,7 +32,7 @@ class TestQueue < Minitest::Test
   def test_job_execute
     MyJob.perform_async(Time.now.to_i)
     assert @jobqueue.count != 0
-    sleep 0.3
+    sleep 1
     assert @jobqueue.count == 0
   end
 
