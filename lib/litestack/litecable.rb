@@ -17,16 +17,43 @@ class Litecable
     config_path: "./litecable.yml",
     path: "./cable.db",
     sync: 0,
-    mmap_size: 16 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
+    mmap_size: 16 * 1024 * 1024, # 16MB
     expire_after: 5, # remove messages older than 5 seconds
-    listen_interval: 0.01, # check new messages every 10 milliseconds
+    listen_interval: 0.05, # check new messages every 50 milliseconds
     metrics: false
   }
   
   def initialize(options = {})  
     init(options)
+    @messages = []
+  end
+  
+  # broadcast a message to a specific channel
+  def broadcast(channel, payload=nil)
+    # group meesages and only do broadcast every 10 ms
+    #run_stmt(:publish, channel.to_s, Oj.dump(payload), @pid)
+    # but broadcast locally normally
+    @mutex.synchronize{ @messages << [channel.to_s, Oj.dump(payload)] }
+    local_broadcast(channel, payload) 
+  end
+  
+  # subscribe to a channel, optionally providing a success callback proc
+  def subscribe(channel, subscriber, success_callback = nil)
+    @mutex.synchronize do
+      @subscribers[channel] = {} unless @subscribers[channel]
+      @subscribers[channel][subscriber] = true
+    end
+  end
+  
+  # unsubscribe from a channel
+  def unsubscribe(channel, subscriber)
+    @mutex.synchronize do
+      @subscribers[channel].delete(subscriber) rescue nil
+    end
   end
 
+  private 
+    
   def local_broadcast(channel, payload=nil)
     return unless @subscribers[channel]
     subscribers = []
@@ -36,28 +63,8 @@ class Litecable
     subscribers.each do |subscriber|
       subscriber.call(payload)      
     end
-  end
-  
-  def broadcast(channel, payload=nil)
-    run_stmt(:publish, channel.to_s, Oj.dump(payload), @pid)
-    local_broadcast(channel, payload) 
-  end
-  
-  def subscribe(channel, subscriber, success_callback = nil)
-    @mutex.synchronize do
-      @subscribers[channel] = {} unless @subscribers[channel]
-      @subscribers[channel][subscriber] = true
-    end
-  end
-  
-  def unsubscribe(channel, subscriber)
-    @mutex.synchronize do
-      @subscribers[channel].delete(subscriber) rescue nil
-    end
-  end
-
-  private 
-    
+  end  
+      
   def setup
     super # create connection
     @pid = Process.pid
@@ -66,7 +73,25 @@ class Litecable
     @running = true
     @listener = create_listener
     @pruner = create_pruner
+    @broadcaster = create_broadcaster
     @last_fetched_id = nil
+  end
+
+  def create_broadcaster
+    Litesupport.spawn do
+      while @running do
+        @mutex.synchronize do
+          if @messages.length > 0
+            run_sql("BEGIN IMMEDIATE")
+            while msg = @messages.shift
+              run_stmt(:publish, msg[0], msg[1], @pid)
+            end
+            run_sql("END")
+          end
+        end
+        sleep 0.02
+      end      
+    end
   end
 
   def create_pruner
@@ -81,7 +106,7 @@ class Litecable
   def create_listener
     Litesupport.spawn do
       while @running do
-        @last_fetched_id ||= (run_sql("SELECT max(id) FROM messages")[0][0] || 0)
+        @last_fetched_id ||= (run_stmt(:last_id)[0][0] || 0)
         @logger.info @last_fetched_id
         run_stmt(:fetch, @last_fetched_id, @pid).to_a.each do |msg|
           @logger.info "RECEIVED #{msg}"
@@ -96,13 +121,17 @@ class Litecable
   def create_connection
     conn = super
     conn.wal_autocheckpoint = 10000 
-    conn.execute("CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY autoincrement, channel TEXT NOT NULL, value TEXT NOT NULL, pid INTEGER, created_at INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT(unixepoch()))")
-    conn.execute("CREATE INDEX IF NOT EXISTS messages_by_date ON messages(created_at)")
-    conn.stmts[:publish] = conn.prepare("INSERT INTO messages(channel, value, pid) VALUES ($1, $2, $3)")
-    conn.stmts[:last_id] = conn.prepare("SELECT max(id) FROM messages")
-    conn.stmts[:fetch] = conn.prepare("SELECT id, channel, value FROM messages WHERE id > $1 and pid != $2")
-    conn.stmts[:prune] = conn.prepare("DELETE FROM messages WHERE created_at < (unixepoch() - $1)")
-    conn.stmts[:check_prune] = conn.prepare("SELECT count(*) FROM messages WHERE created_at < (unixepoch() - $1)")
+    sql = YAML.load_file("#{__dir__}/litecable.sql.yml")
+    version = conn.get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj| 
+      if v > version
+        conn.transaction do 
+          obj.each{|k, s| conn.execute(s)}
+          conn.user_version = v
+        end
+      end
+    end 
+    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
   end
   

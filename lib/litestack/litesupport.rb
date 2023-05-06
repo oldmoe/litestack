@@ -282,7 +282,7 @@ module Litesupport
     # common db object options
     def create_connection
       conn = SQLite3::Database.new(@options[:path])
-      conn.busy_handler{ Litesupport.switch || sleep(0.0001) }
+      conn.busy_handler{ Litesupport.switch || sleep(rand * 0.002) }
       conn.journal_mode = "WAL"
       conn.synchronous = @options[:sync] || 1
       conn.mmap_size = @options[:mmap_size] || 0

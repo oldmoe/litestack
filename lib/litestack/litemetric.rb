@@ -155,8 +155,15 @@ class Litemetric
     conn = super
     conn.wal_autocheckpoint = 10000
     sql = YAML.load_file("#{__dir__}/litemetric.sql.yml")
-    version = sql["version"].to_f
-    sql["schema"].each { |k, v| conn.execute(v) }
+    version = conn.get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj| 
+      if v > version
+        conn.transaction do 
+          obj.each{|k, s| conn.execute(s)}
+          conn.user_version = v
+        end
+      end
+    end 
     sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
   end

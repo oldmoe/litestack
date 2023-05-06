@@ -3,6 +3,8 @@
 # all components should require the support module
 require_relative 'litesupport'
 
+require 'securerandom'
+
 ##
 #Litequeue is a simple queueing system for Ruby applications that allows you to push and pop values from a queue. It provides a straightforward API for creating and managing named queues, and for adding and removing values from those queues. Additionally, it offers options for scheduling pops at a certain time in the future, which can be useful for delaying processing until a later time.
 #
@@ -46,8 +48,9 @@ class Litequeue
     # also bring back the synchronize block, to prevent
     # a race condition if a thread hits the busy handler
     # before the current thread proceeds after a backoff
-    result = run_stmt(:push, queue, delay, value)[0]
-    return result[0] if result
+    id = SecureRandom.uuid # this is somehow expensive, can we improve?
+    run_stmt(:push, id, queue, delay, value)
+    return id
   end
   
   alias_method :"<<", :push
@@ -65,19 +68,18 @@ class Litequeue
   #   id = queue.push("somevalue")
   #   queue.delete(id) # => "somevalue"
   #   queue.pop # => nil
-  def delete(id, queue='default')
-    fire_at, id = id.split("-")
-    result = run_stmt(:delete, queue, fire_at.to_i, id)[0]  
+  def delete(id)
+    result = run_stmt(:delete, id)[0]  
   end
   
   # deletes all the entries in all queues, or if a queue name is given, deletes all entries in that specific queue
   def clear(queue=nil)
-    run_sql("DELETE FROM _ul_queue_ WHERE iif(?, queue = ?,  1)", queue)
+    run_sql("DELETE FROM queue WHERE iif(?, name = ?,  1)", queue)
   end
 
   # returns a count of entries in all queues, or if a queue name is given, reutrns the count of entries in that queue
   def count(queue=nil)
-    run_sql("SELECT count(*) FROM _ul_queue_ WHERE iif(?, queue = ?, 1)", queue)[0][0]
+    run_sql("SELECT count(*) FROM queue WHERE iif(?, name = ?, 1)", queue)[0][0]
   end
   
   # return the size of the queue file on disk
@@ -86,7 +88,7 @@ class Litequeue
   end
   
   def queues_info
-    run_sql("SELECT queue, count(*) AS count, avg(unixepoch() - created_at), min(unixepoch() - created_at), max(unixepoch() - created_at) FROM _ul_queue_ GROUP BY queue ORDER BY count DESC ")
+    run_sql("SELECT name, count(*) AS count, avg(unixepoch() - created_at), min(unixepoch() - created_at), max(unixepoch() - created_at) FROM queue GROUP BY name ORDER BY count DESC ")
   end
   
   def info
@@ -101,14 +103,18 @@ class Litequeue
       
   def create_connection
     conn = super
-    #db = Litesupport.create_db(@options[:path])
-    #db.synchronous = @options[:sync]
     conn.wal_autocheckpoint = 10000 
-    #conn.mmap_size = @options[:mmap_size]
-    conn.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(CAST((strftime('%f') * 1000) AS INTEGER) || hex(randomblob(8))) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
-    conn.stmts[:push] = conn.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
-    conn.stmts[:pop] = conn.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) IN (SELECT queue, fire_at, id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) ORDER BY fire_at ASC LIMIT ifnull($2, 1)) RETURNING fire_at || '-' || id, value")
-    conn.stmts[:delete] = conn.prepare("DELETE FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at = $2 AND id = $3 RETURNING value")
+    sql = YAML.load_file("#{__dir__}/litequeue.sql.yml")
+    version = conn.get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj| 
+      if v > version
+        conn.transaction do 
+          obj.each{|k, s| conn.execute(s)}
+          conn.user_version = v
+        end
+      end
+    end 
+    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
   end
 

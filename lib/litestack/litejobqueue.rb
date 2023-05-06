@@ -105,9 +105,9 @@ class Litejobqueue < Litequeue
   #   end
   #   jobqueue = Litejobqueue.new
   #   id = jobqueue.push(EasyJob, params, 10) # queue for processing in 10 seconds
-  #   jobqueue.delete(id, 'default')    
-  def delete(id, queue=nil)
-    job = super(id, queue)
+  #   jobqueue.delete(id)    
+  def delete(id)
+    job = super(id)
     @logger.info("[litejob]:[DEL] job: #{job}")
     job = Oj.load(job[0]) if job
     job
@@ -178,8 +178,6 @@ class Litejobqueue < Litequeue
       worker_sleep_index = 0
       while @running do
         processed = 0
-        #puts 1
-        #puts @queues
         @queues.each do |level| # iterate through the levels
           level[1].each do |q| # iterate through the queues in the level
             index = 0
@@ -205,13 +203,15 @@ class Litejobqueue < Litequeue
                     capture(:fail, q[0])
                     if job[:retries] == 0
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
-                      _push(Oj.dump(job), @options[:dead_job_retention], '_dead')
+                      #_push(Oj.dump(job), @options[:dead_job_retention], '_dead')
+                      run_stmt(:push, id, '_dead', @options[:dead_job_retention], Oj.dump(job))
                     else
                       capture(:retry, q[0])
                       retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job[:retries]) * @options[:retry_delay] 
                       job[:retries] -=  1
                       @logger.error "[litejob]:[ERR] job: #{job} failed with #{e}:#{e.message}, retrying in #{retry_delay}"
-                      _push(Oj.dump(job), retry_delay, q[0])
+                      #_push(Oj.dump(job), retry_delay, q[0])
+                      run_stmt(:push, id, q[0], retry_delay, Oj.dump(job))
                       @logger.info "[litejob]:[ENQ] job: #{job} enqueued"
                     end
                   end

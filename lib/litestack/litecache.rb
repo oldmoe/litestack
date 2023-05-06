@@ -38,7 +38,7 @@ class Litecache
     expiry: 60 * 60 * 24 * 30, # one month 
     size: 128 * 1024 * 1024, #128MB 
     mmap_size: 128 * 1024 * 1024, #128MB
-    min_size: 32 * 1024, #32MB
+    min_size: 8  * 1024 * 1024, #16MB
     return_full_record: false, #only return the payload
     sleep_interval: 1, # 1 second
     metrics: false
@@ -63,30 +63,9 @@ class Litecache
   #   litecache.close # optional, you can safely kill the process
   
   def initialize(options = {})
-
-    @sql = {
-      :pruner => "DELETE FROM data WHERE expires_in <= $1",
-      :extra_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))",
-      :limited_pruner => "DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)",
-      :toucher => "UPDATE data SET  last_used = unixepoch('now') WHERE id = $1",
-      :setter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in",
-      :inserter => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')",
-      :finder => "SELECT id FROM data WHERE id = $1",
-      :getter => "SELECT id, value, expires_in FROM data WHERE id = $1",
-      :deleter => "delete FROM data WHERE id = $1 returning value",
-      :incrementer => "INSERT into data (id, value, expires_in, last_used) VALUES   ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in",
-      :counter => "SELECT count(*) FROM data",
-      :sizer => "SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count" 
-    }
-  
-    init(options)
-    
-    #@options = DEFAULT_OPTIONS.merge(options)
-    @options[:size] = @options[:min_size] if @options[:size] < @options[:min_size]
-        
-    #@cache = Litesupport::Pool.new(1){create_db}
+    options[:size] = DEFAULT_OPTIONS[:min_size] if options[:size] && options[:size] < DEFAULT_OPTIONS[:min_size]        
+    init(options)    
     @last_visited = {}
-    #@running = true
     collect_metrics if @options[:metrics]
   end
   
@@ -114,7 +93,7 @@ class Litecache
     changes = 0
     @conn.acquire do |cache|
       begin
-        transaction(:immediate) do
+        cache.transaction(:immediate) do
           cache.stmts[:inserter].execute!(key, value, expires_in)
           changes = cache.changes
         end
@@ -144,7 +123,7 @@ class Litecache
   # delete a key, value pair from the cache
   def delete(key)
     changes = 0
-    @conn.aquire do |cache|
+    @conn.acquire do |cache|
       cache.stmts[:deleter].execute!(key)
       changes = cache.changes
     end
@@ -248,10 +227,17 @@ class Litecache
     conn.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
     conn.max_page_count = (@options[:size] / conn.page_size).to_i
     conn.case_sensitive_like = true
-    conn.execute("CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)")
-    conn.execute("CREATE index if not exists expiry_index on data (expires_in)")
-    conn.execute("CREATE index if not exists last_used_index on data (last_used)")
-    @sql.each_pair{|k, v| conn.stmts[k] = conn.prepare(v)}
+    sql = YAML.load_file("#{__dir__}/litecache.sql.yml")
+    version = conn.get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj| 
+      if v > version
+        conn.transaction do 
+          obj.each{|k, s| conn.execute(s)}
+          conn.user_version = v
+        end
+      end
+    end 
+    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
   end
   
