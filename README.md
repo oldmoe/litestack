@@ -160,6 +160,8 @@ queues:
 
 The queues need to include a name and a priority (a number between 1 and 10) and can also optionally add the token "spawn", which means every job will run it its own concurrency context (thread or fiber)
 
+### LiteCable
+
 #### ActionCable
 
 This is a drop in replacement for adapter for actioncable that can replace `async` and other production servers (e.g. PostgreSQL, Redis)
