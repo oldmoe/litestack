@@ -164,7 +164,7 @@ The queues need to include a name and a priority (a number between 1 and 10) and
 
 This is a drop in replacement for adapter for actioncable that can replace `async` and other production servers (e.g. PostgreSQL, Redis)
 
-config.yaml
+cable.yaml
 ```yaml
 development:
   adapter: litecable
