@@ -3,7 +3,7 @@
 # all components should require the support module
 require_relative 'litesupport'
 
-require 'securerandom'
+#require 'securerandom'
 
 ##
 #Litequeue is a simple queueing system for Ruby applications that allows you to push and pop values from a queue. It provides a straightforward API for creating and managing named queues, and for adding and removing values from those queues. Additionally, it offers options for scheduling pops at a certain time in the future, which can be useful for delaying processing until a later time.
@@ -48,12 +48,16 @@ class Litequeue
     # also bring back the synchronize block, to prevent
     # a race condition if a thread hits the busy handler
     # before the current thread proceeds after a backoff
-    id = SecureRandom.uuid # this is somehow expensive, can we improve?
-    run_stmt(:push, id, queue, delay, value)
-    return id
+    #id = SecureRandom.uuid # this is somehow expensive, can we improve?
+    run_stmt(:push, queue, delay, value)[0]
+  end
+  
+  def repush(id, value, delay=0, queue='default')
+    run_stmt(:repush, id, queue, delay, value)[0]
   end
   
   alias_method :"<<", :push
+  alias_method :"<<<", :repush
   
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
   def pop(queue='default', limit = 1)
@@ -108,13 +112,20 @@ class Litequeue
     version = conn.get_first_value("PRAGMA user_version")
     sql["schema"].each_pair do |v, obj| 
       if v > version
-        conn.transaction do 
+        conn.transaction(:immediate) do 
           obj.each{|k, s| conn.execute(s)}
           conn.user_version = v
         end
       end
     end 
     sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
+    # check if there is an old database and convert entries to the new format
+    if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1
+      conn.transaction(:immediate) do
+        conn.execute("INSERT INTO queue(fire_at, name, value, created_at) SELECT fire_at, queue, value, created_at FROM _ul_queue_")
+        conn.execute("DROP TABLE _ul_queue_")
+      end
+    end
     conn
   end
 

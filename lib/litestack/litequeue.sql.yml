@@ -2,7 +2,7 @@ schema:
   1:    
     create_table_queue: >  
       CREATE TABLE IF NOT EXISTS queue(
-        id TEXT PRIMARY KEY, 
+        id TEXT PRIMARY KEY DEFAULT(hex(randomblob(32))) NOT NULL ON CONFLICT REPLACE, 
         name TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, 
         fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE,
         value TEXT,
@@ -14,7 +14,9 @@ schema:
 
 stmts:
 
-  push: INSERT INTO queue(id, name, fire_at, value) VALUES ($1, $2, (unixepoch() + $3), $4)
+  push: INSERT INTO queue(id, name, fire_at, value) VALUES (hex(randomblob(32)), $1, (unixepoch() + $2), $3) RETURNING id, name
+  
+  repush: INSERT INTO queue(id, name, fire_at, value) VALUES (?, ?, (unixepoch() + ?), ?) RETURNING name 
 
   pop: >
     DELETE FROM queue 
@@ -28,5 +30,5 @@ stmts:
     ) 
     RETURNING id, value
   
-  delete: DELETE FROM queue WHERE  id = $1 RETURNING value
+  delete: DELETE FROM queue WHERE id = $1 RETURNING value
 
