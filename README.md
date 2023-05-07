@@ -16,12 +16,14 @@ litestack provides integration with popular libraries, including:
 - ActiveRecord
 - ActiveSupport::Cache
 - ActiveJob
+- ActionCable
 
 With litestack you only need to add a single gem to your app which would replace a host of other gems and services, for example, a typical Rails app using litestack will no longer need the following services:
 
 - Database Server (e.g. PostgreSQL, MySQL)
 - Cache Server (e.g. Redis, Memcached)
 - Job Processor (e.g. Sidekiq, Goodjob)
+- Pubsub Server (e.g. Redis, PostgreSQL)
 
 To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
 
@@ -160,11 +162,13 @@ queues:
 
 The queues need to include a name and a priority (a number between 1 and 10) and can also optionally add the token "spawn", which means every job will run it its own concurrency context (thread or fiber)
 
-### LiteCable
+![litecable](https://github.com/oldmoe/litestack/blob/master/assets/litecable_logo_teal.png?raw=true)
 
 #### ActionCable
 
-This is a drop in replacement for adapter for actioncable that can replace `async` and other production servers (e.g. PostgreSQL, Redis)
+This is a drop in replacement adapter for actioncable that replaces `async` and other production adapters (e.g. PostgreSQL, Redis). This adapter is currently only tested in local (inline) mode.
+
+Getting up and running with litecable requires configuring your cable.yaml file under the config/ directory
 
 cable.yaml
 ```yaml
