@@ -1,4 +1,9 @@
+# frozen_stringe_literal: true
+
 require 'sqlite3'
+require 'logger'
+require 'oj'
+require 'yaml'
 
 module Litesupport
 
@@ -90,7 +95,7 @@ module Litesupport
   # common db object options
   def self.create_db(path)
     db = SQLite3::Database.new(path)
-    db.busy_handler{ switch || sleep(0.001) }
+    db.busy_handler{ switch || sleep(0.0001) }
     db.journal_mode = "WAL"
     db.instance_variable_set(:@stmts, {})
     class << db
@@ -167,5 +172,130 @@ module Litesupport
     end
     
   end
+     
+  module ForkListener
+    def self.listeners
+      @listeners ||= []
+    end
+    
+    def self.listen(&block)
+      listeners << block
+    end
+  end
+
+  module Forkable
+      
+    def _fork(*args)
+      ppid = Process.pid
+      result = super
+      if Process.pid != ppid && [:threaded, :iodine].include?(Litesupport.environment)
+        ForkListener.listeners.each{|l| l.call }
+      end
+      result
+    end
+    
+  end
   
+  module Liteconnection
+    
+    include Forkable
+
+    # close, setup, run_stmt and run_sql assume a single connection was created
+    def close
+      @running = false
+      @conn.acquire do |q| 
+        q.stmts.each_pair {|k, v| q.stmts[k].close }
+        q.close
+      end
+    end
+
+    private # all methods are private
+        
+    def init(options = {})
+      #c configure the object, loading options from the appropriate location
+      configure(options)    
+      # setup connections and background threads
+      setup      
+      # handle process exiting
+      at_exit do 
+        exit_callback
+      end
+      # handle forking (restart connections and background threads)
+      Litesupport::ForkListener.listen do
+        setup
+      end
+    end  
+    
+    def configure(options = {})
+      # detect environment (production, development, etc.)
+      env = "development"
+      if defined? Rails
+        env = ENV["RAILS_ENV"]
+      elsif ENV["RACK_ENV"]
+        env = ENV["RACK_ENV"]  
+      elsif ENV["APP_ENV"]
+        env = ENV["RACK_ENV"]
+      end      
+      defaults = self.class::DEFAULT_OPTIONS rescue {}
+      @options = defaults.merge(options)
+      config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
+      config = config[env] if config[env] # if there is a config for the current environment defined then use it, otherwise use the top level declaration
+      config.keys.each do |k| # symbolize keys
+        config[k.to_sym] = config[k]
+        config.delete k
+      end
+      @options.merge!(config)
+      @options.merge!(options) # make sure options passed to initialize trump everything else
+    end
+    
+    def setup
+      @conn = create_pooled_connection
+      @logger = create_logger
+      @running = true
+    end
+    
+    def create_logger
+      @options[:logger] = nil unless @options[:logger]
+      return @options[:logger] if @options[:logger].respond_to? :info
+      return Logger.new(STDOUT) if @options[:logger] == 'STDOUT'
+      return Logger.new(STDERR) if @options[:logger] == 'STDERR'
+      return Logger.new(@options[:logger]) if @options[:logger].is_a? String 
+      return Logger.new(IO::NULL)         
+    end
+    
+    def exit_callback
+      close
+    end
+
+    def run_stmt(stmt, *args)
+      @conn.acquire{|q| q.stmts[stmt].execute!(*args) }
+    end
+
+    def run_sql(sql, *args)
+      @conn.acquire{|q| q.execute(sql, *args) }
+    end
+    
+    def create_pooled_connection(count = 1)
+      Litesupport::Pool.new(1){create_connection}  
+    end
+
+    # common db object options
+    def create_connection
+      conn = SQLite3::Database.new(@options[:path])
+      conn.busy_handler{ Litesupport.switch || sleep(rand * 0.002) }
+      conn.journal_mode = "WAL"
+      conn.synchronous = @options[:sync] || 1
+      conn.mmap_size = @options[:mmap_size] || 0
+      conn.instance_variable_set(:@stmts, {})
+      class << conn
+        attr_reader :stmts
+      end
+      conn
+    end
+    
+  end
+      
 end  
+
+Process.singleton_class.prepend(Litesupport::Forkable)
+

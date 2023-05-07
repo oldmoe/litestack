@@ -3,6 +3,8 @@
 # all components should require the support module
 require_relative 'litesupport'
 
+#require 'securerandom'
+
 ##
 #Litequeue is a simple queueing system for Ruby applications that allows you to push and pop values from a queue. It provides a straightforward API for creating and managing named queues, and for adding and removing values from those queues. Additionally, it offers options for scheduling pops at a certain time in the future, which can be useful for delaying processing until a later time.
 #
@@ -18,10 +20,12 @@ class Litequeue
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
   #   sync: 1 -> sync only when checkpointing
   
+  include Litesupport::Liteconnection
+  
   DEFAULT_OPTIONS = {
     path: "./queue.db",
     mmap_size: 32 * 1024,
-    sync: 1
+    sync: 0
   }
 
   # create a new instance of the litequeue object
@@ -33,8 +37,7 @@ class Litequeue
   #   queue.pop # => "somevalue"
   
   def initialize(options = {})
-    @options = DEFAULT_OPTIONS.merge(options)
-    @queue = Litesupport::Pool.new(1){create_db} # delegate the db creation to the litepool
+    init(options)
   end
    
   # push an item to the queue, optionally specifying the queue name (defaults to default) and after how many seconds it should be ready to pop (defaults to zero)
@@ -45,15 +48,20 @@ class Litequeue
     # also bring back the synchronize block, to prevent
     # a race condition if a thread hits the busy handler
     # before the current thread proceeds after a backoff
-    result = @queue.acquire { |q| q.stmts[:push].execute!(queue, delay, value)[0] }
-    return result[0] if result
+    #id = SecureRandom.uuid # this is somehow expensive, can we improve?
+    run_stmt(:push, queue, delay, value)[0]
+  end
+  
+  def repush(id, value, delay=0, queue='default')
+    run_stmt(:repush, id, queue, delay, value)[0]
   end
   
   alias_method :"<<", :push
+  alias_method :"<<<", :repush
   
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
   def pop(queue='default', limit = 1)
-   res = @queue.acquire {|q| res = q.stmts[:pop].execute!(queue, limit) }
+   res = run_stmt(:pop, queue, limit)
    return res[0] if res.length == 1
    return nil if res.empty?
    res
@@ -64,49 +72,61 @@ class Litequeue
   #   id = queue.push("somevalue")
   #   queue.delete(id) # => "somevalue"
   #   queue.pop # => nil
-  def delete(id, queue='default')
-    fire_at, id = id.split("-")
-    result = @queue.acquire{|q| q.stmts[:delete].execute!(queue, fire_at.to_i, id)[0] } 
+  def delete(id)
+    result = run_stmt(:delete, id)[0]  
   end
   
   # deletes all the entries in all queues, or if a queue name is given, deletes all entries in that specific queue
   def clear(queue=nil)
-    @queue.acquire{|q| q.execute("DELETE FROM _ul_queue_ WHERE iif(?, queue = ?,  1)", queue) }
+    run_sql("DELETE FROM queue WHERE iif(?, name = ?,  1)", queue)
   end
 
   # returns a count of entries in all queues, or if a queue name is given, reutrns the count of entries in that queue
   def count(queue=nil)
-    @queue.acquire{|q| q.get_first_value("SELECT count(*) FROM _ul_queue_ WHERE iif(?, queue = ?, 1)", queue) }
+    run_sql("SELECT count(*) FROM queue WHERE iif(?, name = ?, 1)", queue)[0][0]
   end
   
   # return the size of the queue file on disk
   def size
-    @queue.acquire{|q| q.get_first_value("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count") }
+    run_sql("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count")[0][0] 
   end
   
-  def close
-    @queue.acquire do |q| 
-      q.stmts.each_pair {|k, v| q.stmts[k].close }
-      q.close
+  def queues_info
+    run_sql("SELECT name, count(*) AS count, avg(unixepoch() - created_at), min(unixepoch() - created_at), max(unixepoch() - created_at) FROM queue GROUP BY name ORDER BY count DESC ")
+  end
+  
+  def info
+    counts = {}
+    queues_info.each do |qc|
+      counts[qc[0]] = {count: qc[1], time_in_queue: {avg: qc[2], min: qc[3], max: qc[4]}}
     end
+    {size: size, count: count, info: counts}
   end
 
   private  
-  
-  def create_db
-    db = Litesupport.create_db(@options[:path])
-    db.synchronous = @options[:sync]
-    db.wal_autocheckpoint = 10000 
-    db.mmap_size = @options[:mmap_size]
-    db.execute("CREATE TABLE IF NOT EXISTS _ul_queue_(queue TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE, fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, id TEXT DEFAULT(hex(randomblob(8)) || (strftime('%f') * 100)) NOT NULL ON CONFLICT REPLACE, value TEXT, created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE, PRIMARY KEY(queue, fire_at ASC, id) ) WITHOUT ROWID")
-    db.stmts[:push] = db.prepare("INSERT INTO _ul_queue_(queue, fire_at, value) VALUES ($1, (strftime('%s') + $2), $3) RETURNING fire_at || '-' || id")
-    db.stmts[:pop] = db.prepare("DELETE FROM _ul_queue_ WHERE (queue, fire_at, id) IN (SELECT queue, fire_at, id FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at <= (unixepoch()) ORDER BY fire_at ASC LIMIT ifnull($2, 1)) RETURNING fire_at || '-' || id, value")
-    db.stmts[:delete] = db.prepare("DELETE FROM _ul_queue_ WHERE queue = ifnull($1, 'default') AND fire_at = $2 AND id = $3 RETURNING value")
-    db
+      
+  def create_connection
+    conn = super
+    conn.wal_autocheckpoint = 10000 
+    sql = YAML.load_file("#{__dir__}/litequeue.sql.yml")
+    version = conn.get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj| 
+      if v > version
+        conn.transaction(:immediate) do 
+          obj.each{|k, s| conn.execute(s)}
+          conn.user_version = v
+        end
+      end
+    end 
+    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
+    # check if there is an old database and convert entries to the new format
+    if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1
+      conn.transaction(:immediate) do
+        conn.execute("INSERT INTO queue(fire_at, name, value, created_at) SELECT fire_at, queue, value, created_at FROM _ul_queue_")
+        conn.execute("DROP TABLE _ul_queue_")
+      end
+    end
+    conn
   end
 
-
 end  
-
-
-

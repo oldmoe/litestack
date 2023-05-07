@@ -7,21 +7,12 @@ require "active_job"
 
 module ActiveJob
   module QueueAdapters
-    # == Ultralite adapter for Active Job
+    # == Litestack adapter for Active Job
     #
     #
     #   Rails.application.config.active_job.queue_adapter = :litejob
     class LitejobAdapter
-      
-      DEFAULT_OPTIONS = {
-        config_path: "./config/litejob.yml",
-        path: "../db/queue.db",
-        queues: [["default", 1]],
-        logger: nil, # Rails performs its logging already
-        retries: 5, # It is recommended to stop retries at the Rails level
-        workers: 5
-      }      
-    
+          
       def initialize(options={})
         # we currently don't honour individual options per job class
         # possible in the future?
@@ -40,6 +31,15 @@ module ActiveJob
 
       class Job # :nodoc:
         
+        DEFAULT_OPTIONS = {
+          config_path: "./config/litejob.yml",
+          path: "../db/queue.db",
+          queues: [["default", 1]],
+          logger: nil, # Rails performs its logging already
+          retries: 5, # It is recommended to stop retries at the Rails level
+          workers: 5
+        }      
+
         include ::Litejob
   
         def perform(job_data)

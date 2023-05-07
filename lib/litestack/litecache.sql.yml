@@ -1,0 +1,28 @@
+schema:
+  1:    
+    create_table_data: >  
+      CREATE table if not exists data(id text primary key, value text, expires_in integer, last_used integer)      
+    create_expiry_index: >
+      CREATE index if not exists expiry_index on data (expires_in)
+    create_last_used_index: >
+      CREATE index if not exists last_used_index on data (last_used)
+
+stmts:
+  pruner: DELETE FROM data WHERE expires_in <= $1
+  extra_pruner: DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used ASC LIMIT (SELECT CAST((count(*) * $1) AS int) FROM data))
+  limited_pruner: DELETE FROM data WHERE id IN (SELECT id FROM data ORDER BY last_used asc limit $1)
+  toucher: UPDATE data SET  last_used = unixepoch('now') WHERE id = $1
+  setter: >
+    INSERT into data (id, value, expires_in, last_used) VALUES ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do 
+    UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in
+  inserter: > 
+    INSERT into data (id, value, expires_in, last_used) VALUES ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do 
+    UPDATE SET value = excluded.value, last_used = excluded.last_used, expires_in = excluded.expires_in WHERE id = $1 and expires_in <= unixepoch('now')
+  finder: SELECT id FROM data WHERE id = $1
+  getter: SELECT id, value, expires_in FROM data WHERE id = $1
+  deleter: delete FROM data WHERE id = $1 returning value
+  incrementer: > 
+    INSERT into data (id, value, expires_in, last_used) VALUES ($1, $2, unixepoch('now') + $3, unixepoch('now')) on conflict(id) do 
+    UPDATE SET value = cast(value AS int) + cast(excluded.value as int), last_used = excluded.last_used, expires_in = excluded.expires_in
+  counter: SELECT count(*) FROM data
+  sizer: SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count
