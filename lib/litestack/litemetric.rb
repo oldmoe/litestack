@@ -42,7 +42,7 @@ class Litemetric
   ## event capturing
   ##################
     
-  def capture(topic, event, key, value=nil)
+  def capture(topic, event, key=event, value=nil)
     if key.is_a? Array
       key.each{|k| capture_single_key(topic, event, k, value)}
     else
@@ -50,7 +50,7 @@ class Litemetric
     end
   end
   
-  def capture_single_key(topic, event, key, value=nil)
+  def capture_single_key(topic, event, key=event, value=nil)
     @mutex.synchronize do
       time_slot = current_time_slot # should that be 5 minutes?
       topic_slot = @metrics[topic]
@@ -205,12 +205,12 @@ class Litemetric
       self.class.name # override in included classes
     end
 
-    def capture(event, key, value=nil)
+    def capture(event, key=event, value=nil)
       return unless @litemetric
       @litemetric.capture(metrics_identifier, event, key, value)
     end
     
-    def measure(event, key)
+    def measure(event, key=event)
       return yield unless @litemetric
       t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC) 
       res = yield
