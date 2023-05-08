@@ -24,8 +24,8 @@ class Litecable
   }
   
   def initialize(options = {})  
-    init(options)
     @messages = []
+    init(options)
   end
   
   # broadcast a message to a specific channel

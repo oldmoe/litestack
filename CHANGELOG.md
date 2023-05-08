@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.2.1] - 2023-05-08
+
+- Fix a race condition in Litecable
+
 ## [0.2.0] - 2023-05-08
 
 - Litecable, a SQLite driver for ActionCable
