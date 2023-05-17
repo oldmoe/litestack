@@ -33,7 +33,7 @@ module ActiveJob
         
         DEFAULT_OPTIONS = {
           config_path: "./config/litejob.yml",
-          path: "../db/queue.db",
+          path: "./queue.db",
           queues: [["default", 1]],
           logger: nil, # Rails performs its logging already
           retries: 5, # It is recommended to stop retries at the Rails level
