@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.2.2] - 2023-05-18
+
+- Fix default queue location in Litejob
+
+
 ## [0.2.1] - 2023-05-08
 
 - Fix a race condition in Litecable
