@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.2.3] - 2023-05-20
+
+- Cut back on options defined in the Litejob Rails adapter
+
 ## [0.2.2] - 2023-05-18
 
 - Fix default queue location in Litejob
