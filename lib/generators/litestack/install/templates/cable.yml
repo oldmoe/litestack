@@ -1,0 +1,11 @@
+development:
+  adapter: litecable
+
+test:
+  adapter: test
+
+staging:
+  adapter: litecable
+
+production:
+  adapter: litecable
