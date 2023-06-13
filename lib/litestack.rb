@@ -12,13 +12,11 @@ require_relative "./litestack/litecable"
 # conditionally load integration with other libraries
 require_relative "./sequel/adapters/litedb" if defined? Sequel
 require_relative "./active_record/connection_adapters/litedb_adapter" if defined? ActiveRecord
-if defined? Rails && defined? ActiveRecord
-  require_relative "./active_record/railtie"
-  require_relative "./railties/rails/commands/dbconsole"
-end
+require_relative "./railties/rails/commands/dbconsole" if defined? Rails && defined? ActiveRecord
 require_relative "./active_support/cache/litecache" if defined? ActiveSupport
 require_relative "./active_job/queue_adapters/litejob_adapter" if defined? ActiveJob
 require_relative "./action_cable/subscription_adapter/litecable" if defined? ActionCable
+require_relative "./litestack/railtie" if defined? Rails
 
 module Litestack
   class NotImplementedError < Exception; end
