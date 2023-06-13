@@ -31,19 +31,13 @@ Litestack is still pretty young and under heavy development, but you are welcome
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add the `litestack` gem line to your application's Gemfile:
 
-```ruby
-gem 'litestack'
-```
+    $ bundle add litestack
 
-And then execute:
+To configure a Rails application to run the full litestack, run:
 
-    $ bundle install
-
-Or install it yourself as:
-
-    $ gem install litestack
+    $ rails generate litestack:install
 
 ## Usage
 
