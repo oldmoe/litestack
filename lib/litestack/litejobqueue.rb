@@ -19,7 +19,7 @@ class Litejobqueue < Litequeue
   # can be overriden by passing new options in a hash 
   # to Litejobqueue.new, it will also be then passed to the underlying Litequeue object
   #   config_path: "./litejob.yml" -> were to find the configuration file (if any)
-  #   path: "./queue.db"
+  #   path: "./db/queue.db"
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
   #   sync: 1 -> sync only when checkpointing
   #   queues: [["default", 1, "spawn"]] -> an array of queues to process 
@@ -32,7 +32,7 @@ class Litejobqueue < Litequeue
   # This can be particularly useful for long running, IO bound jobs. It is not recommended though for threaded environments, as it can result in creating many threads that may consudme a lot of memory. 
   DEFAULT_OPTIONS = {
     config_path: "./litejob.yml",
-    path: "./queue.db",
+    path: "./db/queue.db",
     queues: [["default", 1]],
     workers: 5,
     retries: 5, 
