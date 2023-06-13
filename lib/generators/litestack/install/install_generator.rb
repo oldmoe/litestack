@@ -18,6 +18,9 @@ class Litestack::InstallGenerator < Rails::Generators::Base
   end
 
   def modify_action_cable_adapter
-    copy_file "cable.yml", "config/cable.yml"
+    # I force copy this so defaults Rails installs don't ask questions
+    # that less experienced people might not understand. The more Sr folks.
+    # will know to check git to look at what changed.
+    copy_file "cable.yml", "config/cable.yml", force: true
   end
 end
