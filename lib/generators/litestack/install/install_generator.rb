@@ -23,4 +23,13 @@ class Litestack::InstallGenerator < Rails::Generators::Base
       "# config.active_job.queue_adapter     = :resque",
       "config.active_job.queue_adapter = :litejob"
   end
+
+  def modify_gitignore
+    append_file ".gitignore", <<~TEXT
+
+    # Ignore default Litestack SQLite databases.
+    /db/**/*.sqlite3
+    /db/**/*.sqlite3-*
+    TEXT
+  end
 end
