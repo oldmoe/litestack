@@ -8,7 +8,7 @@ class Litestack::InstallGenerator < Rails::Generators::Base
   def modify_cache_store_adapter
     gsub_file "config/environments/production.rb",
       "# config.cache_store = :mem_cache_store",
-      "config.cache_store = :litecache, { path: './path/to/your/cache/file' }"
+      "config.cache_store = :litecache, { path: './db/cache.db' }"
   end
 
   def modify_active_job_adapter
