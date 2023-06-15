@@ -4,13 +4,13 @@
 #   Ensure the SQLite 3 gem is defined in your Gemfile
 #   gem "sqlite3"
 #
-# `Litesupport.root.join("application.sqlite3")` stores
-# application data in the path `./db/#{Rails.env}/application.sqlite3`
+# `Litesupport.root.join("data.sqlite3")` stores
+# application data in the path `./db/#{Rails.env}/data.sqlite3`
 default: &default
   adapter: litedb
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   timeout: 5000
-  database: <%= Litesupport.root.join("application.sqlite3") %>
+  database: <%= Litesupport.root.join("data.sqlite3") %>
 
 development:
   <<: *default
