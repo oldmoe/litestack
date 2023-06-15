@@ -32,7 +32,7 @@ class Litecache
   #   sleep_interval: 1 -> 1 second of sleep between cleanup runs
 
   DEFAULT_OPTIONS = {
-    path: "./cache.db",
+    path: Litesupport.root.join("cache.sqlite3"),
     config_path: "./litecache.yml",
     sync: 0,
     expiry: 60 * 60 * 24 * 30, # one month 

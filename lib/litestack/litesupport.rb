@@ -4,6 +4,8 @@ require 'sqlite3'
 require 'logger'
 require 'oj'
 require 'yaml'
+require 'pathname'
+require 'fileutils'
 
 module Litesupport
 
@@ -17,7 +19,7 @@ module Litesupport
   # Detect the Rack or Rails environment.
   def self.detect_environment
     if defined? Rails
-      ENV["RAILS_ENV"]
+      Rails.env
     elsif ENV["RACK_ENV"]
       ENV["RACK_ENV"]
     elsif ENV["APP_ENV"]
@@ -59,7 +61,7 @@ module Litesupport
     end
     # we should never reach here
   end
-    
+
   def self.context
     if scheduler == :fiber || scheduler == :poylphony
       Fiber.current.storage
@@ -120,7 +122,30 @@ module Litesupport
     end
     db
   end
-  
+
+  # Databases will be stored by default at this path.
+  def self.root
+    @root ||= ensure_root_volume detect_root
+  end
+
+  # Default path where we'll store all of the databases.
+  def self.detect_root
+    path = if ENV["DATA"]
+      ENV["DATA"]
+    elsif defined? Rails
+      "./db"
+    else
+      "."
+    end
+
+    Pathname.new(path).join(Litesupport.environment)
+  end
+
+  def self.ensure_root_volume(path)
+    FileUtils.mkdir_p path unless path.exist?
+    path
+  end
+
   class Mutex
   
     def initialize
