@@ -29,7 +29,7 @@ if env == "a" # threaded
 end
 
 require_relative '../lib/active_job/queue_adapters/litejob_adapter'
-puts Litesupport.environment
+puts Litesupport.scheduler
 
 RailsJob.queue_adapter = :litejob
 t = Time.now.to_f

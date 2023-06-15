@@ -15,7 +15,7 @@ module Sequel
       
       def connect(server)
       
-        Sequel.extension :fiber_concurrency if [:fiber, :polyphony].include? Litesupport.environment
+        Sequel.extension :fiber_concurrency if [:fiber, :polyphony].include? Litesupport.scheduler
       
         opts = server_opts(server)
         opts[:database] = ':memory:' if blank_object?(opts[:database])
