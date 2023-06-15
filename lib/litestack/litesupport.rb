@@ -130,8 +130,8 @@ module Litesupport
 
   # Default path where we'll store all of the databases.
   def self.detect_root
-    path = if ENV["DATA"]
-      ENV["DATA"]
+    path = if ENV["LITESTACK_DATA_PATH"]
+      ENV["LITESTACK_DATA_PATH"]
     elsif defined? Rails
       "./db"
     else
