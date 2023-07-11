@@ -15,9 +15,10 @@ class Litemetric
     config_path: "./litemetric.yml",
     path: "./metrics.db",
     sync: 1,
-    mmap_size: 16 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
-    flush_interval: 10, # flush data every 1 minute
-    summarize_interval: 10 # summarize data every 1 minute
+    mmap_size: 128 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
+    flush_interval:  10, # flush data every 1 minute
+    summarize_interval: 30, # summarize data every 1 minute
+    snapshot_interval: 1 # snapshot every 10 minutes
   }
 
   RESOLUTIONS = {
@@ -41,36 +42,15 @@ class Litemetric
   
   ## event capturing
   ##################
-    
+  
+  
   def capture(topic, event, key=event, value=nil)
-    if key.is_a? Array
-      key.each{|k| capture_single_key(topic, event, k, value)}
-    else
-      capture_single_key(topic, event, key, value)
-    end
+    @collector.capture(topic, event, key, value=nil)
   end
-  
-  def capture_single_key(topic, event, key=event, value=nil)
-    @mutex.synchronize do
-      time_slot = current_time_slot # should that be 5 minutes?
-      topic_slot = @metrics[topic]
-      if event_slot = topic_slot[event]
-        if key_slot = event_slot[key]
-          if key_slot[time_slot]
-            key_slot[time_slot][:count] += 1
-            key_slot[time_slot][:value] += value unless value.nil?
-          else # new time slot
-            key_slot[time_slot] = {count: 1, value: value}
-          end
-        else
-          event_slot[key] = {time_slot => {count: 1, value: value}}
-        end
-      else # new event
-        topic_slot[event] = {key => {time_slot => {count: 1, value: value}}}
-      end
-    end
+      
+  def capture_snapshot(topic, state)
+    run_stmt(:capture_state, topic, Oj.dump(state))
   end
-  
 
   ## event reporting
   ##################
@@ -78,17 +58,48 @@ class Litemetric
   def topics
     run_stmt(:list_topics).to_a
   end
-
-  def event_names(resolution, topic)
-    run_stmt(:list_event_names, resolution, topic).to_a
+  
+  def topic_summaries(resolution, count, order, dir, search)
+    search = "%#{search}%" if search
+    if dir.downcase == "desc" 
+      run_stmt(:topics_summaries, resolution, count, order, search).to_a
+    else
+      run_stmt(:topics_summaries_asc, resolution, count, order, search).to_a
+    end
+  end
+    
+  def events_summaries(topic, resolution, order, dir, search, count)
+    search = "%#{search}%" if search
+    if dir.downcase == "desc" 
+      run_stmt(:events_summaries, topic, resolution, order, search, count).to_a
+    else
+      run_stmt(:events_summaries_asc, topic, resolution, order, search, count).to_a
+    end
+  end
+  
+  def keys_summaries(topic, event, resolution, order, dir, search, count)
+    search = "%#{search}%" if search
+    if dir.downcase == "desc" 
+      run_stmt(:keys_summaries, topic, event, resolution, order, search, count).to_a
+    else
+      run_stmt(:keys_summaries_asc, topic, event, resolution, order, search, count).to_a
+    end 
   end
 
-  def keys(resolution, topic, event_name)
-    run_stmt(:list_event_keys, resolution, topic, event_name).to_a
-  end
+  def topic_data_points(step, count, resolution, topic)
+    run_stmt(:topic_data_points, step, count, resolution, topic).to_a
+  end 
 
-  def event_data(resolution, topic, event_name, key)
-    run_stmt(:list_events_by_key, resolution, topic, event_name, key).to_a
+  def event_data_points(step, count, resolution, topic, event)
+    run_stmt(:event_data_points, step, count, resolution, topic, event).to_a
+  end 
+
+  def key_data_points(step, count, resolution, topic, event, key)
+    run_stmt(:key_data_points, step, count, resolution, topic, event, key).to_a
+  end 
+
+  def snapshot(topic)
+    run_stmt(:snapshot, topic)[0].to_a
   end
   
   ## summarize data
@@ -120,6 +131,7 @@ class Litemetric
     @registered = {}
     @flusher = create_flusher
     @summarizer = create_summarizer
+    @collector = Litemetric::Collector.new({dbpath: @options[:path]})
     @mutex = Litesupport::Mutex.new
   end
 
@@ -128,28 +140,8 @@ class Litemetric
   end
   
   def flush
-    to_delete = []
-    @conn.acquire do |conn|
-      conn.transaction(:immediate) do
-        @metrics.each_pair do |topic, event_hash|
-          event_hash.each_pair do |event, key_hash|
-            key_hash.each_pair do |key, time_hash|
-              time_hash.each_pair do |time, data|
-                conn.stmts[:capture_event].execute!(topic, event.to_s, key, time, data[:count], data[:value]) if data 
-                time_hash[time] = nil 
-                to_delete << [topic, event, key, time]
-              end
-            end      
-          end      
-        end
-      end
-    end
-    to_delete.each do |r| 
-      @metrics[r[0]][r[1]][r[2]].delete(r[3])
-      @metrics[r[0]][r[1]].delete(r[2]) if @metrics[r[0]][r[1]][r[2]].empty? 
-      @metrics[r[0]].delete(r[1]) if @metrics[r[0]][r[1]].empty? 
-    end
-  end  
+    @collector.flush
+  end
      
   def create_connection
     conn = super
@@ -199,6 +191,16 @@ class Litemetric
     def collect_metrics
       @litemetric = Litemetric.instance
       @litemetric.register(metrics_identifier)
+      @snapshotter = create_snapshotter      
+    end
+
+    def create_snapshotter
+      Litesupport.spawn do
+        while @running do
+          sleep @litemetric.options[:snapshot_interval]
+          capture_snapshot
+        end      
+      end 
     end
 
     def metrics_identifier
@@ -220,9 +222,104 @@ class Litemetric
       res  
     end    
     
-    def snapshot
-      raise Litestack::NotImplementedError
+    def capture_snapshot
+      return unless @litemetric
+      state = snapshot if defined? snapshot
+      if state
+        @litemetric.capture_snapshot(metrics_identifier, state)
+      end
+    end
+        
+  end
+end
+
+class Litemetric
+
+  class Collector
+
+    include Litesupport::Liteconnection
+    
+    DEFAULT_OPTIONS = {
+      path: ":memory:",
+      sync: 1,
+      flush_interval:  3, # flush data every 1 minute
+      summarize_interval: 10, # summarize data every 1 minute
+      snapshot_interval: 1 # snapshot every 10 minutes
+    }
+
+    RESOLUTIONS = {
+      minute: 300, # 5 minutes (highest resolution)
+      hour: 3600, # 1 hour
+      day: 24*3600, # 1 day
+      week: 7*24*3600 # 1 week (lowest resolution)
+    }
+    
+    def initialize(options = {})
+      init(options)
+    end
+    
+    def capture(topic, event, key, value=nil)
+      if key.is_a? Array
+        key.each{|k| capture_single_key(topic, event, k, value)}
+      else
+        capture_single_key(topic, event, key, value)
+      end
+    end
+        
+    def capture_single_key(topic, event, key, value=nil)
+      run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, nil ,1, value)
+    end
+    
+    def flush
+      t = Time.now
+      limit = 1000
+      count = run_stmt(:event_count)[0][0]
+      while count > 0
+        @conn.acquire do |conn|
+          conn.transaction(:immediate) do
+            conn.stmts[:migrate_events].execute!(limit)
+            conn.stmts[:delete_migrated_events].execute!(limit)
+            count = conn.stmts[:event_count].execute![0][0]
+          end         
+        end
+        sleep 0.005
+      end
+    end
+
+    def create_connection
+      conn = super
+      conn.execute("ATTACH ? as m", @options[:dbpath])
+      conn.wal_autocheckpoint = 10000
+      sql = YAML.load_file("#{__dir__}/litemetric_collector.sql.yml")
+      version = conn.get_first_value("PRAGMA user_version")
+      sql["schema"].each_pair do |v, obj| 
+        if v > version
+          conn.transaction do 
+            obj.each do |k, s| 
+              begin
+                conn.execute(s)
+              rescue Exception => e
+                STDERR.puts "Error parsing #{k}"
+                STDERR.puts s
+                raise e
+              end
+            end
+            conn.user_version = v
+          end
+        end
+      end 
+      sql["stmts"].each do |k, v| 
+        begin
+          conn.stmts[k.to_sym] = conn.prepare(v) 
+        rescue Exception => e
+          STDERR.puts "Error parsing #{k}"
+          STDERR.puts v
+          raise e
+        end
+      end
+      conn
     end
     
   end
+  
 end

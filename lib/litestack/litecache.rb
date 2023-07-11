@@ -64,8 +64,8 @@ class Litecache
   
   def initialize(options = {})
     options[:size] = DEFAULT_OPTIONS[:min_size] if options[:size] && options[:size] < DEFAULT_OPTIONS[:min_size]        
-    init(options)    
     @last_visited = {}
+    init(options)    
     collect_metrics if @options[:metrics]
   end
   
@@ -76,7 +76,7 @@ class Litecache
     @conn.acquire do |cache|
       begin
         cache.stmts[:setter].execute!(key, value, expires_in)
-        capture(:write, key)
+        capture(:set, key)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -97,7 +97,7 @@ class Litecache
           cache.stmts[:inserter].execute!(key, value, expires_in)
           changes = cache.changes
         end
-        capture(:write, key)
+        capture(:set, key)
       rescue SQLite3::FullException
         cache.stmts[:extra_pruner].execute!(0.2)
         cache.execute("vacuum")
@@ -113,10 +113,10 @@ class Litecache
     key = key.to_s
     if record = @conn.acquire{|cache| cache.stmts[:getter].execute!(key)[0] }
       @last_visited[key] = true
-      capture(:hit, key)
+      capture(:get, key, 1)
       return record[1]
     end
-    capture(:miss, key)
+    capture(:get, key, 0)
     nil
   end
   
@@ -160,9 +160,9 @@ class Litecache
   end
   
   # return the actual size of the cache file
-  def size
-    run_stmt(:sizer)[0][0]
-  end
+  #def size
+  #  run_stmt(:sizer)[0][0]
+  #end
   
   # delete all key, value pairs in the cache
   def clear
@@ -177,8 +177,22 @@ class Litecache
   
   # return the maximum size of the cache
   def max_size
-    run_sql("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c")[0][0]
+    run_sql("SELECT s.page_size * c.max_page_count FROM pragma_page_size() as s, pragma_max_page_count() as c")[0][0].to_f / (1024 * 1024)
   end
+  
+  def snapshot
+    {
+      summary: {
+        path: path,
+        journal_mode: journal_mode,
+        synchronous: synchronous,
+        size: size,
+        max_size: max_size,
+        entries: count
+      }
+    }
+  end
+
   
   # low level access to SQLite transactions, use with caution
   def transaction(mode, acquire=true)
@@ -239,6 +253,6 @@ class Litecache
     end 
     sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
     conn
-  end
+  end  
   
 end

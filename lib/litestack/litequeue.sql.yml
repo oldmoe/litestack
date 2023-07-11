@@ -31,4 +31,15 @@ stmts:
     RETURNING id, value
   
   delete: DELETE FROM queue WHERE id = $1 RETURNING value
+  
+  info: >
+    SELECT 
+      name, 
+      count(*) AS count, 
+      avg(unixepoch() - created_at) AS avg, 
+      min(unixepoch() - created_at) AS min, 
+      max(unixepoch() - created_at) AS max
+    FROM queue 
+    GROUP BY name 
+    ORDER BY count DESC
 

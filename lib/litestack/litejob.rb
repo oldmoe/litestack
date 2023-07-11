@@ -74,11 +74,11 @@ module Litejob
     end  
          
     def queue
-      @@queue ||= "default"
+      @queue_name ||= "default"
     end
     
     def queue=(queue_name)
-      @@queue = queue_name.to_s
+      @queue_name = queue_name.to_s
     end
 
     def options

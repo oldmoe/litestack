@@ -1,0 +1,56 @@
+schema:
+  1:
+    
+    create_events: >
+      CREATE TABLE IF NOT EXISTS local_events(
+        topic TEXT NOT NULL,
+        name TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
+        key TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
+        count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, 
+        value INTEGER, 
+        minimum INTEGER, 
+        maximum INTEGER, 
+        created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL ON CONFLICT REPLACE, 
+        resolution TEXT DEFAULT('minute') NOT NULL, 
+        PRIMARY KEY(resolution, created_at, topic, name, key)
+      );        
+
+stmts:
+      
+  capture_event: >
+    INSERT INTO local_events(topic, name, key, created_at, count, value, minimum, maximum) 
+    VALUES 
+      (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?6), 
+      (?1, ?2, '___', ?4, ?5, ?6, ?6, ?6),
+      (?1, '___', '___', ?4, ?5, ?6, ?6, ?6) 
+    ON CONFLICT DO UPDATE 
+    SET 
+      count = count + EXCLUDED.count, 
+      value = value + EXCLUDED.value, 
+      minimum = min(minimum, EXCLUDED.minimum), 
+      maximum = max(maximum, EXCLUDED.maximum) 
+    
+  migrate_events: 
+    INSERT INTO m.events(topic, name, key, created_at, count, value, minimum, maximum) 
+    SELECT topic, name, key, created_at, count, value, minimum, maximum 
+    FROM local_events 
+    ORDER BY resolution, created_at ASC, topic, name, key  
+    LIMIT ?
+    ON CONFLICT DO UPDATE 
+    SET 
+      count = count + EXCLUDED.count, 
+      value = value + EXCLUDED.value, 
+      minimum = min(minimum, EXCLUDED.minimum), 
+      maximum = max(maximum, EXCLUDED.maximum) 
+
+  delete_migrated_events:
+    DELETE FROM local_events WHERE rowid IN (
+      SELECT rowid 
+      FROM local_events 
+      ORDER BY resolution, created_at ASC, topic, name, key 
+      LIMIT ?
+    )
+  
+  event_count:
+    SELECT count(*) FROM local_events;
+   

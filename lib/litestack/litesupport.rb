@@ -201,6 +201,11 @@ module Litesupport
     include Forkable
 
     # close, setup, run_stmt and run_sql assume a single connection was created
+    
+    def options
+      @options
+    end
+    
     def close
       @running = false
       @conn.acquire do |q| 
@@ -209,6 +214,22 @@ module Litesupport
       end
     end
 
+    def size
+      run_sql("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count")[0][0].to_f / (1024*1024)
+    end
+
+    def journal_mode
+      run_method(:journal_mode)
+    end
+    
+    def synchronous
+      run_method(:synchronous)
+    end
+    
+    def path
+      run_method(:filename)
+    end
+    
     private # all methods are private
         
     def init(options = {})
@@ -266,13 +287,17 @@ module Litesupport
     def exit_callback
       close
     end
-
+    
     def run_stmt(stmt, *args)
       @conn.acquire{|q| q.stmts[stmt].execute!(*args) }
     end
 
     def run_sql(sql, *args)
       @conn.acquire{|q| q.execute(sql, *args) }
+    end
+    
+    def run_method(method, *args)
+      @conn.acquire{|q| q.send(method, *args)}
     end
     
     def create_pooled_connection(count = 1)

@@ -79,6 +79,11 @@ class Litejobqueue < Litequeue
       pgroups[q[1]] << [q[0], q[2] == "spawn"]
     end
     @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
+    collect_metrics if @options[:metrics]
+  end
+
+  def metrics_identifier
+    "Litejob" # overrides default identifier
   end
   
   # push a job to the queue
@@ -164,12 +169,7 @@ class Litejobqueue < Litequeue
   def job_finished
     Litesupport.synchronize(@mutex){@jobs_in_flight -= 1}
   end
-  
-  # return a hash encapsulating the info about the current jobqueue
-  def snapshot
-    info
-  end
-  
+    
   # optionally run a job in its own context
   def schedule(spawn = false, &block)
     if spawn

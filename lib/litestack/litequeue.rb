@@ -87,20 +87,30 @@ class Litequeue
   end
   
   # return the size of the queue file on disk
-  def size
-    run_sql("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count")[0][0] 
-  end
+  #def size
+  #  run_sql("SELECT size.page_size * count.page_count FROM pragma_page_size() AS size, pragma_page_count() AS count")[0][0] 
+  #end
   
   def queues_info
-    run_sql("SELECT name, count(*) AS count, avg(unixepoch() - created_at), min(unixepoch() - created_at), max(unixepoch() - created_at) FROM queue GROUP BY name ORDER BY count DESC ")
+    run_stmt(:info)
   end
   
-  def info
-    counts = {}
+  def snapshot
+    queues = {}
     queues_info.each do |qc|
-      counts[qc[0]] = {count: qc[1], time_in_queue: {avg: qc[2], min: qc[3], max: qc[4]}}
+      #queues[qc[0]] = {count: qc[1], time_in_queue: {avg: qc[2], min: qc[3], max: qc[4]}}
+      queues[qc[0]] = qc[1]
     end
-    {size: size, count: count, info: counts}
+    {
+      summary: {
+        path: path,
+        journal_mode: journal_mode,
+        synchronous: synchronous,
+        size: size,
+        jobs: count
+      },
+      queues: queues      
+    }
   end
 
   private  
@@ -110,7 +120,7 @@ class Litequeue
     conn.wal_autocheckpoint = 10000 
     sql = YAML.load_file("#{__dir__}/litequeue.sql.yml")
     version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj| 
+    sql["schema"].each_pair do |v, obj|
       if v > version
         conn.transaction(:immediate) do 
           obj.each{|k, s| conn.execute(s)}
