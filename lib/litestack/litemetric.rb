@@ -16,9 +16,9 @@ class Litemetric
     path: "./metrics.db",
     sync: 1,
     mmap_size: 128 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
-    flush_interval:  10, # flush data every 1 minute
-    summarize_interval: 30, # summarize data every 1 minute
-    snapshot_interval: 1 # snapshot every 10 minutes
+    flush_interval:  10, # flush data every 10 seconds
+    summarize_interval: 30, # summarize data every 1/2 minute
+    snapshot_interval: 10*60 # snapshot every 10 minutes
   }
 
   RESOLUTIONS = {
