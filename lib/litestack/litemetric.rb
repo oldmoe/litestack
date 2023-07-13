@@ -28,8 +28,20 @@ class Litemetric
     week: 7*24*3600 # 1 week (lowest resolution)
   }
 
+  # :nodoc:
+  def self.options=(options)
+    # an ugly hack to pass options to a singleton
+    # need to rethink the whole singleton thing
+    @options = options
+  end
+  
+  def self.options
+    @options
+  end
+
   # :nodoc: 
   def initialize(options = {})
+    options = options.merge(Litemetric.options) if Litemetric.options
     init(options)
   end
   
@@ -45,7 +57,7 @@ class Litemetric
   
   
   def capture(topic, event, key=event, value=nil)
-    @collector.capture(topic, event, key, value=nil)
+    @collector.capture(topic, event, key, value)
   end
       
   def capture_snapshot(topic, state)
@@ -266,7 +278,7 @@ class Litemetric
       end
     end
         
-    def capture_single_key(topic, event, key, value=nil)
+    def capture_single_key(topic, event, key, value)
       run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, nil ,1, value)
     end
     

@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.homepage = "http://github.com/oldmoe/litestack"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0.0"
-
+  
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
@@ -27,8 +27,13 @@ Gem::Specification.new do |spec|
   end
   spec.bindir = "bin"
   #spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.executables = ["liteboard"]
   spec.require_paths = ["lib", "lib/litestack"]
 
   spec.add_dependency "sqlite3"
   spec.add_dependency "oj"
+  spec.add_dependency "rack"
+  spec.add_dependency "hanami/router"
+  spec.add_dependency "tilt"
+  spec.add_dependency "erubi"
 end

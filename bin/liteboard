@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'optparse'
+require_relative '../lib/litestack/liteboard/liteboard'
+DEFAULTS = {
+  config_path: Litemetric::DEFAULT_OPTIONS[:config_path],
+  path: Litemetric::DEFAULT_OPTIONS[:path]
+}
+
+options = { 
+  deamonize: false,
+  port: 3001,
+  path: nil,
+  host: 'localhost',
+  config_path: nil,
+  environment: 'production'
+}
+
+OptionParser.new do |parser|
+  parser.banner = "Usage: liteboard [options]"
+  parser.on("-d", "--database PATH", "path to SQLite file  (default: #{DEFAULTS[:path]})") { |v| options[:path] = v }
+  parser.on("-c", "--config PATH", "path to a litemetric config file (default: #{DEFAULTS[:config_path]}) ") { |v| options[:config_path] = v }
+  parser.on("-s", "--server SERVER", "use SERVER (e.g. puma/falcon/iodine)") { |v| options[:port] = v }
+  parser.on("-H", "--host HOST", "listen on HOST (default: #{options[:host]})") { |v| options[:host] = v }
+  parser.on("-p", "--port PORT", "use PORT (default: #{options[:port]})") { |v| options[:port] = v.to_i rescue options[:port] }
+  parser.on("-D", "--deamonize", "run in the background (default: #{options[:daemonize]})") { |v| options[:deamonize] = true }  
+  parser.on("-e", "--environment", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }  
+  parser.on("-h", "--help", "print this message") do
+    puts parser
+    exit
+  end
+end.parse!
+
+def check_database(path)
+  unless File.exist?(path) 
+    puts "liteboard: missing database file, please ensure the db path is correct"
+    puts "liteboard: exiting"
+    exit
+  end
+end
+
+check_database(options[:path]) if options[:path] 
+
+# if there is a config file then we need to check it
+config = nil
+if options[:config_path]
+  begin
+    config = Yaml.load_file(options[:config_path]) 
+  rescue
+    puts "liteboard: missing or bad config file, please ensure the config file path is correct"
+    puts "liteboard: exiting"
+    exit
+  end 
+else # no config path! use the default
+  config = Yaml.load_file(DEFAULTS[:config_path]) rescue nil 
+end
+
+if config
+  if options[:path].nil?
+    path = config['path'] || config[options[:environment]]['path']
+    options[:path] = path
+  end  
+end
+
+# if still no path we assume a default db path
+options[:path] = DEFAULTS[:path] if options[:path].nil?
+
+
+# check the validity of the path before starting the server
+check_database(options[:path])
+Litemetric.options = options
+litemetric = Litemetric.instance
+options[:app] = Liteboard.app
+
+require_relative '../lib/litestack'
+puts "Starting Liteboard version #{Litestack::VERSION}"
+
+Rack::Server.start(options)

@@ -1,0 +1,26 @@
+
+    <h5>All topics</h5>
+    <div id="search"><form><input id="search-field" type="text" placeholder="Search topics" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>
+    <table class="data sortable">
+      <tr>
+        <th width="15%" class="<%='sorted' if @order == 'topic'%>"><a href="<%=index_sort_url('topic')%>">Topics</a>  <%=dir('topic')%></th>
+        <!--th width="15%" class="<%='sorted' if @order == 'events'%>"><a href="<%=index_sort_url('events')%>">Unique Events</a>  <%=dir('events')%></th>
+        <th width="15%" class="<%='sorted' if @order == 'keys'%>"><a href="<%=index_sort_url('keys')%>">Unique Keys</a>  <%=dir('keys')%></th-->
+        <th width="15%" class="<%='sorted' if @order == 'rcount'%>"><a href="<%=index_sort_url('rcount')%>">Total events</a>  <%=dir('rcount')%></th>
+        <th width="40%">Events over time</th>
+      </tr>
+      <% @topics.each do |topic|%>
+        <tr>
+          <td title="<%=topic[0]%>"><div class="label"><a href="./topics/<%=encode(topic[0])%>?res=<%=@res%>"><%=topic[0]%></a></div></td>
+          <!--td><%=topic[1]%></td>
+          <td><%=topic[2]%></td-->
+          <td><%=topic[3]%></td>
+          <td class="chart"><span class="inlinecolumn hidden" data-label="Count"><%=Oj.dump(topic[4]) if topic[4]%></span></td>
+        </tr>
+      <%end%>
+      <% if @topics.empty? %>
+        <tr>
+         <td class="empty" colspan="5">No data to display</td>
+        </tr>
+      <% end %>
+

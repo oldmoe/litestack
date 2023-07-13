@@ -1,0 +1,50 @@
+    <h5><a href="/?res=<%=@res%>">All Topics</a> > <%= @topic %></h5>
+    <% if @snapshot and not @snapshot.empty? and not @snapshot[0].nil?%>
+      <div><b>Snapshot</b> captured on <%= @snapshot[1] %></div>
+      <% @snapshot[0].each_pair do |k, v| %>
+        <table class ="data summary">
+          <tr>
+            <th colspan="2"><%=k.to_s.capitalize%></th>
+          </tr>
+          <% v.each do |ss| %>
+          <tr>
+            <td><%= ss[0].to_s.capitalize.gsub("_", " ") %></td>
+            <td><%= ss[1] %></td>
+          </tr>
+          <% end %>
+        </table>
+        <br/>
+      <% end %>
+    <% end %>
+    <div><b>Dynamic event data</b></div>
+    <div id="search"><form><input id="search-field" type="text" placeholder="Search events" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>    <table class="data sortable">
+      <tr>
+        <th width="10%" class="<%='sorted' if @order == 'name'%>"><a href="<%=topic_sort_url('name')%>">Event</a> <%=dir('name')%></th>
+        <!--th class="<%='sorted' if @order == 'keys'%>"><a href="<%=topic_sort_url('keys')%>">Unique Keys</a> <%=dir('keys')%></th-->
+        <th class="<%='sorted' if @order == 'rcount'%>"><a href="<%=topic_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
+        <th class="<%='sorted' if @order == 'ravg'%>"><a href="<%=topic_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
+        <th class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=topic_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
+        <th class="<%='sorted' if @order == 'rmin'%>"><a href="<%=topic_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
+        <th class="<%='sorted' if @order == 'rmax'%>"><a href="<%=topic_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
+        <th width="25%">Events over time</th>
+        <th width="25%">Average value over time</th>
+      </tr>
+      <% @events.each do |event|%>
+      <tr>
+        <td title="<%=event[0]%>"><div class="label"><a href="/topics/<%=encode(@topic)%>/events/<%=encode(event[0])%>?res=<%=@res%>"><%=event[0]%></a></div></td>
+        <!--td><%=event[1]%></td-->
+        <td><%=event[2]%></td>
+        <td><%="%0.2f" % [event[3]] if event[3] %></td>
+        <td><%="%0.2f" % [event[4]] if event[4] %></td>
+        <td><%="%0.2f" % [event[5]] if event[5] %></td>
+        <td><%="%0.2f" % [event[6]] if event[6] %></td>
+        <td class="chart"><span class="inlinecolumn hidden" data-label="Count"><%=Oj.dump(event[7]) if event[7]%></span></td>
+        <td class="chart"><span class="inlinecolumn hidden" data-label="Avg Value"><%=Oj.dump(event[8]) if event[8]%></span></td>
+      </tr>
+      <% end %>
+      <% if @events.empty? %>
+        <tr>
+         <td class="empty" colspan="9">No data to display</td>
+        </tr>
+      <% end %>
+      </table>

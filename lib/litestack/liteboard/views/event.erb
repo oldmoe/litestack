@@ -1,0 +1,32 @@
+    <h5><a href="/?res=<%=@res%>">All Topics</a> > <a href="/topics/<%=@topic%>?res=<%=@res%>"><%=@topic%></a> > <%= @event %></h5>
+    <div id="search"><form><input id="search-field" type="text" placeholder="Search keys" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>
+    <table class="data sortable">
+      <tr>
+        <th width="20%" class="<%='sorted' if @order == 'key'%>"><a href="<%=event_sort_url('key')%>">Key</a> <%=dir('key')%></th>
+        <th class="<%='sorted' if @order == 'rcount'%>"><a href="<%=event_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
+        <th class="<%='sorted' if @order == 'ravg'%>"><a href="<%=event_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
+        <th class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=event_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
+        <th class="<%='sorted' if @order == 'rmin'%>"><a href="<%=event_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
+        <th class="<%='sorted' if @order == 'rmax'%>"><a href="<%=event_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
+        <th width="25%">Events over time</th>
+        <th width="25%">Average value over time</th>
+      </tr>
+      <% @keys.each do |key|%>
+      <tr>
+        <td title="<%=key[0]%>"><div class="label"><span><%=key[0]%></span></div></td>
+        <td><%=key[1]%></td>
+        <td><%="%0.2f" % [key[2]] if key[2]%></td>
+        <td><%="%0.2f" % [key[3]] if key[3]%></td>
+        <td><%="%0.2f" % [key[4]] if key[4]%></td>
+        <td><%="%0.2f" % [key[5]] if key[5]%></td>
+        <td class="chart"><span class="inlinecolumn hidden" data-label="Count"><%=Oj.dump(key[6]) if key[7]%></span></td>
+        <td class="chart"><span class="inlinecolumn hidden" data-label="Avg Value"><%=Oj.dump(key[7]) if key[7]%></span></td>
+      </tr>
+      <% end %>
+      <% if @keys.empty? %>
+        <tr>
+         <td class="empty" colspan="8">No data to display</td>
+        </tr>
+      <% end %>
+      </table>
+
