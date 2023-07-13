@@ -9,12 +9,13 @@ DEFAULTS = {
 }
 
 options = { 
-  deamonize: false,
-  port: 3001,
-  path: nil,
-  host: 'localhost',
   config_path: nil,
-  environment: 'production'
+  path: nil,
+  deamonize: false,
+  Port: 9292,
+  Host: 'localhost',
+  environment: 'production',
+  quiet: false
 }
 
 OptionParser.new do |parser|
@@ -22,10 +23,11 @@ OptionParser.new do |parser|
   parser.on("-d", "--database PATH", "path to SQLite file  (default: #{DEFAULTS[:path]})") { |v| options[:path] = v }
   parser.on("-c", "--config PATH", "path to a litemetric config file (default: #{DEFAULTS[:config_path]}) ") { |v| options[:config_path] = v }
   parser.on("-s", "--server SERVER", "use SERVER (e.g. puma/falcon/iodine)") { |v| options[:port] = v }
-  parser.on("-H", "--host HOST", "listen on HOST (default: #{options[:host]})") { |v| options[:host] = v }
-  parser.on("-p", "--port PORT", "use PORT (default: #{options[:port]})") { |v| options[:port] = v.to_i rescue options[:port] }
-  parser.on("-D", "--deamonize", "run in the background (default: #{options[:daemonize]})") { |v| options[:deamonize] = true }  
-  parser.on("-e", "--environment", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }  
+  parser.on("-H", "--host HOST", "listen on HOST (default: #{options[:Host]})") { |v| options[:Host] = v }
+  parser.on("-p", "--port PORT", "use PORT (default: #{options[:Port]})") { |v| options[:Port] = v.to_i rescue options[:Port] }
+  parser.on("-D", "--deamonize", "run in the background") { |v| options[:deamonize] = true }  
+  parser.on("-E", "--env ENVIRONMENT", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }  
+  parser.on("-q", "--quiet", "turn off logging") { |v| options[:quiet] = true }  
   parser.on("-h", "--help", "print this message") do
     puts parser
     exit

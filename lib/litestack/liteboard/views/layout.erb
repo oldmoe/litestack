@@ -131,7 +131,8 @@
           for(var i=0; i < list.length; i++){
             //console.log(list[i])
             var link = list[i].children[0] //.children[0].children[0]
-            link.innerHTML = link.innerHTML.replaceAll(el.value, "<span class='token'>" + el.value + "</span>") ;
+            var re = new RegExp("("+el.value+")", "giu")
+            link.innerHTML = link.innerHTML.replaceAll(re, "<span class='token'>$1</span>") ;
           }
         }          
       })

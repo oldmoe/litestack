@@ -30,10 +30,10 @@ Gem::Specification.new do |spec|
   spec.executables = ["liteboard"]
   spec.require_paths = ["lib", "lib/litestack"]
 
-  spec.add_dependency "sqlite3"
+  spec.add_dependency "sqlite3"  
   spec.add_dependency "oj"
   spec.add_dependency "rack"
-  spec.add_dependency "hanami/router"
+  spec.add_dependency "hanami-router"
   spec.add_dependency "tilt"
   spec.add_dependency "erubi"
 end
