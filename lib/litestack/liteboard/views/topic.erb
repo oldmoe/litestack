@@ -2,7 +2,7 @@
     <% if @snapshot and not @snapshot.empty? and not @snapshot[0].nil?%>
       <div><b>Snapshot</b> captured on <%= @snapshot[1] %></div>
       <% @snapshot[0].each_pair do |k, v| %>
-        <table class ="data summary">
+        <table class ="table summary">
           <tr>
             <th colspan="2"><%=k.to_s.capitalize%></th>
           </tr>
@@ -17,22 +17,20 @@
       <% end %>
     <% end %>
     <div><b>Dynamic event data</b></div>
-    <div id="search"><form><input id="search-field" type="text" placeholder="Search events" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>    <table class="data sortable">
+    <div id="search"><form><input id="search-field" type="text" placeholder="Search events" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>    <table class="table sortable">
       <tr>
-        <th width="10%" class="<%='sorted' if @order == 'name'%>"><a href="<%=topic_sort_url('name')%>">Event</a> <%=dir('name')%></th>
-        <!--th class="<%='sorted' if @order == 'keys'%>"><a href="<%=topic_sort_url('keys')%>">Unique Keys</a> <%=dir('keys')%></th-->
-        <th class="<%='sorted' if @order == 'rcount'%>"><a href="<%=topic_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
-        <th class="<%='sorted' if @order == 'ravg'%>"><a href="<%=topic_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
-        <th class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=topic_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
-        <th class="<%='sorted' if @order == 'rmin'%>"><a href="<%=topic_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
-        <th class="<%='sorted' if @order == 'rmax'%>"><a href="<%=topic_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
-        <th width="25%">Events over time</th>
-        <th width="25%">Average value over time</th>
+        <th width="16%" class="<%='sorted' if @order == 'name'%>"><a href="<%=topic_sort_url('name')%>">Event</a> <%=dir('name')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rcount'%>"><a href="<%=topic_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'ravg'%>"><a href="<%=topic_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=topic_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rmin'%>"><a href="<%=topic_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rmax'%>"><a href="<%=topic_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
+        <th width="22%">Events over time</th>
+        <th width="22%">Average value over time</th>
       </tr>
       <% @events.each do |event|%>
       <tr>
         <td title="<%=event[0]%>"><div class="label"><a href="/topics/<%=encode(@topic)%>/events/<%=encode(event[0])%>?res=<%=@res%>"><%=event[0]%></a></div></td>
-        <!--td><%=event[1]%></td-->
         <td><%=event[2]%></td>
         <td><%="%0.2f" % [event[3]] if event[3] %></td>
         <td><%="%0.2f" % [event[4]] if event[4] %></td>

@@ -144,12 +144,12 @@ class Liteboard
   def dir(field)
     if sorted?(field)
       if @dir == 'asc'
-        return '&uArr;'  
+        return "<span class='material-icons'>arrow_drop_up</span>"  
       else
-        return '&dArr;'
+        return "<span class='material-icons'>arrow_drop_down</span>"
       end
     end
-    ''
+    '&nbsp;&nbsp;'
   end
   
   def encode(text)

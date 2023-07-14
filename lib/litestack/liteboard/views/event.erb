@@ -1,15 +1,15 @@
     <h5><a href="/?res=<%=@res%>">All Topics</a> > <a href="/topics/<%=@topic%>?res=<%=@res%>"><%=@topic%></a> > <%= @event %></h5>
     <div id="search"><form><input id="search-field" type="text" placeholder="Search keys" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>
-    <table class="data sortable">
+    <table class="table sortable">
       <tr>
-        <th width="20%" class="<%='sorted' if @order == 'key'%>"><a href="<%=event_sort_url('key')%>">Key</a> <%=dir('key')%></th>
-        <th class="<%='sorted' if @order == 'rcount'%>"><a href="<%=event_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
-        <th class="<%='sorted' if @order == 'ravg'%>"><a href="<%=event_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
-        <th class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=event_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
-        <th class="<%='sorted' if @order == 'rmin'%>"><a href="<%=event_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
-        <th class="<%='sorted' if @order == 'rmax'%>"><a href="<%=event_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
-        <th width="25%">Events over time</th>
-        <th width="25%">Average value over time</th>
+        <th width="16%" class="<%='sorted' if @order == 'key'%>"><a href="<%=event_sort_url('key')%>">Key</a> <%=dir('key')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rcount'%>"><a href="<%=event_sort_url('rcount')%>">Event Count</a> <%=dir('rcount')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'ravg'%>"><a href="<%=event_sort_url('ravg')%>">Avg Value</a> <%=dir('ravg')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rtotal'%>"><a href="<%=event_sort_url('rtotal')%>">Total Value</a> <%=dir('rtotal')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rmin'%>"><a href="<%=event_sort_url('rmin')%>">Min Value</a> <%=dir('rmin')%></th>
+        <th width="8%" class="<%='sorted' if @order == 'rmax'%>"><a href="<%=event_sort_url('rmax')%>">Max Value</a> <%=dir('rmax')%></th>
+        <th width="22%">Events over time</th>
+        <th width="22%">Average value over time</th>
       </tr>
       <% @keys.each do |key|%>
       <tr>
