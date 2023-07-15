@@ -142,6 +142,13 @@ class Litedb::Statement < SQLite3::Statement
     end        
   end
   
+  # overriding each to measure the query time (plus the processing time as well, sadly) 
+  def each
+    measure(stmt_type, @sql) do
+      super
+    end 
+  end
+  
   # overriding execute to measure the query time  
   def execute(*bind_vars)
     res = nil

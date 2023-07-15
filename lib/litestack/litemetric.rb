@@ -132,7 +132,7 @@ class Litemetric
   private
 
   def exit_callback
-    puts "--- Litemetric detected an exit, flushing metrics"
+    STDERR.puts "--- Litemetric detected an exit, flushing metrics"
     @running = false
     flush
   end
@@ -141,10 +141,10 @@ class Litemetric
     super
     @metrics = {}
     @registered = {}
-    @flusher = create_flusher
-    @summarizer = create_summarizer
-    @collector = Litemetric::Collector.new({dbpath: @options[:path]})
     @mutex = Litesupport::Mutex.new
+    @collector = Litemetric::Collector.new({dbpath: @options[:path]})
+    @summarizer = create_summarizer
+    @flusher = create_flusher
   end
 
   def current_time_slot
@@ -157,14 +157,19 @@ class Litemetric
      
   def create_connection
     conn = super
-    conn.wal_autocheckpoint = 10000
+    conn.wal_autocheckpoint = 10000 # checkpoint after 10000 pages are written
     sql = YAML.load_file("#{__dir__}/litemetric.sql.yml")
     version = conn.get_first_value("PRAGMA user_version")
     sql["schema"].each_pair do |v, obj| 
       if v > version
-        conn.transaction do 
-          obj.each{|k, s| conn.execute(s)}
-          conn.user_version = v
+        begin
+          conn.transaction do 
+            obj.each{|k, s| conn.execute(s)}
+            conn.user_version = v
+          end
+        rescue Exception => e
+          STDERR.puts e.message
+          raise e
         end
       end
     end 
@@ -176,9 +181,7 @@ class Litemetric
     Litesupport.spawn do
       while @running do
         sleep @options[:flush_interval]
-        @mutex.synchronize do
-          flush
-        end
+        flush
       end      
     end 
   end
@@ -284,7 +287,7 @@ class Litemetric
     
     def flush
       t = Time.now
-      limit = 1000
+      limit = 1000 # migrate 1000 records at a time
       count = run_stmt(:event_count)[0][0]
       while count > 0
         @conn.acquire do |conn|
@@ -294,7 +297,7 @@ class Litemetric
             count = conn.stmts[:event_count].execute![0][0]
           end         
         end
-        sleep 0.005
+        sleep 0.005 #give other threads a chance to run
       end
     end
 

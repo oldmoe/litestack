@@ -27,10 +27,10 @@
       //table.summary { width: 50% }
       span.hidden { display: none}
       div#search {margin-bottom: 8px}
-      div#footer {position:fixed; height: 40px; margin-left: -12px; width:100%; background-color:#eee; border-top: #666 1px solid; padding: 8px; bottom: 0; text-align: right}
+      div#footer {position:fixed; left:0px; height: 40px; width:100%; background-color:#0891; border-top: #0893 1px solid; padding: 8px; bottom: 0; text-align: right}
       .logo{font-family: antonio}
       .logo-half{ color: #078 }
-      .smaller { font-size: 28px; font-weight: normal}
+      .smaller { font-size: 24px; font-weight: normal}
       .token {background-color: #ed9}
       svg > g > g.google-visualization-tooltip { pointer-events : none }
       .material-icons { vertical-align: middle}
@@ -39,7 +39,7 @@
   <body>
     <div id="content">
     <div id="header">
-      <h1><span class="logo"><span class="logo-half">lite</span>board</span>  <span class="logo smaller">the <span class="logo-half">lite</span>metric dashboard</span></span></h1>
+      <h1><span class="logo"><span class="logo-half">lite</span>board | </span> <span class="logo smaller">the <span class="logo-half">lite</span>metric dashboard</span></span></h1>
     </div>
     <table class="head">
       <tr>
@@ -87,14 +87,15 @@
             })
             //data.addRows(mydata)
             var options = {
-              'animation': {'startup': true, 'duration': 300},
-              'width':'400',
-              'height': 40,
-              'backgroundColor': 'none',
-              'colors' : ['#089'],
-              'vAxis': {'gridlines': {'count' : 0}, 'textPosition' : 'none', 'baselineColor' : 'none', 'minValue' : 0 , 'maxValue' : 50},
-              'hAxis': { 'count' : 0, 'textPosition' : 'none', 'baselineColor' : 'none'},
-              'legend': {'position': 'none'}
+              animation: {'startup': true, 'duration': 300},
+              width: 400,
+              height: 40,
+              backgroundColor: 'none',
+              curveType: 'function',
+              colors : ['#089'],
+              vAxis: {'gridlines': {'count' : 0}, 'textPosition' : 'none', 'baselineColor' : 'none', 'minValue' : 0 , 'maxValue' : 50},
+              hAxis: { 'count' : 0, 'textPosition' : 'none', 'baselineColor' : 'none'},
+              legend: {'position': 'none'}
             }
             var chart = new google.visualization.AreaChart(element);
             chart.draw(data, options);   
