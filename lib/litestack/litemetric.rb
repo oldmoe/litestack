@@ -228,13 +228,16 @@ class Litemetric
     end
     
     def measure(event, key=event)
-      return yield unless @litemetric
+      unless @litemetric
+        yield
+        return 0 
+      end
       t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC) 
-      res = yield
+      yield
       t2 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       value = (( t2 - t1 ) * 1000).round # capture time in milliseconds
       capture(event, key, value)
-      res  
+      value # return value so other events can reuse it  
     end    
     
     def capture_snapshot
