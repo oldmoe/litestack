@@ -183,7 +183,7 @@ production:
 
 ## Contributing
 
-Bug reports are welcome on GitHub at https://github.com/oldmoe/litestack. Please note that this is not an open contribution project and that we don't accept pull requests.
+Bug reports and pull requests are welcome on GitHub at https://github.com/oldmoe/litestack.
 
 ## License
 
