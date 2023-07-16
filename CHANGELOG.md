@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.2.6] - 2023-07-16
+
+- Much improved database location setting (thanks Brad Gessler)
+- A Rails generator for better Rails Litestack defaults (thanks Brad Gessler)
+- Revamped Litemetric, now much faster and more accurate (still experimental)
+- Introduced Liteboard, a dashboard for viewing Litemetric data
+
 ## [0.2.3] - 2023-05-20
 
 - Cut back on options defined in the Litejob Rails adapter
