@@ -1,0 +1,11 @@
+Description:
+    Installs litestack gem and configures the project to use litestack
+    in development, test, and production environments.
+
+Example:
+    bin/rails generate litestack:install
+
+    This will modify:
+        config/environments/production.rb
+        config/database.yml
+        config/cable.yml

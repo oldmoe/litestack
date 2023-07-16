@@ -28,7 +28,7 @@ end
 
 require './uljob.rb'
 
-STDERR.puts "litejob started in #{Litesupport.environment} environmnet"
+STDERR.puts "litejob started in #{Litesupport.scheduler} environmnet"
 
 t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 bench("enqueuing litejobs", count) do |i|

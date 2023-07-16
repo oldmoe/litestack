@@ -4,47 +4,66 @@ require 'sqlite3'
 require 'logger'
 require 'oj'
 require 'yaml'
+require 'pathname'
+require 'fileutils'
 
 module Litesupport
 
   class Error < StandardError; end
   
-  # cache the environment we are running in
-  # it is an error to change the environment for a process 
-  # or for a child forked from that process
-  def self.environment
-    @env ||= detect_environment
-  end
-  
   def self.max_contexts
-    return 50 if environment == :fiber || environment == :polyphony
+    return 50 if scheduler == :fiber || scheduler == :polyphony
     5    
   end
-    
-  # identify which environment we are running in
-  # we currently support :fiber, :polyphony, :iodine & :threaded
-  # in the future we might want to expand to other environments
+
+  # Detect the Rack or Rails environment.
   def self.detect_environment
+    if defined? Rails
+      Rails.env
+    elsif ENV["RACK_ENV"]
+      ENV["RACK_ENV"]
+    elsif ENV["APP_ENV"]
+      ENV["RACK_ENV"]
+    else
+      "development"
+    end
+  end
+
+  def self.environment
+    @environment ||= detect_environment
+  end
+
+  # cache the scheduler we are running in
+  # it is an error to change the scheduler for a process
+  # or for a child forked from that process
+  def self.scheduler
+    @scehduler ||= detect_scheduler
+  end
+
+  # identify which scheduler we are running in
+  # we currently support :fiber, :polyphony, :iodine & :threaded
+  # in the future we might want to expand to other schedulers
+  def self.detect_scheduler
     return :fiber if Fiber.scheduler 
     return :polyphony if defined? Polyphony
     return :iodine if defined? Iodine
-    return :threaded # fall back for all other environments
+    return :threaded # fall back for all other schedulers
   end
   
   # spawn a new execution context
   def self.spawn(&block)
-    if self.environment == :fiber
+    if self.scheduler == :fiber
       Fiber.schedule(&block)
-    elsif self.environment == :polyphony
+    elsif self.scheduler == :polyphony
       spin(&block)
-    elsif self.environment == :threaded or self.environment == :iodine
+    elsif self.scheduler == :threaded or self.scheduler == :iodine
       Thread.new(&block)
     end
     # we should never reach here
   end
-    
+
   def self.context
-    if environment == :fiber || environment == :poylphony
+    if scheduler == :fiber || scheduler == :poylphony
       Fiber.current.storage
     else
       Thread.current
@@ -52,7 +71,7 @@ module Litesupport
   end
   
   def self.current_context
-    if environment == :fiber || environment == :poylphony
+    if scheduler == :fiber || scheduler == :poylphony
       Fiber.current
     else
       Thread.current
@@ -61,10 +80,10 @@ module Litesupport
   
   # switch the execution context to allow others to run
   def self.switch
-    if self.environment == :fiber
+    if self.scheduler == :fiber
       Fiber.scheduler.yield
       true
-    elsif self.environment == :polyphony
+    elsif self.scheduler == :polyphony
       Fiber.current.schedule
       Thread.current.switch_fiber
       true
@@ -85,7 +104,7 @@ module Litesupport
   # they must send (true) as a parameter to this method
   # else it is a no-op for fibers
   def self.synchronize(fiber_sync = false, &block)
-    if self.environment == :fiber or self.environment == :polyphony
+    if self.scheduler == :fiber or self.scheduler == :polyphony
       yield # do nothing, just run the block as is
     else
       self.mutex.synchronize(&block)
@@ -103,7 +122,30 @@ module Litesupport
     end
     db
   end
-  
+
+  # Databases will be stored by default at this path.
+  def self.root
+    @root ||= ensure_root_volume detect_root
+  end
+
+  # Default path where we'll store all of the databases.
+  def self.detect_root
+    path = if ENV["LITESTACK_DATA_PATH"]
+      ENV["LITESTACK_DATA_PATH"]
+    elsif defined? Rails
+      "./db"
+    else
+      "."
+    end
+
+    Pathname.new(path).join(Litesupport.environment)
+  end
+
+  def self.ensure_root_volume(path)
+    FileUtils.mkdir_p path unless path.exist?
+    path
+  end
+
   class Mutex
   
     def initialize
@@ -111,7 +153,7 @@ module Litesupport
     end
     
     def synchronize(&block)
-      if Litesupport.environment == :threaded || Litesupport.environment == :iodine
+      if Litesupport.scheduler == :threaded || Litesupport.scheduler == :iodine
         @mutex.synchronize{ block.call }
       else
         block.call
@@ -188,7 +230,7 @@ module Litesupport
     def _fork(*args)
       ppid = Process.pid
       result = super
-      if Process.pid != ppid && [:threaded, :iodine].include?(Litesupport.environment)
+      if Process.pid != ppid && [:threaded, :iodine].include?(Litesupport.scheduler)
         ForkListener.listeners.each{|l| l.call }
       end
       result
@@ -245,22 +287,14 @@ module Litesupport
       Litesupport::ForkListener.listen do
         setup
       end
-    end  
-    
+    end
+
     def configure(options = {})
-      # detect environment (production, development, etc.)
-      env = "development"
-      if defined? Rails
-        env = ENV["RAILS_ENV"]
-      elsif ENV["RACK_ENV"]
-        env = ENV["RACK_ENV"]  
-      elsif ENV["APP_ENV"]
-        env = ENV["RACK_ENV"]
-      end      
+      # detect enviornment (production, development, etc.)
       defaults = self.class::DEFAULT_OPTIONS rescue {}
       @options = defaults.merge(options)
       config = YAML.load_file(@options[:config_path]) rescue {} # an empty hash won't hurt
-      config = config[env] if config[env] # if there is a config for the current environment defined then use it, otherwise use the top level declaration
+      config = config[Litesupport.environment] if config[Litesupport.environment] # if there is a config for the current enviornment defined then use it, otherwise use the top level declaration
       config.keys.each do |k| # symbolize keys
         config[k.to_sym] = config[k]
         config.delete k

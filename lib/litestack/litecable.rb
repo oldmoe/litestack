@@ -15,7 +15,7 @@ class Litecable
 
   DEFAULT_OPTIONS = {
     config_path: "./litecable.yml",
-    path: "./cable.db",
+    path: Litesupport.root.join("cable.sqlite3"),
     sync: 0,
     mmap_size: 16 * 1024 * 1024, # 16MB
     expire_after: 5, # remove messages older than 5 seconds
