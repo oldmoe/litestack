@@ -303,7 +303,7 @@ class Litemetric
 
     def create_connection
       conn = super
-      conn.execute("ATTACH ? as m", @options[:dbpath])
+      conn.execute("ATTACH ? as m", @options[:dbpath].to_s)
       conn.wal_autocheckpoint = 10000
       sql = YAML.load_file("#{__dir__}/litemetric_collector.sql.yml")
       version = conn.get_first_value("PRAGMA user_version")

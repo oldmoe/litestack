@@ -52,7 +52,7 @@ class Liteboard
   end
 
   def after(body=nil)
-    [200, {}, [body]]    
+    [200, {'Cache-Control' => 'no-cache'}, [body]]    
   end
 
   def before
