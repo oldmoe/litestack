@@ -35,7 +35,7 @@ module ActiveRecord
         # set the global memory map so all processes can share data
         # https://www.sqlite.org/pragma.html#pragma_mmap_size
         # https://www.sqlite.org/mmap.html
-        raw_connection.mmap_size = 128 * 1024 * 1024 
+        raw_connection.mmap_size = 128.megabytes
         
         # increase the local connection cache to 2000 pages
         # https://www.sqlite.org/pragma.html#pragma_cache_size
