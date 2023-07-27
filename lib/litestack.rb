@@ -22,4 +22,5 @@ module Litestack
   class NotImplementedError < Exception; end
   class TimeoutError < Exception; end
   class DeadlockError < Exception; end
+  class InsufficientSQLiteVersionError < Exception; end
 end

@@ -2,22 +2,60 @@
 require_relative 'litesupport'
 
 # Litedb inherits from the SQLite3::Database class and adds a few initialization options
-class Litedb < ::SQLite3::Database
+module Litedb
+  module Statement
+    include Litemetric::Measurable
+  
+    attr_accessor :sql
+  
+    def initialize(db, sql)
+      super(db, sql)
+      collect_metrics if db.collecting_metrics?
+    end
+  
+    def metrics_identifier
+      "Litedb" # overridden to match the parent class
+    end
+    
+    # return the type of the statement 
+    def stmt_type
+      @stmt_type ||= detect_stmt_type
+    end
+    
+    def detect_stmt_type
+      if @sql.start_with?("SEL") || @sql.start_with?("WITH")
+        "Read"
+      elsif @sql.start_with?("CRE") || @sql.start_with?("ALT") || @sql.start_with?("DRO")
+        "Schema change"
+      elsif @sql.start_with?("PRA") 
+        "Pragma"
+      else
+        "Write"
+      end        
+    end
+    
+    # overriding each to measure the query time (plus the processing time as well, sadly) 
+    def each
+      measure(stmt_type, @sql) do
+        super
+      end 
+    end
+    
+    # overriding execute to measure the query time  
+    def execute(*bind_vars)
+      res = nil
+      measure(stmt_type, @sql) do
+        res = super(*bind_vars)
+      end
+      res
+    end
+  end
 
   # add litemetric support
   include Litemetric::Measurable
   
-  # overrride the original initilaizer to allow for connection configuration
+  # overrride the original initializer to allow for connection configuration
   def initialize(file, options = {}, zfs = nil )
-    if block_given?
-      super(file, options, zfs) do |db|
-        init unless options[:noinit] == true
-        yield db
-      end
-    else
-      super(file, options, zfs)
-      init unless options[:noinit] == true
-    end
     @running = true
     @collecting_metrics = options[:metrics]
     collect_metrics if @collecting_metrics
@@ -86,76 +124,4 @@ class Litedb < ::SQLite3::Database
     end  
    
   end
-
-  private
-
-  # default connection configuration values 
-  def init
-    # version 3.37 is required for strict typing support and the newest json operators
-    raise Litesupport::Error if SQLite3::SQLITE_VERSION_NUMBER < 3037000
-    # time to wait to obtain a write lock before raising an exception
-    self.busy_handler{|i| sleep 0.001}
-    # level of database durability, 2 = "FULL" (sync on every write), other values include 1 = "NORMAL" (sync every 1000 written pages) and 0 = "NONE"
-    self.synchronous = 1
-    # Journal mode WAL allows for greater concurrency (many readers + one writer)
-    self.journal_mode = "WAL"
-    # impose a limit on the WAL file to prevent unlimited growth (with a negative impact on read performance as well)
-    self.journal_size_limit = 64 * 1024 * 1024
-    # set the global memory map so all processes can share data
-    self.mmap_size = 128 * 1024 * 1024 
-    # increase the local connection cache to 2000 pages
-    self.cache_size = 2000
-  end
-  
-end
-
-# the Litedb::Statement also inherits from SQLite3::Statement
-class Litedb::Statement < SQLite3::Statement      
-    
-  include Litemetric::Measurable
-
-  attr_accessor :sql
-
-  def initialize(db, sql)
-    super(db, sql)
-    collect_metrics if db.collecting_metrics?
-  end
-
-  def metrics_identifier
-    "Litedb" # overridden to match the parent class
-  end
-  
-  # return the type of the statement 
-  def stmt_type
-    @stmt_type ||= detect_stmt_type
-  end
-  
-  def detect_stmt_type
-    if @sql.start_with?("SEL") || @sql.start_with?("WITH")
-      "Read"
-    elsif @sql.start_with?("CRE") || @sql.start_with?("ALT") || @sql.start_with?("DRO")
-      "Schema change"
-    elsif @sql.start_with?("PRA") 
-      "Pragma"
-    else
-      "Write"
-    end        
-  end
-  
-  # overriding each to measure the query time (plus the processing time as well, sadly) 
-  def each
-    measure(stmt_type, @sql) do
-      super
-    end 
-  end
-  
-  # overriding execute to measure the query time  
-  def execute(*bind_vars)
-    res = nil
-    measure(stmt_type, @sql) do
-      res = super(*bind_vars)
-    end
-    res
-  end
-
 end
