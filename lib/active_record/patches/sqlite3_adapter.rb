@@ -7,7 +7,7 @@ module ActiveRecord
         
         super
         
-        configure_connection unless options.fetch(:noinit, false)
+        configure_litedb_connection unless options.fetch(:noinit, false)
         
         ::SQLite3::Database.prepend Litedb
         ::SQLite3::Statement.prepend Litedb::Statement
@@ -15,7 +15,7 @@ module ActiveRecord
       
       private
       
-      def configure_connection
+      def configure_litedb_connection
         # time to wait to obtain a write lock before raising an exception
         # https://www.sqlite.org/pragma.html#pragma_busy_timeout
         raw_connection.busy_handler { sleep 0.001 }
