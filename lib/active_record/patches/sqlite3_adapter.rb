@@ -30,7 +30,7 @@ module ActiveRecord
         
         # impose a limit on the WAL file to prevent unlimited growth (with a negative impact on read performance as well)
         # https://www.sqlite.org/pragma.html#pragma_journal_size_limit
-        raw_connection.journal_size_limit = 64 * 1024 * 1024
+        raw_connection.journal_size_limit = 64.megabytes
         
         # set the global memory map so all processes can share data
         # https://www.sqlite.org/pragma.html#pragma_mmap_size
