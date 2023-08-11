@@ -10,7 +10,7 @@ require 'oj'
 class Litecable
 
   include Litesupport::Liteconnection
-  include Litemetric::Measurable
+  #include Litemetric::Measurable
 
 
   DEFAULT_OPTIONS = {
@@ -119,20 +119,9 @@ class Litecable
   end
 
   def create_connection
-    conn = super
-    conn.wal_autocheckpoint = 10000 
-    sql = YAML.load_file("#{__dir__}/litecable.sql.yml")
-    version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj| 
-      if v > version
-        conn.transaction do 
-          obj.each{|k, s| conn.execute(s)}
-          conn.user_version = v
-        end
-      end
-    end 
-    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
-    conn
+    super("#{__dir__}/litecable.sql.yml") do |conn|
+      conn.wal_autocheckpoint = 10000 
+    end
   end
   
 end

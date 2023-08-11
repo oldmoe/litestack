@@ -1,6 +1,9 @@
 # all components should require the support module
 require_relative 'litesupport'
 
+# all measurable components should require the litemetric class
+require_relative 'litemetric'
+
 # Litedb inherits from the SQLite3::Database class and adds a few initialization options
 class Litedb < ::SQLite3::Database
 
@@ -34,7 +37,11 @@ class Litedb < ::SQLite3::Database
 
   # return the size of the database file  
   def size
-    execute("SELECT s.page_size * c.page_count FROM pragma_page_size() as s, pragma_page_count() as c")[0][0]
+    execute("SELECT s.page_size * c.page_count FROM pragma_page_size() AS s, pragma_page_count() AS c")[0][0]
+  end
+  
+  def schema_object_count(type = nil)
+    execute("SELECT count(*) FROM SQLITE_MASTER WHERE iif(?1 IS NOT NULL, type = ?1, TRUE)", type)[0][0]
   end
   
   # collect snapshot information
@@ -44,7 +51,9 @@ class Litedb < ::SQLite3::Database
         path: filename,
         journal_mode: journal_mode,
         synchronous: synchronous,
-        size: size
+        size: size.to_f / (1024 * 1024),
+        tables: schema_object_count('table'), 
+        indexes: schema_object_count('index')
       }
     }
   end

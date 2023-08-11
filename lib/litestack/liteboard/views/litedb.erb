@@ -1,0 +1,168 @@
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Size
+        </div>
+        <div class="card-body">
+          <h1><%=round(@size)%>MB</h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Tables
+        </div>
+        <div class="card-body">
+          <h1><%=@tables%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Indexes
+        </div>
+        <div class="card-body">
+          <h1><%=@indexes%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Read queries
+        </div>
+        <div class="card-body">
+          <h1><%=@reads%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Write queries
+        </div>
+        <div class="card-body">
+          <h1><%=@writes%></h1>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Reads vs writes over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinecolumn"><%=Oj.dump([["Time", "Reads", "Writes"]] + @reads_vs_writes)%></span>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Reads vs writes
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinepie"><%=[["name", "value"],["reads", @reads],["writes", @writes]]%></span>
+        </div>
+      </div>
+    </div>
+  
+  </div>
+  
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Query execution time over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinecolumn"><%=Oj.dump([["Time", "Reads execution time",  {'role' => 'tooltip'}, "Writes execution time", {'role' => 'tooltip'}]] + @reads_vs_writes_times)%></span>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Query time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinepie"><%=[["name", "value"],["total reads time", @read_times],["total writes time", @write_times]]%></span>
+        </div>
+      </div>
+    </div>
+  
+  </div>
+  
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Slowest queries
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@slowest.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h6><%=r['ravg'].truncate(4)%>&nbsp;sec</h6></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Most expensive queries (execution time x frequency)
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@popular.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h6><%=r['rtotal'].truncate(4)%>&nbsp;sec</h6></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+

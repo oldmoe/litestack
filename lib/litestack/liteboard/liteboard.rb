@@ -16,13 +16,17 @@ class Liteboard
     get "/", to: ->(env) do
       Liteboard.new(env).call(:index)
     end
-    
-    get "/topics/:topic", to: ->(env) do
-      Liteboard.new(env).call(:topic)
+
+    get "/topics/Litejob", to: ->(env) do
+      Liteboard.new(env).call(:litejob)
+    end
+
+    get "/topics/Litecache", to: ->(env) do
+      Liteboard.new(env).call(:litecache)
     end
     
-    get "/topics/:topic/events/:event", to: ->(env) do
-      Liteboard.new(env).call(:event)
+    get "/topics/Litedb", to: ->(env) do
+      Liteboard.new(env).call(:litedb)
     end
 
   end 
@@ -45,12 +49,6 @@ class Liteboard
     after(res)
   end
   
-  def render(tpl_name)
-    layout = Tilt.new("#{__dir__}/views/layout.erb")
-    tpl = Tilt.new("#{__dir__}/views/#{tpl_name.to_s}.erb")
-    res = layout.render(self){tpl.render(self)}
-  end
-
   def after(body=nil)
     [200, {'Cache-Control' => 'no-cache'}, [body]]    
   end
@@ -76,48 +74,127 @@ class Liteboard
     end
     @search = params(:search)
     @search = nil if @search == ''
+    @topics = @lm.topic_summaries(@resolution, @step * @count, @order, @dir, @search)
   end
   
   def index
     @order = 'topic' unless @order
-    topics = @lm.topics
-    @topics = @lm.topic_summaries(@resolution, @step * @count, @order, @dir, @search)
     @topics.each do |topic|
         data_points = @lm.topic_data_points(@step, @count, @resolution, topic[0])      
-        topic << data_points.collect{|r| [r[0],r[2]]}
+        topic << data_points.collect{|r| [r[0],r[2] || 0]}
     end    
     render :index
   end
   
-  def topic
+  def litecache
     @order = 'rcount' unless @order
-    @topic = params(:topic)
+    @topic = 'Litecache'
     @events = @lm.events_summaries(@topic, @resolution, @order, @dir, @search, @step * @count)
     @events.each do |event|
-      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event[0])
-      event << data_points.collect{|r| [r[0],r[2]]}
-      event << data_points.collect{|r| [r[0],r[3]]}
+      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event['name'])
+      event['counts'] = data_points.collect{|r| [r['rtime'],r['rcount']]}
+      event['values'] = data_points.collect{|r| [r['rtime'],r['ravg']]}
     end
-    @snapshot = @lm.snapshot(@topic)
-    if @snapshot.empty?
-      @snapshot = []
-    else
-      @snapshot[0] = Oj.load(@snapshot[0]) unless @snapshot[0].nil?
-    end
-    render :topic
+    @snapshot = read_snapshot(@topic)
+    @size = @snapshot[0][:summary][:size] rescue 0
+    @max_size = @snapshot[0][:summary][:max_size] rescue 0
+    @full = (@size / @max_size)*100 rescue 0
+    @entries = @snapshot[0][:summary][:entries] rescue 0
+    @gets = @events.find{|t| t['name'] == 'get'}
+    @sets = @events.find{|t| t['name'] == 'set'}
+    @reads = @gets['rcount'] rescue 0
+    @writes = @sets['rcount'] rescue 0
+    @hitrate = @gets['ravg'] rescue 0
+    @hits = @reads * @hitrate
+    @misses = @reads - @hits
+    @reads_vs_writes = @gets['counts'].collect.with_index{|obj, i| obj.clone << @sets['counts'][i][1] } rescue []
+    @hits_vs_misses = @gets['values'].collect.with_index{|obj, i| [obj[0], obj[1].to_f * @gets['counts'][i][1].to_f, (1 - obj[1].to_f) * @gets['counts'][i][1].to_f] } rescue []
+    @top_reads = @lm.keys_summaries(@topic, 'get', @resolution, @order, @dir, nil, @step * @count).first(8)
+    @top_writes = @lm.keys_summaries(@topic, 'set', @resolution, @order, @dir, nil, @step * @count).first(8)
+    render :litecache
   end
   
-  def event
+  def litedb
     @order = 'rcount' unless @order
-    @topic = params(:topic)
-    @event = params(:event)
-    @keys = @lm.keys_summaries(@topic, @event, @resolution, @order, @dir, @search, @step * @count)  
-    @keys.each do |key|
-      data_points = @lm.key_data_points(@step, @count, @resolution, @topic, @event, key[0])
-      key << data_points.collect{|r| [r[0],r[2]]}
-      key << data_points.collect{|r| [r[0],r[3]]}
-    end    
-    render :event
+    @topic = 'Litedb'
+    @events = @lm.events_summaries(@topic, @resolution, @order, @dir, @search, @step * @count)
+    @events.each do |event|
+      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event['name'])
+      event['counts'] = data_points.collect{|r| [r['rtime'],r['rcount'] || 0]}
+      event['values'] = data_points.collect{|r| [r['rtime'],r['rtotal'] || 0]}
+    end
+    @snapshot = read_snapshot(@topic)
+    @size = @snapshot[0][:summary][:size] rescue 0
+    @tables = @snapshot[0][:summary][:tables] rescue 0
+    @indexes = @snapshot[0][:summary][:indexes] rescue 0
+    @gets = @events.find{|t| t['name'] == 'Read'}
+    @sets = @events.find{|t| t['name'] == 'Write'}
+    @reads = @gets['rcount'] rescue 0
+    @writes = @sets['rcount'] rescue 0
+    @time = @gets['ravg'] rescue 0
+    @reads_vs_writes = @gets['counts'].collect.with_index{|obj, i| obj.clone << @sets['counts'][i][1] } rescue []
+    @reads_vs_writes_times = @gets['values'].collect.with_index{|obj, i| [obj[0], obj[1], @sets['values'][i][1].to_f] } rescue []
+    @read_times = @gets['rtotal'] rescue 0
+    @write_times = @sets['rtotal'] rescue 0
+    @slowest = @lm.keys_summaries(@topic, 'Read', @resolution, 'ravg', 'desc', nil, @step * @count).first(8)
+    @slowest += @lm.keys_summaries(@topic, 'Write', @resolution, 'ravg', 'desc', nil, @step * @count).first(8)
+    @slowest = @slowest.sort{|a, b| a['ravg'] <=> b['ravg']}.reverse.first(8) 
+    @popular = @lm.keys_summaries(@topic, 'Read', @resolution, 'rtotal', 'desc', nil, @step * @count).first(8)
+    @popular += @lm.keys_summaries(@topic, 'Write', @resolution, 'rtotal', 'desc', nil, @step * @count).first(8)
+    @popular = @popular.sort{|a, b| a['rtotal'] <=> b['rtotal']}.reverse.first(8) 
+    render :litedb
+  end
+  
+  def litejob
+    @order = 'rcount' unless @order
+    @topic = 'Litejob'
+    @events = @lm.events_summaries(@topic, @resolution, @order, @dir, @search, @step * @count)
+    @events.each do |event|
+      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event['name'])
+      event['counts'] = data_points.collect{|r| [r['rtime'],r['rcount'] || 0]}
+      event['values'] = data_points.collect{|r| [r['rtime'],r['rtotal'] || 0]}
+    end
+    @snapshot = read_snapshot(@topic)
+    @size = @snapshot[0][:summary][:size] rescue 0
+    @jobs = @snapshot[0][:summary][:jobs] rescue 0
+    @queues = @snapshot[0][:queues] rescue {}
+    @processed_jobs = @events.find{|e|e['name'] == 'perform'}
+    @processed_count = @processed_jobs['rcount'] rescue 0
+    @processing_time = @processed_jobs['rtotal'] rescue 0 
+    keys_summaries = @lm.keys_summaries(@topic, 'perform', @resolution, 'rcount', 'desc', nil, @step * @count)
+    @processed_count_by_queue = keys_summaries.collect{|r|[r['key'], r['rcount']]}
+    @processing_time_by_queue = keys_summaries.collect{|r|[r['key'], r['rtotal']]} #.sort{|r1, r2| r1['rtotal'] > r2['rtotal'] }
+    @processed_count_over_time = @events.find{|e| e['name'] == 'perform'}['counts'] rescue []
+    @processing_time_over_time = @events.find{|e| e['name'] == 'perform'}['values'] rescue []
+    @processed_count_over_time_by_queues = [] 
+    @processing_time_over_time_by_queues = []
+    keys = ['Time']
+    keys_summaries.each_with_index do |summary,i|
+      key = summary['key']
+      keys << key
+      data_points = @lm.key_data_points(@step, @count, @resolution, @topic, 'perform', key)
+      if i == 0
+        data_points.each do |dp|        
+          @processed_count_over_time_by_queues << [dp['rtime']] 
+          @processing_time_over_time_by_queues << [dp['rtime']] 
+        end
+      end
+      data_points.each_with_index do |dp, j|
+        @processed_count_over_time_by_queues[j] << (dp['rcount'] || 0)
+        @processing_time_over_time_by_queues[j] << (dp['rtotal'] || 0)
+      end
+    end
+    @processed_count_over_time_by_queues.unshift(keys)
+    @processing_time_over_time_by_queues.unshift(keys)      
+    render :litejob
+  end
+  
+  def index_url
+    "/?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
+  end
+  
+  def topic_url(topic)
+    "/topics/#{encode(topic)}?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
   end
 
   def index_sort_url(field)
@@ -156,9 +233,34 @@ class Liteboard
     URI.encode_uri_component(text)
   end
   
+  def round(float)
+    return 0 unless float.is_a? Numeric
+    ((float * 100).round).to_f / 100
+  end
+  
   def self.app
    @@app
   end
+
+  private
+  
+  def read_snapshot(topic)
+    snapshot = @lm.snapshot(topic)
+    if snapshot.empty?
+      snapshot = []
+    else
+      snapshot[0] = Oj.load(snapshot[0]) unless snapshot[0].nil?
+    end
+    snapshot  
+  end
+  
+  def render(tpl_name)
+    layout = Tilt.new("#{__dir__}/views/layout.erb")
+    tpl_path = "#{__dir__}/views/#{tpl_name.to_s}.erb"
+    tpl = Tilt.new(tpl_path)
+    res = layout.render(self){tpl.render(self)}
+  end
+
 
 end
 

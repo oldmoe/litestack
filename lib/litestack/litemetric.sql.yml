@@ -13,13 +13,13 @@ schema:
         name TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
         key TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
         count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, 
-        value INTEGER, 
-        minimum INTEGER, 
-        maximum INTEGER, 
+        value REAL, 
+        minimum REAL, 
+        maximum REAL, 
         created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL, 
         resolution TEXT DEFAULT('minute') NOT NULL, 
         PRIMARY KEY(resolution, created_at, topic, name, key)
-      );        
+      ) STRICT;        
 
     create_topic_index_on_events: CREATE INDEX events_topic_index ON events (resolution, created_at, topic) WHERE name = '___';
     create_event_index_on_events: CREATE INDEX events_event_index ON events (resolution, created_at , topic, name) WHERE key = '___';
@@ -226,7 +226,7 @@ stmts:
     FROM events 
     WHERE topic = ?1 AND name = ?2 AND resolution = ?3 
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() -?6 
+    AND created_at >= unixepoch() - ?6 
     AND key != '___'
     AND iif(length(?5) > 0, rowid IN (SELECT rowid FROM events_search WHERE key LIKE ?5), TRUE)
     GROUP BY key
@@ -251,7 +251,7 @@ stmts:
     FROM events 
     WHERE topic = ?1 AND name = ?2 AND resolution = ?3 
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() -?6 
+    AND created_at >= unixepoch() - ?6 
     AND key != '___'
     AND iif(length(?5) > 0, rowid IN (SELECT rowid FROM events_search WHERE key LIKE ?5), TRUE)
     GROUP BY key
@@ -272,8 +272,8 @@ stmts:
     SELECT 
       datetime(ts.slot, 'unixepoch') AS rtime, 
       ts.slot AS unixtime, 
-      format('%.2f', sum(events.count)) AS rcount, 
-      format('%.2f', avg(events.value/events.count)) AS ravg 
+      sum(events.count) AS rcount, 
+      avg(events.value/events.count) AS ravg 
     FROM (
       WITH RECURSIVE timeslot(x) AS ( 
         SELECT (unixepoch()/(?1))*(?1) 
@@ -294,8 +294,9 @@ stmts:
     SELECT 
       datetime(ts.slot, 'unixepoch') AS rtime, 
       ts.slot AS unixtime, 
-      format('%.2f', sum(events.count)) AS rcount, 
-      format('%.2f', avg(events.value/events.count)) AS ravg 
+      events.count AS rcount, 
+      events.value / events.count AS ravg, 
+      events.value AS rtotal 
     FROM (
       WITH RECURSIVE timeslot(x) AS ( 
         SELECT (unixepoch()/(?1))*(?1) 
@@ -317,8 +318,9 @@ stmts:
     SELECT 
       datetime(ts.slot, 'unixepoch') AS rtime, 
       ts.slot AS unixtime, 
-      format('%.2f', sum(events.count)) AS rcount, 
-      format('%.2f', avg(events.value/events.count)) AS ravg 
+      events.count AS rcount, 
+      events.value / events.count AS ravg, 
+      events.value AS rtotal 
     FROM (
       WITH RECURSIVE timeslot(x) AS ( 
         SELECT (unixepoch()/(?1))*(?1) 

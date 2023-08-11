@@ -23,7 +23,7 @@ module Litesupport
     elsif ENV["RACK_ENV"]
       ENV["RACK_ENV"]
     elsif ENV["APP_ENV"]
-      ENV["RACK_ENV"]
+      ENV["APP_ENV"]
     else
       "development"
     end
@@ -99,8 +99,8 @@ module Litesupport
     @@mutex ||= Mutex.new
   end
   
-  # bold assumption, we will only synchronize threaded code
-  # if some code explicitly wants to synchronize a fiber
+  # bold assumption, we will only synchronize threaded code!
+  # If some code explicitly wants to synchronize a fiber
   # they must send (true) as a parameter to this method
   # else it is a no-op for fibers
   def self.synchronize(fiber_sync = false, &block)
@@ -162,21 +162,6 @@ module Litesupport
   
   end
    
-  module Forkable
-    
-    def _fork(*args)
-      ppid = Process.pid
-      result = super      
-      if Process.pid != ppid
-        # trigger a restart of all connections owned by Litesupport::Pool
-      end
-      result
-    end
-    
-  end
-
-  #::Process.singleton_class.prepend(::Litesupport::Forkable)
-  
   class Pool
   
     def initialize(count, &block)
@@ -333,13 +318,18 @@ module Litesupport
     def run_method(method, *args)
       @conn.acquire{|q| q.send(method, *args)}
     end
+
+    def run_stmt_method(stmt, method, *args)
+      @conn.acquire{|q| q.stmts[stmt].send(method, *args)}
+    end
+
     
     def create_pooled_connection(count = 1)
       Litesupport::Pool.new(1){create_connection}  
     end
 
     # common db object options
-    def create_connection
+    def create_connection(path_to_sql_file = nil)
       conn = SQLite3::Database.new(@options[:path])
       conn.busy_handler{ Litesupport.switch || sleep(rand * 0.002) }
       conn.journal_mode = "WAL"
@@ -349,9 +339,40 @@ module Litesupport
       class << conn
         attr_reader :stmts
       end
+      yield conn if block_given?
+      # use the <client>.sql.yml file to define the schema and compile prepared statements
+      unless path_to_sql_file.nil?
+        sql = YAML.load_file(path_to_sql_file)
+        version = conn.get_first_value("PRAGMA user_version")
+        sql["schema"].each_pair do |v, obj| 
+          if v > version
+            conn.transaction do 
+              obj.each do |k, s| 
+                begin
+                  conn.execute(s)
+                rescue Exception => e
+                  STDERR.puts "Error parsing #{k}"
+                  STDERR.puts s
+                  raise e               
+                end
+              end
+              conn.user_version = v
+            end
+          end
+        end 
+        sql["stmts"].each do |k, v| 
+          begin
+            conn.stmts[k.to_sym] = conn.prepare(v)
+          rescue Exception => e
+            STDERR.puts "Error parsing #{k}"
+            STDERR.puts v
+            raise e               
+          end
+        end
+      end
       conn
     end
-    
+        
   end
       
 end  

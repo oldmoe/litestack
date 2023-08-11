@@ -1,0 +1,151 @@
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Size
+        </div>
+        <div class="card-body">
+          <h1><%=round(@size)%>MB</h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Active queues
+        </div>
+        <div class="card-body">
+          <h1><%=@queues.length%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Outstanding jobs
+        </div>
+        <div class="card-body">
+          <h1><%=@jobs%></h1>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  
+  <div class="row">
+  
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Processed jobs
+        </div>
+        <div class="card-body">
+          <h1><%=@processed_count%></h1>
+        </div>
+      </div>
+    </div>
+    
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Total processing time
+        </div>
+        <div class="card-body">
+          <h1><%=@processing_time%> sec</h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Average processing time per job
+        </div>
+        <div class="card-body">
+          <h1><%=@processing_time.to_f / @processed_count rescue 0%> sec</h1>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class="row">
+  
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Processed jobs by queue
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinepie">
+            <%=[["name", "value"]] + @processed_count_by_queue.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Job processing time by queue
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinepie">
+            <%=[["name", "value"]] + @processing_time_by_queue.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class="row">
+  
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Processed jobs by queue over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinestackedcolumn">
+            <%=@processed_count_over_time_by_queues.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Job processing time by queue over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinestackedcolumn">
+            <%=@processing_time_over_time_by_queues.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
