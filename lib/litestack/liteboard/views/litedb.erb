@@ -39,7 +39,7 @@
           Read queries
         </div>
         <div class="card-body">
-          <h1><%=@reads%></h1>
+          <h1><%=format(@reads)%></h1>
         </div>
       </div>
     </div>
@@ -50,7 +50,7 @@
           Write queries
         </div>
         <div class="card-body">
-          <h1><%=@writes%></h1>
+          <h1><%=format(@writes)%></h1>
         </div>
       </div>
     </div>
@@ -134,7 +134,7 @@
             <%@slowest.each do |r| %>
             <tr>
               <td><%=r['key']%></td>
-              <td align="right"><h6><%=r['ravg'].truncate(4)%>&nbsp;sec</h6></td>
+              <td align="right"><h6><%=format(r['ravg'].truncate(4))%>&nbsp;sec</h6></td>
             </tr>
             <% end %>
           </table>
@@ -152,7 +152,7 @@
             <%@popular.each do |r| %>
             <tr>
               <td><%=r['key']%></td>
-              <td align="right"><h6><%=r['rtotal'].truncate(4)%>&nbsp;sec</h6></td>
+              <td align="right"><h6><%=format(r['rtotal'].truncate(4))%>&nbsp;sec</h6></td>
             </tr>
             <% end %>
           </table>

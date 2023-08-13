@@ -29,6 +29,10 @@ class Liteboard
       Liteboard.new(env).call(:litedb)
     end
 
+    get "/topics/Litecable", to: ->(env) do
+      Liteboard.new(env).call(:litecable)
+    end
+
   end 
 
 
@@ -189,6 +193,29 @@ class Liteboard
     render :litejob
   end
   
+  def litecable
+    @order = 'rcount' unless @order
+    @topic = 'Litecable'
+    @events = @lm.events_summaries(@topic, @resolution, @order, @dir, @search, @step * @count)
+    @events.each do |event|
+      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event['name'])
+      event['counts'] = data_points.collect{|r| [r['rtime'],r['rcount'] || 0]}
+    end
+
+    @subscription_count = @events.find{|t| t['name'] == 'subscribe'}['rcount'] rescue 0
+    @broadcast_count = @events.find{|t| t['name'] == 'broadcast'}['rcount'] rescue 0
+    @message_count = @events.find{|t| t['name'] == 'message'}['rcount'] rescue 0
+
+    @subscriptions_over_time = @events.find{|t| t['name'] == 'subscribe'}['counts'] rescue []
+    @broadcasts_over_time = @events.find{|t| t['name'] == 'broadcast'}['counts'] rescue []
+    @messages_over_time = @events.find{|t| t['name'] == 'message'}['counts'] rescue []
+    @messages_over_time = @messages_over_time.collect.with_index{|msg, i| [msg[0], @broadcasts_over_time[i][1], msg[1]]}
+    
+    @top_subscribed_channels = @lm.keys_summaries(@topic, 'subscribe', @resolution, @order, @dir, @search, @step * @count).first(8)
+    @top_messaged_channels = @lm.keys_summaries(@topic, 'message', @resolution, @order, @dir, @search, @step * @count).first(8)
+    render :litecable
+  end
+  
   def index_url
     "/?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
   end
@@ -236,6 +263,14 @@ class Liteboard
   def round(float)
     return 0 unless float.is_a? Numeric
     ((float * 100).round).to_f / 100
+  end
+  
+  def format(float)
+    string = float.to_s
+    whole, decimal = string.split('.')
+    whole = whole.split('').reverse.each_slice(3).map(&:join).join(',').reverse
+    whole = [whole, decimal].join('.') if decimal
+    whole
   end
   
   def self.app

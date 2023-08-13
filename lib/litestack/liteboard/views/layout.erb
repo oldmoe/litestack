@@ -104,6 +104,16 @@
           element.innerText = ''
           element.classList.remove("hidden")      
           if(mydata.length > 1) {        
+            mydata.forEach(row => {
+              if(mydata[0].length == 5){ // we are doing custom tooltips
+                if(row[0] != "Time"){
+                  row[1] = Number(row[1].toPrecision(4))
+                  row[3] = Number(row[2].toPrecision(4))
+                  row[2] = row[0]+': '+mydata[0][1]+' '+row[1]
+                  row[4] = row[0]+': '+mydata[0][3]+' '+row[3]
+                }
+              }
+            })
             var data = google.visualization.arrayToDataTable(
               mydata
             )
@@ -235,7 +245,7 @@
               isStacked: true,
               bars: 'horizontal'
             }
-            var chart = new google.visualization.ColumnChart(element);
+            var chart = new google.visualization.AreaChart(element);
             chart.draw(data, options);   
           }
         })

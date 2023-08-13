@@ -17,7 +17,7 @@ stmts:
 
   last_id: SELECT max(id) FROM messages
   
-  fetch: SELECT id, channel, value FROM messages WHERE id > $1 and pid != $2
+  fetch: SELECT id, channel, value, created_at FROM messages WHERE id > $1 and pid != $2
 
   prune: DELETE FROM messages WHERE created_at < (unixepoch() - $1)
 

@@ -1,0 +1,118 @@
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Subscriptions
+        </div>
+        <div class="card-body">
+          <h1><%=format(@subscription_count)%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Messages Received
+        </div>
+        <div class="card-body">
+          <h1><%=format(@broadcast_count)%></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Messages delivered
+        </div>
+        <div class="card-body">
+          <h1><%=format(@message_count)%></h1>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class="row">
+  
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Subscriptions over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinecolumn">
+            <%=[["Time", "Count"]] + @subscriptions_over_time.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Messages received/delivered over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinestackedcolumn">
+            <%=[["Time", "Recieved Count", "Delivered Count"]] + @messages_over_time.to_a%>
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Channels with most subscriptions
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@top_subscribed_channels.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h6><%=format(r['rcount'])%>&nbsp;subs</h6></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Channels with most messages delivered
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@top_messaged_channels.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h6><%=format(r['rcount'])%>&nbsp;messages</h6></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>

@@ -6,7 +6,7 @@
           Size
         </div>
         <div class="card-body">
-          <h1><%=round(@size)%>MB</h1>
+          <h1><%=format(round(@size))%> MB</h1>
         </div>
       </div>
     </div>
@@ -17,7 +17,7 @@
           Active queues
         </div>
         <div class="card-body">
-          <h1><%=@queues.length%></h1>
+          <h1><%=format(@queues.length)%></h1>
         </div>
       </div>
     </div>
@@ -28,7 +28,7 @@
           Outstanding jobs
         </div>
         <div class="card-body">
-          <h1><%=@jobs%></h1>
+          <h1><%=format(@jobs)%></h1>
         </div>
       </div>
     </div>
@@ -48,7 +48,7 @@
           Processed jobs
         </div>
         <div class="card-body">
-          <h1><%=@processed_count%></h1>
+          <h1><%=format(@processed_count)%> jobs</h1>
         </div>
       </div>
     </div>
@@ -59,7 +59,7 @@
           Total processing time
         </div>
         <div class="card-body">
-          <h1><%=@processing_time%> sec</h1>
+          <h1><%=format(@processing_time)%> sec</h1>
         </div>
       </div>
     </div>
@@ -70,7 +70,7 @@
           Average processing time per job
         </div>
         <div class="card-body">
-          <h1><%=@processing_time.to_f / @processed_count rescue 0%> sec</h1>
+          <h1><%=(@processing_time.to_f / @processed_count).truncate(4) rescue 0%> sec</h1>
         </div>
       </div>
     </div>
