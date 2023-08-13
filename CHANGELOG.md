@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [0.3.0] - 2023-08-13
+
+- Reworked the Litecable thread safety model
+- Fixed multiple litejob bugs (thanks Stephen Margheim)
+- Fixed Railtie dependency (thanks Marco Roth)
+- Litesupport fixes (thanks Stephen Margheim)
+- Much improved metrics reporting for Litedb, Litecache, Litejob & Litecable
+- Removed (for now, will come again later) litemetric reporting support for ad-hoc modules
+
 ## [0.2.6] - 2023-07-16
 
 - Much improved database location setting (thanks Brad Gessler)
