@@ -95,7 +95,7 @@ class Litejobqueue < Litequeue
   #   jobqueue = Litejobqueue.new
   #   jobqueue.push(EasyJob, params) # the job will be performed asynchronously
   def push(jobclass, params, delay=0, queue=nil)
-    payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue})
+    payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue}, mode: :strict)
     res = super(payload, delay, queue)
     capture(:enqueue, queue)
     @logger.info("[litejob]:[ENQ] queue:#{res[1]} class:#{jobclass} job:#{res[0]}")
@@ -103,7 +103,7 @@ class Litejobqueue < Litequeue
   end
   
   def repush(id, job, delay=0, queue=nil)
-    res = super(id, Oj.dump(job), delay, queue)
+    res = super(id, Oj.dump(job, mode: :strict), delay, queue)
     capture(:enqueue, queue)
     @logger.info("[litejob]:[ENQ] queue:#{res[0]} class:#{job[:klass]} job:#{id}")
     res
