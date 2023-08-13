@@ -24,7 +24,6 @@ class Litecable
   }
   
   def initialize(options = {})  
-    #@messages = []
     @messages = Litesupport::Pool.new(1){[]}
     init(options)
     collect_metrics if @options[:metrics]
