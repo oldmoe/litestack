@@ -196,24 +196,24 @@ class Litejobqueue < Litequeue
               begin
                 id, job = payload[0], payload[1]
                 job = Oj.load(job)
-                @logger.info "[litejob]:[DEQ] queue:#{q[0]} class:#{job[:klass]} job:#{id}" 
-                klass = eval(job[:klass])
+                @logger.info "[litejob]:[DEQ] queue:#{q[0]} class:#{job["klass"]} job:#{id}" 
+                klass = eval(job["klass"])
                 schedule(q[1]) do # run the job in a new context
                   job_started #(Litesupport.current_context)
                   begin
-                    measure(:perform, q[0]){ klass.new.perform(*job[:params]) }
-                    @logger.info "[litejob]:[END] queue:#{q[0]} class:#{job[:klass]} job:#{id}" 
+                    measure(:perform, q[0]){ klass.new.perform(*job["params"]) }
+                    @logger.info "[litejob]:[END] queue:#{q[0]} class:#{job["klass"]} job:#{id}" 
                   rescue Exception => e
                     # we can retry the failed job now
                     capture(:fail, q[0])
-                    if job[:retries] == 0
-                      @logger.error "[litejob]:[ERR] queue:#{q[0]} class:#{job[:klass]} job:#{id} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
+                    if job["retries"] == 0
+                      @logger.error "[litejob]:[ERR] queue:#{q[0]} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
                       repush(id, job, @options[:dead_job_retention], '_dead')
                     else
                       capture(:retry, q[0])
-                      retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job[:retries]) * @options[:retry_delay] 
-                      job[:retries] -=  1
-                      @logger.error "[litejob]:[ERR] queue:#{q[0]} class:#{job[:klass]} job:#{id} failed with #{e}:#{e.message}, retrying in #{retry_delay} seconds"
+                      retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job["retries"]) * @options[:retry_delay] 
+                      job["retries"] -=  1
+                      @logger.error "[litejob]:[ERR] queue:#{q[0]} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retrying in #{retry_delay} seconds"
                       repush(id, job, retry_delay, q[0])                      
                     end
                   end
