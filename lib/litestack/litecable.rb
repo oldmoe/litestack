@@ -63,7 +63,7 @@ class Litecable
   def local_broadcast(channel, payload = nil)
     subscribers = []
     @subscribers.acquire do |subs|
-      return unless subs[channel]
+      break unless subs[channel]
       subscribers = subs[channel].keys
     end
     subscribers.each do |subscriber|
@@ -89,7 +89,7 @@ class Litecable
         @messages.acquire do |msgs|
           if msgs.length > 0
             run_sql("BEGIN IMMEDIATE")
-            while msg = msgs.shift
+            while (msg = msgs.shift)
               run_stmt(:publish, msg[0], msg[1], @pid)
             end
             run_sql("END")

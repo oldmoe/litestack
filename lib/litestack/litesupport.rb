@@ -55,7 +55,7 @@ module Litesupport
       Fiber.schedule(&block)
     elsif scheduler == :polyphony
       spin(&block)
-    elsif scheduler == :threaded or scheduler == :iodine
+    elsif scheduler == :threaded || scheduler == :iodine
       Thread.new(&block)
     end
     # we should never reach here
@@ -103,7 +103,7 @@ module Litesupport
   # they must send (true) as a parameter to this method
   # else it is a no-op for fibers
   def self.synchronize(fiber_sync = false, &block)
-    if scheduler == :fiber or scheduler == :polyphony
+    if scheduler == :fiber || scheduler == :polyphony
       yield # do nothing, just run the block as is
     else
       mutex.synchronize(&block)
@@ -177,12 +177,10 @@ module Litesupport
       result = nil
       until acquired
         @mutex.synchronize do
-          if resource = @resources.find { |r| r[1] == :free }
+          if (resource = @resources.find { |r| r[1] == :free })
             resource[1] = :busy
             begin
               result = yield resource[0]
-            rescue Exception => e
-              raise e
             ensure
               resource[1] = :free
               acquired = true
@@ -297,8 +295,8 @@ module Litesupport
     def create_logger
       @options[:logger] = nil unless @options[:logger]
       return @options[:logger] if @options[:logger].respond_to? :info
-      return Logger.new(STDOUT) if @options[:logger] == "STDOUT"
-      return Logger.new(STDERR) if @options[:logger] == "STDERR"
+      return Logger.new($stdout) if @options[:logger] == "STDOUT"
+      return Logger.new($stderr) if @options[:logger] == "STDERR"
       return Logger.new(@options[:logger]) if @options[:logger].is_a? String
       Logger.new(IO::NULL)
     end
@@ -348,7 +346,7 @@ module Litesupport
             conn.transaction do
               obj.each do |k, s|
                 conn.execute(s)
-              rescue Exception => e
+              rescue Exception => e # standard:disable Lint/RescueException
                 warn "Error parsing #{k}"
                 warn s
                 raise e
@@ -359,7 +357,7 @@ module Litesupport
         end
         sql["stmts"].each do |k, v|
           conn.stmts[k.to_sym] = conn.prepare(v)
-        rescue Exception => e
+        rescue Exception => e # standard:disable Lint/RescueException
           warn "Error parsing #{k}"
           warn v
           raise e

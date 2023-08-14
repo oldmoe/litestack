@@ -163,10 +163,6 @@ class Litemetric
     @flusher = create_flusher
   end
 
-  def current_time_slot
-    (Time.now.to_i / 300) * 300 # every 5 minutes
-  end
-
   def flush
     @collector.flush
   end
@@ -284,7 +280,6 @@ class Litemetric
     end
 
     def flush
-      t = Time.now
       limit = 1000 # migrate 1000 records at a time
       count = run_stmt(:event_count)[0][0]
       while count > 0

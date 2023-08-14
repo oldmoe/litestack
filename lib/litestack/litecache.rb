@@ -71,7 +71,7 @@ class Litecache
   # add a key, value pair to the cache, with an optional expiry value (number of seconds)
   def set(key, value, expires_in = nil)
     key = key.to_s
-    expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
+    expires_in = @options[:expires_in] if expires_in.nil? || expires_in.zero?
     @conn.acquire do |cache|
       cache.stmts[:setter].execute!(key, value, expires_in)
       capture(:set, key)
@@ -86,7 +86,7 @@ class Litecache
   # add a key, value pair to the cache, but only if the key doesn't exist, with an optional expiry value (number of seconds)
   def set_unless_exists(key, value, expires_in = nil)
     key = key.to_s
-    expires_in = @options[:expires_in] if expires_in.nil? or expires_in.zero?
+    expires_in = @options[:expires_in] if expires_in.nil? || expires_in.zero?
     changes = 0
     @conn.acquire do |cache|
       cache.transaction(:immediate) do
@@ -106,7 +106,7 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    if record = @conn.acquire { |cache| cache.stmts[:getter].execute!(key)[0] }
+    if (record = @conn.acquire { |cache| cache.stmts[:getter].execute!(key)[0] })
       @last_visited[key] = true
       capture(:get, key, 1)
       return record[1]
@@ -139,9 +139,9 @@ class Litecache
   # delete all entries in the cache up limit (ordered by LRU), if no limit is provided approximately 20% of the entries will be deleted
   def prune(limit = nil)
     @conn.acquire do |cache|
-      if limit and limit.is_a? Integer
+      if limit&.is_a? Integer
         cache.stmts[:limited_pruner].execute!(limit)
-      elsif limit and limit.is_a? Float
+      elsif limit&.is_a? Float
         cache.stmts[:extra_pruner].execute!(limit)
       else
         cache.stmts[:pruner].execute!
@@ -219,7 +219,7 @@ class Litecache
           retry
         rescue SQLite3::FullException
           cache.stmts[:extra_pruner].execute!(0.2)
-        rescue Exception
+        rescue Exception # standard:disable Lint/RescueException
           # database is closed
         end
         sleep @options[:sleep_interval]

@@ -1,5 +1,7 @@
 require "../lib/litestack"
 
+# standard:disable Style/GlobalVars
+
 class SomeAction
   include Litemetric::Measurable
 
@@ -50,7 +52,9 @@ t = Time.now
   $time += (rand * 100).to_i # extra 10 seconds
   action = ["do1", "do2", "do3"].sample
   some_action.send(action, "key_#{i}")
-  puts "Finished #{i} events after #{Time.now - t} seconds" if i % 1000 == 0 and i > 0
+  puts "Finished #{i} events after #{Time.now - t} seconds" if i % 1000 == 0 && i > 0
 end
 puts "finished capturing, now reporting"
 # some_action.report
+
+# standard:enable Style/GlobalVars

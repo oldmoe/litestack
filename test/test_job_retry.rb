@@ -2,7 +2,7 @@ require "minitest/autorun"
 require "../lib/litestack/litejob"
 
 # create a job queue (will be saved in a class variable)
-queue = Litejobqueue.new({retries: 3, retry_delay: 1, retry_delay_multiplier: 1, gc_sleep_interval: 1, dead_job_retention: 1, logger: "STDOUT"})
+Litejobqueue.new({retries: 3, retry_delay: 1, retry_delay_multiplier: 1, gc_sleep_interval: 1, dead_job_retention: 1, logger: "STDOUT"})
 
 class MyJob
   include Litejob

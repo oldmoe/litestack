@@ -7,7 +7,7 @@ class Litejobqueue
   end
 end
 
-jobqueue = Litejobqueue.new({path: ":memory:", retries: 2, retry_delay: 1, retry_delay_multiplier: 1, queues: [["test", 1]]})
+Litejobqueue.new({path: ":memory:", retries: 2, retry_delay: 1, retry_delay_multiplier: 1, queues: [["test", 1]]})
 
 class MyJob
   include ::Litejob

@@ -39,8 +39,6 @@ require_relative "./litejobqueue"
 #  end
 #
 module Litejob
-  private
-
   def self.included(klass)
     klass.extend(ClassMethods)
     klass.get_jobqueue
@@ -70,7 +68,7 @@ module Litejob
 
     def delete(id, queue_name = nil)
       queue_name ||= queue
-      get_jobqueue.delete(id, queue)
+      get_jobqueue.delete(id, queue_name)
     end
 
     def queue

@@ -43,7 +43,7 @@ class TestQueue < Minitest::Test
 
   def test_push_with_delay
     assert @jobqueue.count == 0
-    id = @jobqueue.push(MyJob.name, [Time.now.to_i], 1, "test")
+    @jobqueue.push(MyJob.name, [Time.now.to_i], 1, "test")
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0
@@ -54,14 +54,14 @@ class TestQueue < Minitest::Test
 
   def test_retry
     # should fail twice
-    id = @jobqueue.push(MyJob.name, [Time.now.to_i + 2], 0, "test")
+    @jobqueue.push(MyJob.name, [Time.now.to_i + 2], 0, "test")
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0
     sleep 2.5
     assert @jobqueue.count == 0
     # should fail forever
-    id = @jobqueue.push(MyJob.name, [Time.now.to_i + 3], 0, "test")
+    @jobqueue.push(MyJob.name, [Time.now.to_i + 3], 0, "test")
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0

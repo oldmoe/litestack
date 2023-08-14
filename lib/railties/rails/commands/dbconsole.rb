@@ -63,9 +63,9 @@ module Rails
       when "sqlserver"
         args = []
 
-        args += ["-d", "#{db_config.database}"] if db_config.database
-        args += ["-U", "#{config[:username]}"] if config[:username]
-        args += ["-P", "#{config[:password]}"] if config[:password]
+        args += ["-d", db_config.database.to_s] if db_config.database
+        args += ["-U", config[:username].to_s] if config[:username]
+        args += ["-P", config[:password].to_s] if config[:password]
 
         if config[:host]
           host_arg = +"tcp:#{config[:host]}"

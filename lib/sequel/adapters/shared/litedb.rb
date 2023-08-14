@@ -70,7 +70,7 @@ module Sequel
         m = output_identifier_meth
         h = {}
         _foreign_key_list_ds(table).each do |row|
-          if r = h[row[:id]]
+          if (r = h[row[:id]])
             r[:columns] << m.call(row[:from])
             r[:key] << m.call(row[:to]) if r[:key]
           else
@@ -95,12 +95,12 @@ module Sequel
         metadata_dataset.with_sql("PRAGMA index_list(?)", im.call(table)).each do |r|
           if opts[:only_autocreated]
             # If specifically asked for only autocreated indexes, then return those an only those
-            next unless /\Asqlite_autoindex_/.match?(r[:name])
+            next unless r[:name].start_with?("sqlite_autoindex_")
           elsif r.has_key?(:origin)
             # If origin is set, then only exclude primary key indexes and partial indexes
             next if r[:origin] == "pk"
             next if r[:partial].to_i == 1
-          elsif /\Asqlite_autoindex_/.match?(r[:name])
+          elsif r[:name].start_with?("sqlite_autoindex_")
             next
           end
           # When :origin key not present, assume any autoindex could be a primary key one and exclude it
@@ -336,8 +336,8 @@ module Sequel
         v = typecast_value_boolean(opts.fetch(:case_sensitive_like, 1))
         ps << "PRAGMA case_sensitive_like = #{v ? 1 : 0}"
         [[:auto_vacuum, AUTO_VACUUM], [:synchronous, SYNCHRONOUS], [:temp_store, TEMP_STORE]].each do |prag, con|
-          if v = opts[prag]
-            raise(Error, "Value for PRAGMA #{prag} not supported, should be one of #{con.join(", ")}") unless v = con.index(v.to_sym)
+          if (v = opts[prag])
+            raise(Error, "Value for PRAGMA #{prag} not supported, should be one of #{con.join(", ")}") unless (v = con.index(v.to_sym))
             ps << "PRAGMA #{prag} = #{v}"
           end
         end
@@ -405,7 +405,7 @@ module Sequel
         remove_cached_schema(table)
         def_columns = defined_columns_for(table)
         old_columns = def_columns.map { |c| c[:name] }
-        opts[:old_columns_proc].call(old_columns) if opts[:old_columns_proc]
+        opts[:old_columns_proc]&.call(old_columns)
 
         yield def_columns if defined?(yield)
 
@@ -424,13 +424,13 @@ module Sequel
 
           # If dropping a column, if there is a foreign key with that
           # column, don't include it when building a copy of the table.
-          if ocp = opts[:old_columns_proc]
+          if (ocp = opts[:old_columns_proc])
             fks.delete_if { |c| ocp.call(c[:columns].dup) != c[:columns] }
           end
 
           # Skip any foreign key columns where a constraint for those
           # foreign keys is being dropped.
-          if sfkc = opts[:skip_foreign_key_columns]
+          if (sfkc = opts[:skip_foreign_key_columns])
             fks.delete_if { |c| c[:columns] == sfkc }
           end
 
@@ -460,7 +460,7 @@ module Sequel
 
         def_columns_str = (def_columns.map { |c| column_definition_sql(c) } + constraints.map { |c| constraint_definition_sql(c) }).join(", ")
         new_columns = old_columns.dup
-        opts[:new_columns_proc].call(new_columns) if opts[:new_columns_proc]
+        opts[:new_columns_proc]&.call(new_columns)
 
         qt = quote_schema_table(table)
         bt = quote_identifier(backup_table_name(qt))
@@ -503,7 +503,7 @@ module Sequel
           if sqlite_version > 33100
             # table_xinfo PRAGMA used, remove hidden columns
             # that are not generated columns
-            if row[:generated] = (row.delete(:hidden) != 0)
+            if row[:generated] == (row.delete(:hidden) != 0)
               next unless row[:type].end_with?(" GENERATED ALWAYS")
               row[:type] = row[:type].sub(" GENERATED ALWAYS", "")
             end
@@ -514,7 +514,7 @@ module Sequel
           row[:default] = row.delete(:dflt_value)
           row[:default] = nil if blank_object?(row[:default]) || row[:default] == "NULL"
           row[:db_type] = row.delete(:type)
-          if row[:primary_key] = row.delete(:pk).to_i > 0
+          if row[:primary_key] == row.delete(:pk).to_i > 0
             pks += 1
             # Guess that an integer primary key uses auto increment,
             # since that is Sequel's default and SQLite does not provide
@@ -582,7 +582,7 @@ module Sequel
       Dataset.def_sql_method(self, :update, [["if db.sqlite_version >= 33500", %w[with update table set from where returning]], ["elsif db.sqlite_version >= 33300", %w[with update table set from where]], ["elsif db.sqlite_version >= 30803", %w[with update table set where]], ["else", %w[update table set where]]])
 
       def cast_sql_append(sql, expr, type)
-        if type == Time or type == DateTime
+        if type == Time || type == DateTime
           sql << "datetime("
           literal_append(sql, expr)
           sql << ")"
@@ -631,7 +631,7 @@ module Sequel
           end
         when :extract
           part = args[0]
-          raise(Sequel::Error, "unsupported extract argument: #{part.inspect}") unless format = EXTRACT_MAP[part]
+          raise(Sequel::Error, "unsupported extract argument: #{part.inspect}") unless (format = EXTRACT_MAP[part])
           sql << "CAST(strftime(" << format << ", "
           literal_append(sql, args[1])
           sql << ") AS " << ((part == :second) ? "NUMERIC" : "INTEGER") << ")"
@@ -925,32 +925,32 @@ module Sequel
 
       # Add OR clauses to SQLite INSERT statements
       def insert_conflict_sql(sql)
-        if resolution = @opts[:insert_conflict]
+        if (resolution = @opts[:insert_conflict])
           sql << " OR " << resolution.to_s.upcase
         end
       end
 
       # Add ON CONFLICT clause if it should be used
       def insert_on_conflict_sql(sql)
-        if opts = @opts[:insert_on_conflict]
+        if (opts = @opts[:insert_on_conflict])
           sql << " ON CONFLICT"
 
-          if target = opts[:constraint]
+          if (target = opts[:constraint])
             sql << " ON CONSTRAINT "
             identifier_append(sql, target)
-          elsif target = opts[:target]
+          elsif (target = opts[:target])
             sql << " "
             identifier_append(sql, Array(target))
-            if conflict_where = opts[:conflict_where]
+            if (conflict_where = opts[:conflict_where])
               sql << " WHERE "
               literal_append(sql, conflict_where)
             end
           end
 
-          if values = opts[:update]
+          if (values = opts[:update])
             sql << " DO UPDATE SET "
             update_sql_values_hash(sql, values)
-            if update_where = opts[:update_where]
+            if (update_where = opts[:update_where])
               sql << " WHERE "
               literal_append(sql, update_where)
             end
@@ -1035,7 +1035,7 @@ module Sequel
 
       # Use FROM to specify additional tables in an update query
       def update_from_sql(sql)
-        if (from = @opts[:from][1..-1]).empty?
+        if (from = @opts[:from][1..]).empty?
           raise(Error, "Need multiple FROM tables if updating/deleting a dataset with JOINs") if @opts[:join]
         else
           sql << " FROM "

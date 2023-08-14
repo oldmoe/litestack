@@ -6,7 +6,7 @@ rescue
   1000
 end
 env = ARGV[1] || "t"
-delay = begin
+_delay = begin
   ARGV[2].to_f
 rescue
   0

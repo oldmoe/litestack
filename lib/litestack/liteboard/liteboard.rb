@@ -41,7 +41,7 @@ class Liteboard
   end
 
   def params(key)
-    URI.decode_uri_component("#{@params[key]}")
+    URI.decode_uri_component(@params[key].to_s)
   end
 
   def call(method)
@@ -393,7 +393,7 @@ class Liteboard
   def format(float)
     string = float.to_s
     whole, decimal = string.split(".")
-    whole = whole.split("").reverse.each_slice(3).map(&:join).join(",").reverse
+    whole = whole.chars.reverse.each_slice(3).map(&:join).join(",").reverse
     whole = [whole, decimal].join(".") if decimal
     whole
   end
@@ -418,7 +418,7 @@ class Liteboard
     layout = Tilt.new("#{__dir__}/views/layout.erb")
     tpl_path = "#{__dir__}/views/#{tpl_name}.erb"
     tpl = Tilt.new(tpl_path)
-    res = layout.render(self) { tpl.render(self) }
+    layout.render(self) { tpl.render(self) }
   end
 end
 

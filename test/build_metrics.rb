@@ -2,12 +2,14 @@ require_relative "../lib/litestack/litemetric"
 require_relative "../lib/litestack/litecache"
 require_relative "../lib/litestack/litejob"
 
+# standard:disable Style/GlobalVars
+
 # initialize the litemetric to modify the date function
 
 lm = Litemetric.instance
 
 # initialize the queue to capture the options
-jobqueue = Litejobqueue.new({
+Litejobqueue.new({
   path: "./q.db",
   retries: 2,
   queues: [["normal", 1], ["urgent", 3], ["critical", 10]],
@@ -80,8 +82,10 @@ t = Time.now
   $time = $start_time - (rand * (3600 * 24 * 7 * 52)).to_i # up to 52 weeks in the past
   jobs.sample.perform_async($time)
   cache_actions.sample.call
-  puts "Finished #{i} events after #{Time.now - t} seconds for time_slot=#{lm.send(:current_time_slot)}" if i % 1000 == 0 and i > 0
+  puts "Finished #{i} events after #{Time.now - t} seconds for time_slot=#{lm.send(:current_time_slot)}" if i % 1000 == 0 && i > 0
 end
 puts "finished creating jobs, now summarizing"
 lm.summarize
 sleep
+
+# standard:enable Style/GlobalVars

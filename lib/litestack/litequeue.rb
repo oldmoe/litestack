@@ -72,7 +72,7 @@ class Litequeue
   #   queue.delete(id) # => "somevalue"
   #   queue.pop # => nil
   def delete(id)
-    result = run_stmt(:delete, id)[0]
+    run_stmt(:delete, id)[0]
   end
 
   # deletes all the entries in all queues, or if a queue name is given, deletes all entries in that specific queue
