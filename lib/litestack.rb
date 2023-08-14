@@ -2,6 +2,7 @@
 
 # load core classes
 require_relative "./litestack/version"
+require_relative "./litestack/litescheduler"
 require_relative "./litestack/litesupport"
 require_relative "./litestack/litemetric"
 require_relative "./litestack/litedb"
