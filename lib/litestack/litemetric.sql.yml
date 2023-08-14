@@ -5,335 +5,345 @@ schema:
         name TEXT PRIMARY KEY NOT NULL,
         state TEXT,
         updated_at INTEGER
-      ); 
-    
+      );
+
     create_events: >
       CREATE TABLE IF NOT EXISTS events(
-        topic TEXT NOT NULL references topics(name) ON DELETE CASCADE, 
-        name TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
-        key TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
-        count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, 
-        value REAL, 
-        minimum REAL, 
-        maximum REAL, 
-        created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL, 
-        resolution TEXT DEFAULT('minute') NOT NULL, 
+        topic TEXT NOT NULL references topics(name) ON DELETE CASCADE,
+        name TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE,
+        key TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE,
+        count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE,
+        value REAL,
+        minimum REAL,
+        maximum REAL,
+        created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL,
+        resolution TEXT DEFAULT('minute') NOT NULL,
         PRIMARY KEY(resolution, created_at, topic, name, key)
-      ) STRICT;        
+      ) STRICT;
 
-    create_topic_index_on_events: CREATE INDEX events_topic_index ON events (resolution, created_at, topic) WHERE name = '___';
-    create_event_index_on_events: CREATE INDEX events_event_index ON events (resolution, created_at , topic, name) WHERE key = '___';
+    create_topic_index_on_events: >
+      CREATE INDEX events_topic_index ON events (resolution, created_at, topic) WHERE name = '___';
+    create_event_index_on_events: >
+      CREATE INDEX events_event_index ON events (resolution, created_at , topic, name) WHERE key = '___';
 
     create_events_search: >
       CREATE VIRTUAL TABLE IF NOT EXISTS events_search USING fts5 (
-        topic, 
-        name, 
-        key, 
-        resolution, 
-        content=events, 
+        topic,
+        name,
+        key,
+        resolution,
+        content=events,
         tokeniz="trigram"
-      )
-    
+      );
+
     create_events_insert_trigger: >
-      CREATE TRIGGER events_insert AFTER INSERT ON events 
+      CREATE TRIGGER events_insert AFTER INSERT ON events
       BEGIN
-        INSERT INTO 
-          events_search(rowid, topic, name, key, resolution) 
+        INSERT INTO
+          events_search(rowid, topic, name, key, resolution)
         VALUES
           (new.rowid, new.topic, new.name, new.key, new.resolution);
       END;
-    
+
     create_events_delete_trigger: >
-      CREATE TRIGGER events_delete AFTER DELETE ON events 
+      CREATE TRIGGER events_delete AFTER DELETE ON events
       BEGIN
         INSERT INTO
-          events_search(events_search, rowid, topic, name, key, resolution) 
+          events_search(events_search, rowid, topic, name, key, resolution)
         VALUES
-          ('delete', old.rowid, old.topic, old.name, old.key, old.resolution);        
+          ('delete', old.rowid, old.topic, old.name, old.key, old.resolution);
       END;
 
     create_events_update_trigger: >
-      CREATE TRIGGER events_update AFTER UPDATE ON events 
+      CREATE TRIGGER events_update AFTER UPDATE ON events
       BEGIN
         INSERT INTO
-          events_search(events_search, rowid, topic, name, key, resolution) 
+          events_search(events_search, rowid, topic, name, key, resolution)
         VALUES
-          ('delete', old.rowid, old.topic, old.name, old.key, old.resolution);        
-        INSERT INTO 
-          events_search(rowid, topic, name, key, resolution) 
+          ('delete', old.rowid, old.topic, old.name, old.key, old.resolution);
+        INSERT INTO
+          events_search(rowid, topic, name, key, resolution)
         VALUES
           (new.rowid, new.topic, new.name, new.key, new.resolution);
       END;
 
     rebuild_index: >
       INSERT INTO events_search(events_search) VALUES ('rebuild');
-    
-       
-    
 
 stmts:
-  
   register_topic: >
-    INSERT INTO topics (name, updated_at) VALUES (?, unixepoch()) 
-    ON CONFLICT DO
-    UPDATE SET updated_at = unixepoch();
-    
+    INSERT INTO topics (name, updated_at) VALUES (?, unixepoch())
+    ON CONFLICT DO UPDATE
+    SET updated_at = unixepoch();
+
   capture_state: >
-    UPDATE topics 
-    SET state = ?2, updated_at = unixepoch() 
-    WHERE name = ?1
+    UPDATE topics
+    SET state = ?2, updated_at = unixepoch()
+    WHERE name = ?1;
 
   snapshot: >
     SELECT state, datetime(updated_at, 'unixepoch')
-    FROM topics 
-    WHERE name = ?1
+    FROM topics
+    WHERE name = ?1;
 
   capture_event: >
-    INSERT INTO events(topic, name, key, created_at, count, value, minimum, maximum) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) 
-    ON CONFLICT DO 
-    UPDATE SET count = count + EXCLUDED.count, value = value + EXCLUDED.value, minimum = min(minimum, EXCLUDED.minimum), maximum = max(maximum, EXCLUDED.maximum) 
-  
+    INSERT INTO events(topic, name, key, created_at, count, value, minimum, maximum)
+    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+    ON CONFLICT DO UPDATE
+    SET
+      count = count + EXCLUDED.count,
+      value = value + EXCLUDED.value,
+      minimum = min(minimum, EXCLUDED.minimum),
+      maximum = max(maximum, EXCLUDED.maximum);
+
   # requires an index on (resolution, created_at)
   summarize_events: >
-    INSERT INTO 
-      events (topic, name, key, count, value, minimum, maximum, created_at, resolution ) 
-    SELECT 
-      topic, 
-      name, 
-      key, 
-      sum(count), 
-      sum(value), 
-      min(minimum), 
-      max(maximum), 
-      (created_at/(?1))*?1 as created,  
-      ?2 
-    FROM events 
-    WHERE resolution = ?3 
+    INSERT INTO
+      events (topic, name, key, count, value, minimum, maximum, created_at, resolution)
+    SELECT
+      topic,
+      name,
+      key,
+      sum(count),
+      sum(value),
+      min(minimum),
+      max(maximum),
+      (created_at/(?1))*?1 as created,
+      ?2
+    FROM events
+    WHERE resolution = ?3
     GROUP BY topic, name, key, created
-    ON CONFLICT DO
-    UPDATE SET count = EXCLUDED.count, value = EXCLUDED.value, minimum = EXCLUDED.minimum, maximum = EXCLUDED.maximum 
+    ON CONFLICT DO UPDATE
+    SET
+      count = EXCLUDED.count,
+      value = EXCLUDED.value,
+      minimum = EXCLUDED.minimum,
+      maximum = EXCLUDED.maximum;
 
   # requires an index on (resolution, created_at) #TODO: fix deletion boundary (use the date mapping)
-  delete_events: DELETE FROM events WHERE resolution = ?1 AND (created_at /(?2)) * ?2  < ((unixepoch()/(?2)) * ?2 - ?2);
+  delete_events: >
+    DELETE FROM events
+    WHERE resolution = ?1
+      AND (created_at /(?2)) * ?2  < ((unixepoch()/(?2)) * ?2 - ?2);
 
   # select topics from the topics table
-  list_topics: SELECT name FROM topics ORDER BY name ASC;
+  list_topics: >
+    SELECT name FROM topics ORDER BY name ASC;
 
-  # select topics, their event counts, total values, min and max values 
+  # select topics, their event counts, total values, min and max values
   topics_summaries: >
-    SELECT 
-      topic, 
-      count(distinct name) as events, 
-      count(distinct key) as keys, 
-      sum(count) as rcount 
-    from events 
-    where resolution = ?1 
-    AND created_at <= unixepoch()
-    AND created_at >= unixepoch() -?2 
-    AND name = '___'
-    AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE topic LIKE ?4), TRUE)
-    GROUP BY topic 
-    ORDER BY 
-      iif(?3 = 'events', events, 
-        iif(?3 = 'keys', keys, 
-          iif(?3 = 'rcount', rcount, topic)))  
+    SELECT
+      topic,
+      count(distinct name) as events,
+      count(distinct key) as keys,
+      sum(count) as rcount
+    FROM events
+    WHERE resolution = ?1
+      AND created_at <= unixepoch()
+      AND created_at >= unixepoch() -?2
+      AND name = '___'
+      AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE topic LIKE ?4), TRUE)
+    GROUP BY topic
+    ORDER BY
+      iif(?3 = 'events', events,
+        iif(?3 = 'keys', keys,
+          iif(?3 = 'rcount', rcount, topic)))
     DESC;
-  
+
   topics_summaries_asc: >
-    SELECT 
-      topic, 
-      count(distinct name) as events, 
-      count(distinct key) as keys, 
-      sum(count) as rcount 
-    from events 
-    where resolution = ?1 
-    AND created_at <= unixepoch()
-    AND created_at >= unixepoch() -?2 
-    AND name = '___'
-    AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE topic LIKE ?4), TRUE)
-    GROUP BY topic 
-    ORDER BY 
-      iif(?3 = 'events', events, 
-        iif(?3 = 'keys', keys, 
-          iif(?3 = 'rcount', rcount, topic)))  
+    SELECT
+      topic,
+      count(distinct name) as events,
+      count(distinct key) as keys,
+      sum(count) as rcount
+    FROM events
+    WHERE resolution = ?1
+      AND created_at <= unixepoch()
+      AND created_at >= unixepoch() -?2
+      AND name = '___'
+      AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE topic LIKE ?4), TRUE)
+    GROUP BY topic
+    ORDER BY
+      iif(?3 = 'events', events,
+        iif(?3 = 'keys', keys,
+          iif(?3 = 'rcount', rcount, topic)))
     ASC;
 
   events_summaries: >
-    SELECT 
-      name, 
-      count(DISTINCT key) AS keys, 
+    SELECT
+      name,
+      count(DISTINCT key) AS keys,
       sum(count) as rcount,
-      cast(sum(value) as double) / sum(count) as ravg, 
-      sum(value) AS rtotal,       
-      min(minimum) AS rmin, 
-      max(maximum) AS rmax 
-    FROM events 
-    WHERE topic = ?1 AND resolution = ?2 
+      cast(sum(value) as double) / sum(count) as ravg,
+      sum(value) AS rtotal,
+      min(minimum) AS rmin,
+      max(maximum) AS rmax
+    FROM events
+    WHERE topic = ?1 AND resolution = ?2
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() - ?5 
+    AND created_at >= unixepoch() - ?5
     AND name != '___'
     AND key = '___'
     AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE name LIKE ?4), TRUE)
-    GROUP BY name 
-    ORDER BY 
-      iif(?3 = 'rcount', rcount, 
-        iif(?3 = 'ravg', ravg, 
-          iif(?3 = 'rtotal', rtotal,  
-            iif(?3 = 'rmin', rmin, 
-              iif(?3 = 'rmax', rmax, 
-                iif(?3 = 'keys', keys, 
-                  iif(?3 = 'name', name, rcount))))))) 
-    DESC
+    GROUP BY name
+    ORDER BY
+      iif(?3 = 'rcount', rcount,
+        iif(?3 = 'ravg', ravg,
+          iif(?3 = 'rtotal', rtotal,
+            iif(?3 = 'rmin', rmin,
+              iif(?3 = 'rmax', rmax,
+                iif(?3 = 'keys', keys,
+                  iif(?3 = 'name', name, rcount)))))))
+      DESC
     LIMIT 20;
 
   events_summaries_asc: >
-    SELECT 
-      name, 
-      count(DISTINCT key) AS keys, 
+    SELECT
+      name,
+      count(DISTINCT key) AS keys,
       sum(count) as rcount,
-      cast(sum(value) as double) / sum(count) as ravg, 
-      sum(value) AS rtotal,       
-      min(minimum) AS rmin, 
-      max(maximum) AS rmax 
-    FROM events 
-    WHERE topic = ?1 AND resolution = ?2 
+      cast(sum(value) as double) / sum(count) as ravg,
+      sum(value) AS rtotal,
+      min(minimum) AS rmin,
+      max(maximum) AS rmax
+    FROM events
+    WHERE topic = ?1 AND resolution = ?2
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() -?5 
+    AND created_at >= unixepoch() -?5
     AND name != '___'
     AND key = '___'
     AND iif(length(?4) > 0, rowid IN (SELECT rowid FROM events_search WHERE name LIKE ?4), TRUE)
-    GROUP BY name 
-    ORDER BY 
-      iif(?3 = 'rcount', rcount, 
-        iif(?3 = 'ravg', ravg, 
-          iif(?3 = 'rtotal', rtotal,  
-            iif(?3 = 'rmin', rmin, 
-              iif(?3 = 'rmax', rmax, 
-                iif(?3 = 'keys', keys, 
-                  iif(?3 = 'name', name, rcount))))))) 
-    ASC
+    GROUP BY name
+    ORDER BY
+      iif(?3 = 'rcount', rcount,
+        iif(?3 = 'ravg', ravg,
+          iif(?3 = 'rtotal', rtotal,
+            iif(?3 = 'rmin', rmin,
+              iif(?3 = 'rmax', rmax,
+                iif(?3 = 'keys', keys,
+                  iif(?3 = 'name', name, rcount)))))))
+      ASC
     LIMIT 20;
 
- 
   keys_summaries: >
-    SELECT 
-      key, 
+    SELECT
+      key,
       sum(count) AS rcount,
-      cast(sum(value) AS double) / sum(count) AS ravg, 
-      sum(value) AS rtotal,       
-      min(minimum) AS rmin, 
-      max(maximum) AS rmax 
-    FROM events 
-    WHERE topic = ?1 AND name = ?2 AND resolution = ?3 
+      cast(sum(value) AS double) / sum(count) AS ravg,
+      sum(value) AS rtotal,
+      min(minimum) AS rmin,
+      max(maximum) AS rmax
+    FROM events
+    WHERE topic = ?1 AND name = ?2 AND resolution = ?3
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() - ?6 
+    AND created_at >= unixepoch() - ?6
     AND key != '___'
     AND iif(length(?5) > 0, rowid IN (SELECT rowid FROM events_search WHERE key LIKE ?5), TRUE)
     GROUP BY key
-    ORDER BY 
-      iif(?4 = 'rcount', rcount, 
-        iif(?4 = 'ravg', ravg, 
-          iif(?4 = 'rtotal', rtotal,  
-            iif(?4 = 'rmin', rmin, 
-              iif(?4 = 'rmax', rmax, 
-                iif(?4 = 'key', key, rcount)))))) 
+    ORDER BY
+      iif(?4 = 'rcount', rcount,
+        iif(?4 = 'ravg', ravg,
+          iif(?4 = 'rtotal', rtotal,
+            iif(?4 = 'rmin', rmin,
+              iif(?4 = 'rmax', rmax,
+                iif(?4 = 'key', key, rcount))))))
       DESC
     LIMIT 20;
 
   keys_summaries_asc: >
-    SELECT 
-      key, 
+    SELECT
+      key,
       sum(count) AS rcount,
-      cast(sum(value) AS double) / sum(count) AS ravg, 
-      sum(value) AS rtotal,       
-      min(minimum) AS rmin, 
-      max(maximum) AS rmax 
-    FROM events 
-    WHERE topic = ?1 AND name = ?2 AND resolution = ?3 
+      cast(sum(value) AS double) / sum(count) AS ravg,
+      sum(value) AS rtotal,
+      min(minimum) AS rmin,
+      max(maximum) AS rmax
+    FROM events
+    WHERE topic = ?1 AND name = ?2 AND resolution = ?3
     AND created_at <= unixepoch()
-    AND created_at >= unixepoch() - ?6 
+    AND created_at >= unixepoch() - ?6
     AND key != '___'
     AND iif(length(?5) > 0, rowid IN (SELECT rowid FROM events_search WHERE key LIKE ?5), TRUE)
     GROUP BY key
-    ORDER BY 
-      iif(?4 = 'rcount', rcount, 
-        iif(?4 = 'ravg', ravg, 
-          iif(?4 = 'rtotal', rtotal,  
-            iif(?4 = 'rmin', rmin, 
-              iif(?4 = 'rmax', rmax, 
-                iif(?4 = 'key', key, rcount)))))) 
+    ORDER BY
+      iif(?4 = 'rcount', rcount,
+        iif(?4 = 'ravg', ravg,
+          iif(?4 = 'rtotal', rtotal,
+            iif(?4 = 'rmin', rmin,
+              iif(?4 = 'rmax', rmax,
+                iif(?4 = 'key', key, rcount))))))
       ASC
     LIMIT 20;
 
-  # list data points at the topic, event, or key level 
-  # needs: duration, limit, resolution, topic, name (optional), key (optional) 
+  # list data points at the topic, event, or key level
+  # needs: duration, limit, resolution, topic, name (optional), key (optional)
 
   topic_data_points: >
-    SELECT 
-      datetime(ts.slot, 'unixepoch') AS rtime, 
-      ts.slot AS unixtime, 
-      sum(events.count) AS rcount, 
-      avg(events.value/events.count) AS ravg 
+    SELECT
+      datetime(ts.slot, 'unixepoch') AS rtime,
+      ts.slot AS unixtime,
+      sum(events.count) AS rcount,
+      avg(events.value/events.count) AS ravg
     FROM (
-      WITH RECURSIVE timeslot(x) AS ( 
-        SELECT (unixepoch()/(?1))*(?1) 
-        UNION ALL 
-        SELECT x - (?1) FROM timeslot LIMIT ?2 
-      ) SELECT x as slot FROM timeslot 
-    ) AS ts 
-    LEFT OUTER JOIN events 
-    ON ts.slot = events.created_at 
-    AND events.resolution = ?3
-    AND events.topic = ?4 
-    AND events.created_at <= UNIXEPOCH()
-    AND events.name = '___'
+      WITH RECURSIVE timeslot(x) AS (
+        SELECT (unixepoch()/(?1))*(?1)
+        UNION ALL
+        SELECT x - (?1) FROM timeslot LIMIT ?2
+      ) SELECT x as slot FROM timeslot
+    ) AS ts
+    LEFT OUTER JOIN events
+      ON ts.slot = events.created_at
+      AND events.resolution = ?3
+      AND events.topic = ?4
+      AND events.created_at <= UNIXEPOCH()
+      AND events.name = '___'
     GROUP BY ts.slot
     ORDER BY ts.slot ASC;
-    
+
   event_data_points: >
-    SELECT 
-      datetime(ts.slot, 'unixepoch') AS rtime, 
-      ts.slot AS unixtime, 
-      events.count AS rcount, 
-      events.value / events.count AS ravg, 
-      events.value AS rtotal 
+    SELECT
+      datetime(ts.slot, 'unixepoch') AS rtime,
+      ts.slot AS unixtime,
+      events.count AS rcount,
+      events.value / events.count AS ravg,
+      events.value AS rtotal
     FROM (
-      WITH RECURSIVE timeslot(x) AS ( 
-        SELECT (unixepoch()/(?1))*(?1) 
-        UNION ALL 
-        SELECT x - (?1) FROM timeslot LIMIT ?2 
-      ) SELECT x as slot FROM timeslot 
-    ) AS ts 
-    LEFT OUTER JOIN events 
-    ON ts.slot = events.created_at 
-    AND events.resolution = ?3
-    AND events.topic = ?4 
-    AND events.name = ?5 
-    AND events.key = '___'
-    AND events.created_at <= UNIXEPOCH() 
+      WITH RECURSIVE timeslot(x) AS (
+        SELECT (unixepoch()/(?1))*(?1)
+        UNION ALL
+        SELECT x - (?1) FROM timeslot LIMIT ?2
+      ) SELECT x as slot FROM timeslot
+    ) AS ts
+    LEFT OUTER JOIN events
+      ON ts.slot = events.created_at
+      AND events.resolution = ?3
+      AND events.topic = ?4
+      AND events.name = ?5
+      AND events.key = '___'
+      AND events.created_at <= UNIXEPOCH()
     GROUP BY ts.slot
     ORDER BY ts.slot ASC;
-    
+
   key_data_points: >
-    SELECT 
-      datetime(ts.slot, 'unixepoch') AS rtime, 
-      ts.slot AS unixtime, 
-      events.count AS rcount, 
-      events.value / events.count AS ravg, 
-      events.value AS rtotal 
+    SELECT
+      datetime(ts.slot, 'unixepoch') AS rtime,
+      ts.slot AS unixtime,
+      events.count AS rcount,
+      events.value / events.count AS ravg,
+      events.value AS rtotal
     FROM (
-      WITH RECURSIVE timeslot(x) AS ( 
-        SELECT (unixepoch()/(?1))*(?1) 
-        UNION ALL 
-        SELECT x - (?1) FROM timeslot LIMIT ?2 
-      ) SELECT x as slot FROM timeslot 
-    ) AS ts 
-    LEFT OUTER JOIN events 
-    ON ts.slot = events.created_at 
-    AND events.resolution = ?3
-    AND events.topic = ?4 
-    AND events.name = ?5 
-    AND events.key = ?6 
-    AND events.created_at <= UNIXEPOCH() 
+      WITH RECURSIVE timeslot(x) AS (
+        SELECT (unixepoch()/(?1))*(?1)
+        UNION ALL
+        SELECT x - (?1) FROM timeslot LIMIT ?2
+      ) SELECT x as slot FROM timeslot
+    ) AS ts
+    LEFT OUTER JOIN events
+      ON ts.slot = events.created_at
+      AND events.resolution = ?3
+      AND events.topic = ?4
+      AND events.name = ?5
+      AND events.key = ?6
+      AND events.created_at <= UNIXEPOCH()
     GROUP BY ts.slot
     ORDER BY ts.slot ASC;

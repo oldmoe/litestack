@@ -1,6 +1,6 @@
 data: 123
 
-production: 
+production:
   data: abc
 
 developments:
