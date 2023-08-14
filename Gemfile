@@ -8,3 +8,5 @@ gemspec
 
 
 gem "rack", "~> 3.0"
+
+gem "simplecov"
