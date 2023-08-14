@@ -68,9 +68,8 @@ module Litejob
       get_jobqueue
     end
        
-    def delete(id, queue_name=nil) 
-      queue_name ||= queue
-      get_jobqueue.delete(id, queue)
+    def delete(id) 
+      get_jobqueue.delete(id)
     end  
          
     def queue
