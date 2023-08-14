@@ -1,20 +1,20 @@
-require '../lib/litestack'
+require "../lib/litestack"
 
 class SomeAction
   include Litemetric::Measurable
-  
+
   def initialize
     collect_metrics
   end
-  
+
   def do1(param)
     capture("something", param)
   end
-  
+
   def do2(param)
     capture("anotherthing", param)
   end
-  
+
   def do3(param)
     measure("differentthing", param) do
       sleep 0.001
@@ -37,7 +37,6 @@ class SomeAction
       end
     end
   end
-
 end
 
 some_action = SomeAction.new
@@ -48,12 +47,10 @@ def lm.current_time_slot
 end
 t = Time.now
 40000.times do |i|
-  $time += (rand * 100).to_i #extra 10 seconds
+  $time += (rand * 100).to_i # extra 10 seconds
   action = ["do1", "do2", "do3"].sample
   some_action.send(action, "key_#{i}")
   puts "Finished #{i} events after #{Time.now - t} seconds" if i % 1000 == 0 and i > 0
 end
 puts "finished capturing, now reporting"
-#some_action.report
-
-
+# some_action.report

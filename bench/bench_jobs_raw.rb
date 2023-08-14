@@ -1,15 +1,23 @@
-require './bench'
+require "./bench"
 
-count = ARGV[0].to_i rescue 1000
+count = begin
+  ARGV[0].to_i
+rescue
+  1000
+end
 env = ARGV[1] || "t"
-delay = ARGV[2].to_f rescue 0
+delay = begin
+  ARGV[2].to_f
+rescue
+  0
+end
 
 # Sidekiq bench
 ###############
-require './skjob.rb'
+require "./skjob"
 
 t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-puts "make sure sidekiq is started with skjob.rb as the job"     
+puts "make sure sidekiq is started with skjob.rb as the job"
 bench("enqueuing sidekiq jobs", count) do |i|
   SidekiqJob.perform_async(count, t, delay)
 end
@@ -20,15 +28,15 @@ puts "Don't forget to check the sidekiq log for processing time conclusion"
 ###############
 
 if env == "t" # threaded
-  # do nothing 
+  # do nothing
 elsif env == "a" # async
-  require 'async/scheduler'
+  require "async/scheduler"
   Fiber.set_scheduler Async::Scheduler.new
 end
 
-require './uljob.rb'
+require "./uljob"
 
-STDERR.puts "litejob started in #{Litesupport.scheduler} environmnet"
+warn "litejob started in #{Litesupport.scheduler} environmnet"
 
 t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 bench("enqueuing litejobs", count) do |i|
@@ -40,4 +48,3 @@ puts "Please wait for the benchmark to finish .."
 Fiber.scheduler.run if env == "a"
 
 sleep
-

@@ -1,6 +1,4 @@
-require '../lib/litestack'
+require "../lib/litestack"
 
 lm = Litemetric.instance
 lm.summarize
-
-

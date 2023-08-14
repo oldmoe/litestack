@@ -9,24 +9,24 @@ require "sqlite3"
 
 class LitecachePruningTest < ActiveSupport::TestCase
   def setup
-    @record_size = 10 
+    @record_size = 10
     @cache = ActiveSupport::Cache::Litecache.new({expires_in: 60, size: 1})
-    #@cache = ActiveSupport::Cache.lookup_store(:litecache, expires_in: 60, size: 1)
+    # @cache = ActiveSupport::Cache.lookup_store(:litecache, expires_in: 60, size: 1)
     @cache.clear
     @db = SQLite3::Database.new(":memory:")
   end
 
   def test_prune_all
     1024.times do |i|
-      @cache.write(i, @db.get_first_value("select hex(randomblob(1024*10*1))")) #&& sleep(0.001)
+      @cache.write(i, @db.get_first_value("select hex(randomblob(1024*10*1))")) # && sleep(0.001)
     end
     assert_not_equal(@cache.count, 1024)
     assert_not @cache.exist?(0)
   end
-  
+
   def test_prune_size
     @cache.write(1, "aaaaaaaaaa") && sleep(0.001)
-    @cache.write(2, "bbbbbbbbbb") && sleep(0.001) 
+    @cache.write(2, "bbbbbbbbbb") && sleep(0.001)
     @cache.write(3, "cccccccccc") && sleep(0.001)
     @cache.write(4, "dddddddddd") && sleep(0.001)
     @cache.write(5, "eeeeeeeeee") && sleep(0.001)
@@ -42,15 +42,16 @@ class LitecachePruningTest < ActiveSupport::TestCase
   end
 
   def test_cache_not_mutated
-    item = { "foo" => "bar" }
+    item = {"foo" => "bar"}
     key = "test_key"
     @cache.write(key, item)
     read_item = @cache.read(key)
     read_item["foo"] = "xyz"
     assert_equal item, @cache.read(key)
   end
+
   def test_cache_different_object_ids_hash
-    item = { "foo" => "bar" }
+    item = {"foo" => "bar"}
     key = "test_key"
     @cache.write(key, item)
 
@@ -68,6 +69,7 @@ class LitecachePruningTest < ActiveSupport::TestCase
     assert_not_equal item.object_id, read_item.object_id
     assert_not_equal read_item.object_id, @cache.read(key).object_id
   end
+
   def test_write_with_unless_exist
     assert_equal true, @cache.write(1, "aaaaaaaaaa")
     assert_equal false, @cache.write(1, "aaaaaaaaaa", unless_exist: true)
@@ -81,4 +83,3 @@ class LitecachePruningTest < ActiveSupport::TestCase
     assert_equal true, @cache.write(1, "bbbb", expires_in: 1.second, unless_exist: true)
   end
 end
-

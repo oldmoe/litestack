@@ -20,6 +20,8 @@ require_relative "./litestack/railtie" if defined? Rails::Railtie
 
 module Litestack
   class NotImplementedError < Exception; end
+
   class TimeoutError < Exception; end
+
   class DeadlockError < Exception; end
 end
