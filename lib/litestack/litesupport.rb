@@ -7,6 +7,8 @@ require 'yaml'
 require 'pathname'
 require 'fileutils'
 
+require_relative "./litescheduler"
+
 module Litesupport
 
   class Error < StandardError; end

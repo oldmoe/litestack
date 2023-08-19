@@ -121,7 +121,7 @@ class Litejobqueue < Litequeue
   def delete(id)
     job = super(id)
     @logger.info("[litejob]:[DEL] job: #{job}")
-    job = Oj.load(job[0]) if job
+    job = Oj.load(job[0], symbol_keys: true) if job
     job
   end
   
@@ -195,7 +195,7 @@ class Litejobqueue < Litequeue
               index += 1
               begin
                 id, job = payload[0], payload[1]
-                job = Oj.load(job)
+                job = Oj.load(job, symbol_keys: true)
                 @logger.info "[litejob]:[DEQ] queue:#{q[0]} class:#{job[:klass]} job:#{id}" 
                 klass = eval(job[:klass])
                 schedule(q[1]) do # run the job in a new context
