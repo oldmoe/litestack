@@ -1,5 +1,5 @@
 require 'minitest/autorun'
-require '../lib/litestack/litejob.rb'
+require '../lib/litestack/litejobqueue.rb'
 
 class Litejobqueue
   def at_exit
