@@ -179,7 +179,7 @@ class Litemetric
   end
   
   def create_flusher
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         sleep @options[:flush_interval]
         flush
@@ -188,7 +188,7 @@ class Litemetric
   end
   
   def create_summarizer
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         sleep @options[:summarize_interval]
         summarize
@@ -211,7 +211,7 @@ class Litemetric
     end
 
     def create_snapshotter
-      Litesupport.spawn do
+      Litescheduler.spawn do
         while @running do
           sleep @litemetric.options[:snapshot_interval]
           capture_snapshot

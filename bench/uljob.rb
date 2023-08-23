@@ -1,5 +1,5 @@
 require './bench'
-require '../lib/litestack'
+require '../lib/litestack/litejob'
 
 class MyJob
   include Litejob
