@@ -190,9 +190,9 @@ class Litejobqueue < Litequeue
             batched = 0
             
             while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
-              capture(:dequeue, q[0])
+              capture(:dequeue, queue)
               processed += 1
-              index += 1
+              batched += 1
               
               id, serialized_job = payload
               process_job(queue, id, serialized_job, spawns)

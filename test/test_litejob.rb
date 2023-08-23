@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "./test_helper"
+require_relative "../lib/litestack/litejob"
 
 class NoOpJob
   include Litejob
