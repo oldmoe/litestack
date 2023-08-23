@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require_relative "./test_helper"
+require_relative "../lib/litestack/litescheduler"
 
 describe Litescheduler do
   describe "#backend" do
@@ -31,6 +32,14 @@ describe Litescheduler do
       assert_equal :polyphony, Litescheduler.backend
       
       Object.send(:remove_const, :Polyphony)
+    end
+
+    it "when Iodine is defined, returns an instance of the Iodine adapter" do
+      Iodine = Class.new # standard:disable Lint/ConstantDefinitionInBlock
+
+      assert_equal :iodine, Litescheduler.backend
+
+      Object.send(:remove_const, :Iodine)
     end
 
     it "when nothing is present, returns an instance of the Thread adapter" do
