@@ -197,7 +197,7 @@ class Litejobqueue < Litequeue
               id, serialized_job = payload
               process_job(queue, id, serialized_job, spawns)
               
-              Litesupport.switch # give other contexts a chance to run here
+              Litescheduler.switch # give other contexts a chance to run here
             end
           end
         end

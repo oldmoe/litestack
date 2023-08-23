@@ -86,37 +86,27 @@ module Litesupport
     def initialize(count, &block)
       @count = count
       @block = block
-      @resources = []
+      @resources = Thread::Queue.new
       @mutex = Litesupport::Mutex.new
       @count.times do
         resource = @mutex.synchronize{ block.call }
-        @resources << [resource, :free]
+        @resources << resource 
       end
     end
     
     def acquire
-      # check for pid changes
-      acquired = false
       result = nil
-      while !acquired do
-        @mutex.synchronize do
-          if resource = @resources.find{|r| r[1] == :free }
-            resource[1] = :busy
-            begin
-              result = yield resource[0]
-            rescue Exception => e
-              raise e
-            ensure
-              resource[1] = :free
-              acquired = true
-            end
-          end
-        end
-        sleep 0.001 unless acquired
+      resource = @resources.pop
+      begin
+        result = yield resource
+      rescue Exception => e
+        raise e
+      ensure
+        @resources << resource
       end
       result
     end
-    
+        
   end
      
   module ForkListener
