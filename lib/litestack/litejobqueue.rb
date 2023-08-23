@@ -54,7 +54,7 @@ class Litejobqueue < Litequeue
   # a method that returns a single instance of the job queue
   # for use by Litejob
   def self.jobqueue(options = {})
-    @@queue ||= Litesupport.synchronize{self.new(options)}
+    @@queue ||= Litescheduler.synchronize{self.new(options)}
   end
 
   def self.new(options = {})
@@ -121,7 +121,7 @@ class Litejobqueue < Litequeue
   def delete(id)
     job = super(id)
     @logger.info("[litejob]:[DEL] job: #{job}")
-    job = Oj.load(job[0]) if job
+    job = Oj.load(job[0], symbol_keys: true) if job
     job
   end
   
@@ -163,17 +163,17 @@ class Litejobqueue < Litequeue
   end
   
   def job_started
-    Litesupport.synchronize(@mutex){@jobs_in_flight += 1}
+    Litescheduler.synchronize(@mutex){@jobs_in_flight += 1}
   end
   
   def job_finished
-    Litesupport.synchronize(@mutex){@jobs_in_flight -= 1}
+    Litescheduler.synchronize(@mutex){@jobs_in_flight -= 1}
   end
     
   # optionally run a job in its own context
   def schedule(spawn = false, &block)
     if spawn
-      Litesupport.spawn &block
+      Litescheduler.spawn &block
     else
       yield
     end
@@ -181,7 +181,7 @@ class Litejobqueue < Litequeue
     
   # create a worker according to environment
   def create_worker
-    Litesupport.spawn do
+    Litescheduler.spawn do
       worker_sleep_index = 0
       while @running do
         processed = 0
@@ -213,7 +213,7 @@ class Litejobqueue < Litequeue
   
   # create a gc for dead jobs
   def create_garbage_collector
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         while jobs = pop('_dead', 100)
           if jobs[0].is_a? Array
