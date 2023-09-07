@@ -84,7 +84,7 @@ class Litecable
   end
 
   def create_broadcaster
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running
         @messages.acquire do |msgs|
           if msgs.length > 0
@@ -101,7 +101,7 @@ class Litecable
   end
 
   def create_pruner
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running
         run_stmt(:prune, @options[:expire_after])
         sleep @options[:expire_after]
@@ -110,7 +110,7 @@ class Litecable
   end
 
   def create_listener
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running
         @last_fetched_id ||= (run_stmt(:last_id)[0][0] || 0)
         run_stmt(:fetch, @last_fetched_id, @pid).to_a.each do |msg|

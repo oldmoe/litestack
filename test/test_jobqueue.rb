@@ -1,5 +1,5 @@
 require "minitest/autorun"
-require "../lib/litestack/litejob"
+require "../lib/litestack/litejobqueue"
 
 class Litejobqueue
   def at_exit
@@ -35,11 +35,10 @@ class TestQueue < Minitest::Test
     id = @jobqueue.push(MyJob.name, [Time.now.to_i], 10, "test")
     assert @jobqueue.count != 0
     @jobqueue.count
-    @jobqueue.delete(id)
+    @jobqueue.delete(id[0])
     assert @jobqueue.count == 0
     @jobqueue.clear
   end
-  #=begin
 
   def test_push_with_delay
     assert @jobqueue.count == 0
@@ -69,5 +68,4 @@ class TestQueue < Minitest::Test
     assert @jobqueue.count != 0
     @jobqueue.clear
   end
-  #=end
 end

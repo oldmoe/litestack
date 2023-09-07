@@ -7,13 +7,10 @@ require "yaml"
 require "pathname"
 require "fileutils"
 
+require_relative "./litescheduler"
+
 module Litesupport
   class Error < StandardError; end
-
-  def self.max_contexts
-    return 50 if scheduler == :fiber || scheduler == :polyphony
-    5
-  end
 
   # Detect the Rack or Rails environment.
   def self.detect_environment
@@ -32,88 +29,10 @@ module Litesupport
     @environment ||= detect_environment
   end
 
-  # cache the scheduler we are running in
-  # it is an error to change the scheduler for a process
-  # or for a child forked from that process
-  def self.scheduler
-    @scehduler ||= detect_scheduler
-  end
-
-  # identify which scheduler we are running in
-  # we currently support :fiber, :polyphony, :iodine & :threaded
-  # in the future we might want to expand to other schedulers
-  def self.detect_scheduler
-    return :fiber if Fiber.scheduler
-    return :polyphony if defined? Polyphony
-    return :iodine if defined? Iodine
-    :threaded # fall back for all other schedulers
-  end
-
-  # spawn a new execution context
-  def self.spawn(&block)
-    if scheduler == :fiber
-      Fiber.schedule(&block)
-    elsif scheduler == :polyphony
-      spin(&block)
-    elsif scheduler == :threaded || scheduler == :iodine
-      Thread.new(&block)
-    end
-    # we should never reach here
-  end
-
-  def self.context
-    if scheduler == :fiber || scheduler == :poylphony
-      Fiber.current.storage
-    else
-      Thread.current
-    end
-  end
-
-  def self.current_context
-    if scheduler == :fiber || scheduler == :poylphony
-      Fiber.current
-    else
-      Thread.current
-    end
-  end
-
-  # switch the execution context to allow others to run
-  def self.switch
-    if scheduler == :fiber
-      Fiber.scheduler.yield
-      true
-    elsif scheduler == :polyphony
-      Fiber.current.schedule
-      Thread.current.switch_fiber
-      true
-    else
-      # Thread.pass
-      false
-    end
-  end
-
-  # mutex initialization
-  def self.mutex
-    # a single mutex per process (is that ok?)
-    @@mutex ||= Mutex.new
-  end
-
-  # bold assumption, we will only synchronize threaded code!
-  # If some code explicitly wants to synchronize a fiber
-  # they must send (true) as a parameter to this method
-  # else it is a no-op for fibers
-  def self.synchronize(fiber_sync = false, &block)
-    if scheduler == :fiber || scheduler == :polyphony
-      yield # do nothing, just run the block as is
-    else
-      mutex.synchronize(&block)
-    end
-  end
-
   # common db object options
   def self.create_db(path)
     db = SQLite3::Database.new(path)
-    db.busy_handler { switch || sleep(0.0001) }
+    db.busy_handler { Litescheduler.switch || sleep(0.0001) }
     db.journal_mode = "WAL"
     db.instance_variable_set(:@stmts, {})
     class << db
@@ -151,7 +70,7 @@ module Litesupport
     end
 
     def synchronize(&block)
-      if Litesupport.scheduler == :threaded || Litesupport.scheduler == :iodine
+      if Litescheduler.scheduler == :threaded || Litescheduler.scheduler == :iodine
         @mutex.synchronize { block.call }
       else
         block.call
@@ -163,31 +82,21 @@ module Litesupport
     def initialize(count, &block)
       @count = count
       @block = block
-      @resources = []
+      @resources = Thread::Queue.new
       @mutex = Litesupport::Mutex.new
       @count.times do
         resource = @mutex.synchronize { block.call }
-        @resources << [resource, :free]
+        @resources << resource
       end
     end
 
     def acquire
-      # check for pid changes
-      acquired = false
       result = nil
-      until acquired
-        @mutex.synchronize do
-          if (resource = @resources.find { |r| r[1] == :free })
-            resource[1] = :busy
-            begin
-              result = yield resource[0]
-            ensure
-              resource[1] = :free
-              acquired = true
-            end
-          end
-        end
-        sleep 0.001 unless acquired
+      resource = @resources.pop
+      begin
+        result = yield resource
+      ensure
+        @resources << resource
       end
       result
     end
@@ -207,7 +116,7 @@ module Litesupport
     def _fork(*args)
       ppid = Process.pid
       result = super
-      if Process.pid != ppid && [:threaded, :iodine].include?(Litesupport.scheduler)
+      if Process.pid != ppid && [:threaded, :iodine].include?(Litescheduler.backend)
         ForkListener.listeners.each { |l| l.call }
       end
       result
@@ -328,7 +237,7 @@ module Litesupport
     # common db object options
     def create_connection(path_to_sql_file = nil)
       conn = SQLite3::Database.new(@options[:path])
-      conn.busy_handler { Litesupport.switch || sleep(rand * 0.002) }
+      conn.busy_handler { Litescheduler.switch || sleep(rand * 0.002) }
       conn.journal_mode = "WAL"
       conn.synchronous = @options[:sync] || 1
       conn.mmap_size = @options[:mmap_size] || 0

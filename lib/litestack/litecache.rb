@@ -206,7 +206,7 @@ class Litecache
   end
 
   def spawn_worker
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running
         @conn.acquire do |cache|
           cache.transaction(:immediate) do

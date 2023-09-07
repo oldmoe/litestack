@@ -36,7 +36,7 @@ end
 
 require "./uljob"
 
-warn "litejob started in #{Litesupport.scheduler} environmnet"
+warn "litejob started in #{Litescheduler.backend} environment"
 
 t = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 bench("enqueuing litejobs", count) do |i|
