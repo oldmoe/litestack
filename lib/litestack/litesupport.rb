@@ -70,7 +70,7 @@ module Litesupport
     end
 
     def synchronize(&block)
-      if Litescheduler.scheduler == :threaded || Litescheduler.scheduler == :iodine
+      if Litescheduler.backend == :threaded || Litescheduler.backend == :iodine
         @mutex.synchronize { block.call }
       else
         block.call
