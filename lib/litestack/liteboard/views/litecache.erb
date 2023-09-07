@@ -1,0 +1,144 @@
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Current size / Max size
+        </div>
+        <div class="card-body">
+          <h1><%=format(round(@size))%>MB / <%=format(round(@max_size))%>MB <span class="fs-4"><%=round(@full)%>% full</span></h1>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Number of entries
+        </div>
+        <div class="card-body">
+          <h1><%=format(@entries)%></h1>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Reads / Writes
+        </div>
+        <div class="card-body">
+          <h1><%=format(@reads)%> / <%=format(@writes)%> <span class="fs-4"><%=round(@reads.to_f/@writes) rescue 0%> reads/write</span></h1>
+          <hr/>
+          <span class="hidden inlinepie"><%=[["name", "value"],["reads", @reads],["writes", @writes]]%></span>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Read hits / Misses
+        </div>
+        <div class="card-body">
+          <h1><%=format(@hits)%> / <%=format(@misses)%> <span class="fs-4"><%=round(@hitrate*100)%>% hit rate</span></h1>
+          <hr/>
+          <span class="hidden inlinepie"><%=[["name", "value"],["hits", @hits],["misses", @misses]]%></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Reads, writes over time
+        </div>
+        <div class="card-body">
+          <div class="hidden inlinecolumn">
+            <%=Oj.dump([["Time", "Reads", "Writes"]] + @reads_vs_writes)%>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Hits vs misses over time
+        </div>
+        <div class="card-body">
+          <span class="hidden inlinecolumn">
+            <%=Oj.dump([["Time", "Hits", "Misses"]] + @hits_vs_misses)%>
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  <div class = "row">
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Most read entries
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@top_reads.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h5><%=format(r['rcount'])%></h5></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class = "col">
+      <div class="card">
+        <div class="card-header">
+          Most written entries
+        </div>
+        <div class="card-body">
+          <table class="table">
+            <%@top_writes.each do |r| %>
+            <tr>
+              <td><%=r['key']%></td>
+              <td align="right"><h5><%=format(r['rcount'])%></h5></td>
+            </tr>
+            <% end %>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+

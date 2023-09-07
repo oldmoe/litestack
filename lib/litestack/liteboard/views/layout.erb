@@ -15,17 +15,17 @@
       h1 { font-family: antonio }
       #content{ padding-right: 12px; padding-left: 12px; padding-bottom: 60px;}
       table.head { margin-top: 12px; margin-bottom:12px}
-      table.head select { color: #078; background-color: #fff; font-weight: normal }
+      select { color: #078; background-color: #fff; font-weight: normal }
       .table th { color: #078; font-weight: normal; }
       .table th.sorted { font-weight: bold }
       .table td { color: #444; vertical-align:middle; font-size: 18px}
       .table td:first-child { color: #444; vertical-align:middle; font-size: 15px; font-weight:normal}
       .table td.empty { text-align:center}
-      a { color: #078; }
+      a, a.nav-link { color: #078; }
+      .nav-pills .nav-link.active { color: #fff; background-color: #078}
       a .logo { color: #000;}
       a:visited { color: #078; }
-      //table.summary { width: 50% }
-      span.hidden { display: none}
+      .hidden { display: none}
       div#search {margin-bottom: 8px}
       div#footer {position:fixed; left:0px; height: 40px; width:100%; background-color:#0891; border-top: #0893 1px solid; padding: 8px; bottom: 0; text-align: right}
       .logo{font-family: antonio}
@@ -41,23 +41,46 @@
     <div id="header">
       <h1><span class="logo"><span class="logo-half">lite</span>board | </span> <span class="logo smaller">the <span class="logo-half">lite</span>metric dashboard</span></span></h1>
     </div>
-    <table class="head">
-      <tr>
-        <td>
-          Showing data for the last <select onchange="window.location = locationWithParam('res', this.value)">
+    <div class="container">
+      <div class = "row">
+      &nbsp;<br/>
+      </div>
+      <div class="row">
+        <div class="col">
+          <nav class="navbar bg-body-tertiary">
+          <div>&nbsp;&nbsp;Showing data for the last <select onchange="window.location = locationWithParam('res', this.value)">
             <%= mapping = {'hour' => '60 minutes', 'day' => '24 hours', 'week' => '7 days', 'year' => '52 weeks'}%>
             <% ['hour', 'day', 'week', 'year'].each do  |res| %>
               <option value=<%=res%> <%='selected' if res == @res%>><%=mapping[res]%></option>
             <% end %>
-          </select>
-        </td>
-        <td></td>
-      </tr>
-      <tr>
-        <td></td><td></td>
-      </tr>
-    </table>
+          </select></div>
+          </nav>
+        </div>
+      </div>
+      <div class = "row">
+      &nbsp;<br/>
+      </div>
     <%= yield %>
+
+    </div>
+    
+<div class="container" style="position: fixed; left:0px; top: 145px">
+  <div class="row justify-content-center">
+    <div class="col">
+      <div class="card" style="width: 15rem;">
+        <div class="card-body">
+          <ul class="nav nav-pills nav-fill flex-column list-group list-group-flush">
+            <li class="list-group-item"><a class="nav-link <%='active' unless @topic%>" href="<%=index_url%>">Home</a></li>
+            <%@topics.each do |topic|%>
+            <li class="list-group-item"><a class="nav-link <%='active' if @topic == topic[0]%>" href="<%=topic_url(topic[0])%>"><%=topic[0]%></a></li>
+            <%end%>
+          </ul>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+    
     </div>
     <div id="footer">
       Powered by <a href="https://www.github.com/oldmoe/litestack" target="_blank"><span class="logo"><span class="logo-half">lite</span>stack</span></a>
@@ -65,44 +88,170 @@
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"   crossorigin="anonymous"></script>
   </body>
     <script>
-      google.charts.load('current', {'packages':['corechart']});
+      google.charts.load('current', {'packages':['corechart', 'bar']});
 
-      google.charts.setOnLoadCallback(drawChart);
+      google.charts.setOnLoadCallback(drawMiniColumnChart);
+      google.charts.setOnLoadCallback(drawColumnChart);
+      google.charts.setOnLoadCallback(drawPieChart);
+      google.charts.setOnLoadCallback(drawStackedColumnChart);
 
-      function drawChart() {
-        elements = document.querySelectorAll(".inlinecolumn")
+
+      function drawMiniColumnChart() {
+        elements = document.querySelectorAll(".inlineminicolumn")
         elements.forEach(element => {
-          //console.log(element)
           var label = element.dataset.label;
           var mydata = eval(element.innerText)
-          //console.log(mydata)
-          if(mydata.length > 0) {        
-            var data = new google.visualization.DataTable();
-          
-            data.addColumn('string', 'Time');
-            data.addColumn('number', label);
+          element.innerText = ''
+          element.classList.remove("hidden")      
+          if(mydata.length > 1) {        
             mydata.forEach(row => {
-              row[1] = Number(row[1])
-              data.addRows([row])
+              if(mydata[0].length == 5){ // we are doing custom tooltips
+                if(row[0] != "Time"){
+                  row[1] = Number(row[1].toPrecision(4))
+                  row[3] = Number(row[2].toPrecision(4))
+                  row[2] = row[0]+': '+mydata[0][1]+' '+row[1]
+                  row[4] = row[0]+': '+mydata[0][3]+' '+row[3]
+                }
+              }
             })
-            //data.addRows(mydata)
+            var data = google.visualization.arrayToDataTable(
+              mydata
+            )
             var options = {
               animation: {'startup': true, 'duration': 300},
-              width: 400,
-              height: 40,
+              width: 300,
+              height: 70,
+              chartArea: {width:'100%', height: '100%'},              
               backgroundColor: 'none',
-              curveType: 'function',
-              colors : ['#089'],
-              vAxis: {'gridlines': {'count' : 0}, 'textPosition' : 'none', 'baselineColor' : 'none', 'minValue' : 0 , 'maxValue' : 50},
+              bar: {groupWidth: "61.8%"},
+              colors : ['#089', 'silver' ],
+              vAxis: {'gridlines': {'count' : 0}, 'textPosition' : 'none', 'baselineColor' : 'none'},
               hAxis: { 'count' : 0, 'textPosition' : 'none', 'baselineColor' : 'none'},
-              legend: {'position': 'none'}
+              legend: {'position': 'none'},
+              tooltip: {showColorCode: true, isHtml: true},
+              isStacked: true
             }
-            var chart = new google.visualization.AreaChart(element);
+            var chart = new google.visualization.ColumnChart(element);
             chart.draw(data, options);   
-            element.classList.remove("hidden")      
+          }
+        })
+      }
+
+      function drawColumnChart() {
+        elements = document.querySelectorAll(".inlinecolumn")
+        elements.forEach(element => {
+          var label = element.dataset.label;
+          var mydata = eval(element.innerText)
+          element.innerText = ''
+          element.classList.remove("hidden")      
+          if(mydata.length > 1) {        
+            mydata.forEach(row => {
+              if(mydata[0].length == 5){ // we are doing custom tooltips
+                if(row[0] != "Time"){
+                  row[1] = Number(row[1].toPrecision(4))
+                  row[3] = Number(row[2].toPrecision(4))
+                  row[2] = row[0]+': '+mydata[0][1]+' '+row[1]
+                  row[4] = row[0]+': '+mydata[0][3]+' '+row[3]
+                }
+              }
+            })
+            var data = google.visualization.arrayToDataTable(
+              mydata
+            )
+            var options = {
+              animation: {'startup': true, 'duration': 300},
+              width: 550,
+              height: 350,
+              chartArea: {width:'100%', height: '80%'},              
+              backgroundColor: 'none',
+              bar: {groupWidth: "61.8%"},
+              colors : ['#089', 'silver' ],
+              vAxis: {'gridlines': {'count' : 0}, 'textPosition' : 'none', 'baselineColor' : 'none'},
+              hAxis: { 'count' : 0, 'textPosition' : 'none', 'baselineColor' : 'none'},
+              legend: {'position': 'bottom'},
+              tooltip: {showColorCode: true, isHtml: true},
+              isStacked: true
+            }
+            var chart = new google.visualization.ColumnChart(element);
+            chart.draw(data, options);   
           }
         })
       }      
+
+      function drawPieChart() {
+        elements = document.querySelectorAll(".inlinepie")
+        elements.forEach(element => {
+          var label = element.dataset.label;
+          var mydata = eval(element.innerText)
+          element.innerText = ''
+          element.classList.remove("hidden")      
+          if(mydata.length >= 2) {        
+            var data = google.visualization.arrayToDataTable(
+              mydata
+            )
+            var options = {
+              animation: {'startup': true, 'duration': 300},
+              annotations: {textStyle: {bold: true}, alwaysOutside: false },
+              width: 600,
+              height: 350,
+              backgroundColor: 'none',
+              bar: {groupWidth: "80%"},
+              colors : ['#089', 'silver', '#545B77' ],
+              axisTitlesPosition: 'none',
+              chartArea: {width:'90%', height: '85%'},
+              tooltip : {showColorCode: true},
+              vAxis: {gridlines: {count : 0}, textPosition : 'in', baselineColor : 'none', textStyle: {color: '#089', bold: true} },
+              hAxis: {gridlines: {count : 0}, textPosition : 'none', baselineColor : 'none'},
+              legend: {'position': 'bottom'},
+              isStacked: true,
+              bars: 'horizontal'
+            }
+            var chart = new google.visualization.PieChart(element);
+            if(mydata[1][1] == 0 && mydata[2][1] == 0){
+              return 0
+            }
+            chart.draw(data, options);   
+          }
+        })
+      }      
+
+
+      function drawStackedColumnChart() {
+        elements = document.querySelectorAll(".inlinestackedcolumn")
+        elements.forEach(element => {
+          var label = element.dataset.label;
+          var mydata = eval(element.innerText)
+          element.innerText = ''
+          element.classList.remove("hidden")      
+          if(mydata.length > 1) {        
+            console.log(mydata)
+            var data = google.visualization.arrayToDataTable(
+              mydata
+            )
+            var options = {
+              animation: {'startup': true, 'duration': 300},
+              annotations: {textStyle: {bold: true}, alwaysOutside: false },
+              width: 600,
+              height: 350,
+              backgroundColor: 'none',
+              bar: {groupWidth: "80%"},
+              colors : [ '#089', 'silver', '#545B77', 'silver'],
+              axisTitlesPosition: 'none',
+              chartArea: {width:'100%', height: '85%'},
+              tooltip : {showColorCode: true},
+              vAxis: {gridlines: {count : 0}, textPosition : 'none', baselineColor : 'none', textStyle: {color: '#089', bold: true} },
+              hAxis: {gridlines: {count : 0}, textPosition : 'none', baselineColor : 'none'},
+              legend: {'position': 'bottom'},
+              isStacked: true,
+              bars: 'horizontal'
+            }
+            var chart = new google.visualization.AreaChart(element);
+            chart.draw(data, options);   
+          }
+        })
+      }      
+
+
       function search_kd(el){
         //store the current value 
         el.oldvalue = el.value
@@ -126,6 +275,7 @@
       }
       
       $(document).ready(function(){
+        /*
         el = $('#search-field')[0]
         el.focus()
         if(el.value && el.value.length > 0){
@@ -137,7 +287,8 @@
             var re = new RegExp("("+el.value+")", "giu")
             link.innerHTML = link.innerHTML.replaceAll(re, "<span class='token'>$1</span>") ;
           }
-        }          
+        }
+        */          
       })
       
       function locationWithParam(param, value){

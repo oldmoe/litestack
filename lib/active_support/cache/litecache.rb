@@ -48,7 +48,7 @@ module ActiveSupport
         @cache.prune(limit)
       end 
 
-      def clear()
+      def clear(options = nil)
       	@cache.clear
       end
       

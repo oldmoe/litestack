@@ -7,13 +7,13 @@ schema:
         name TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
         key TEXT DEFAULT('___') NOT NULL ON CONFLICT REPLACE, 
         count INTEGER DEFAULT(0) NOT NULL ON CONFLICT REPLACE, 
-        value INTEGER, 
-        minimum INTEGER, 
-        maximum INTEGER, 
+        value REAL, 
+        minimum REAL, 
+        maximum REAL, 
         created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL ON CONFLICT REPLACE, 
         resolution TEXT DEFAULT('minute') NOT NULL, 
         PRIMARY KEY(resolution, created_at, topic, name, key)
-      );        
+      ) STRICT;        
 
 stmts:
       

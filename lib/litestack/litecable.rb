@@ -24,52 +24,54 @@ class Litecable
   }
   
   def initialize(options = {})  
-    @messages = []
+    @messages = Litesupport::Pool.new(1){[]}
     init(options)
+    collect_metrics if @options[:metrics]
   end
   
   # broadcast a message to a specific channel
   def broadcast(channel, payload=nil)
     # group meesages and only do broadcast every 10 ms
-    #run_stmt(:publish, channel.to_s, Oj.dump(payload), @pid)
     # but broadcast locally normally
-    @mutex.synchronize{ @messages << [channel.to_s, Oj.dump(payload)] }
+    @messages.acquire{|msgs| msgs << [channel.to_s, Oj.dump(payload)]}
+    capture(:broadcast, channel)
     local_broadcast(channel, payload) 
   end
   
   # subscribe to a channel, optionally providing a success callback proc
   def subscribe(channel, subscriber, success_callback = nil)
-    @mutex.synchronize do
-      @subscribers[channel] = {} unless @subscribers[channel]
-      @subscribers[channel][subscriber] = true
+    @subscribers.acquire do |subs|
+      subs[channel] = {} unless subs[channel]
+      subs[channel][subscriber] = true
     end
+    capture(:subscribe, channel)
   end
   
   # unsubscribe from a channel
   def unsubscribe(channel, subscriber)
-    @mutex.synchronize do
-      @subscribers[channel].delete(subscriber) rescue nil
-    end
+    @subscribers.acquire{|subs| subs[channel].delete(subscriber) rescue nil }
+    capture(:unsubscribe, channel)
   end
 
   private 
-    
+  
+  # broadcast the message to local subscribers  
   def local_broadcast(channel, payload=nil)
-    return unless @subscribers[channel]
     subscribers = []
-    @mutex.synchronize do
-      subscribers = @subscribers[channel].keys
+    @subscribers.acquire do |subs| 
+      return unless subs[channel]
+      subscribers = subs[channel].keys
     end
     subscribers.each do |subscriber|
       subscriber.call(payload)      
+      capture(:message, channel)
     end
   end  
       
   def setup
     super # create connection
     @pid = Process.pid
-    @subscribers = {}
-    @mutex = Litesupport::Mutex.new
+    @subscribers = Litesupport::Pool.new(1){{}}
     @running = true
     @listener = create_listener
     @pruner = create_pruner
@@ -78,16 +80,16 @@ class Litecable
   end
 
   def create_broadcaster
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
-        @mutex.synchronize do
-          if @messages.length > 0
+        @messages.acquire do |msgs|
+          if msgs.length > 0
             run_sql("BEGIN IMMEDIATE")
-            while msg = @messages.shift
+            while msg = msgs.shift
               run_stmt(:publish, msg[0], msg[1], @pid)
             end
             run_sql("END")
-          end
+          end          
         end
         sleep 0.02
       end      
@@ -95,7 +97,7 @@ class Litecable
   end
 
   def create_pruner
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         run_stmt(:prune, @options[:expire_after])
         sleep @options[:expire_after]
@@ -104,10 +106,9 @@ class Litecable
   end
 
   def create_listener
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         @last_fetched_id ||= (run_stmt(:last_id)[0][0] || 0)
-        @logger.info @last_fetched_id
         run_stmt(:fetch, @last_fetched_id, @pid).to_a.each do |msg|
           @logger.info "RECEIVED #{msg}"
           @last_fetched_id = msg[0]
@@ -119,20 +120,9 @@ class Litecable
   end
 
   def create_connection
-    conn = super
-    conn.wal_autocheckpoint = 10000 
-    sql = YAML.load_file("#{__dir__}/litecable.sql.yml")
-    version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj| 
-      if v > version
-        conn.transaction do 
-          obj.each{|k, s| conn.execute(s)}
-          conn.user_version = v
-        end
-      end
-    end 
-    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
-    conn
+    super("#{__dir__}/litecable.sql.yml") do |conn|
+      conn.wal_autocheckpoint = 10000 
+    end
   end
   
 end

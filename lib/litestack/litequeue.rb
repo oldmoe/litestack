@@ -78,12 +78,12 @@ class Litequeue
   
   # deletes all the entries in all queues, or if a queue name is given, deletes all entries in that specific queue
   def clear(queue=nil)
-    run_sql("DELETE FROM queue WHERE iif(?, name = ?,  1)", queue)
+    run_sql("DELETE FROM queue WHERE iif(?1 IS NOT NULL, name = ?1,  TRUE)", queue)
   end
 
   # returns a count of entries in all queues, or if a queue name is given, reutrns the count of entries in that queue
   def count(queue=nil)
-    run_sql("SELECT count(*) FROM queue WHERE iif(?, name = ?, 1)", queue)[0][0]
+    run_sql("SELECT count(*) FROM queue WHERE iif(?1 IS NOT NULL, name = ?1, TRUE)", queue)[0][0]
   end
   
   # return the size of the queue file on disk
@@ -116,27 +116,16 @@ class Litequeue
   private  
       
   def create_connection
-    conn = super
-    conn.wal_autocheckpoint = 10000 
-    sql = YAML.load_file("#{__dir__}/litequeue.sql.yml")
-    version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj|
-      if v > version
-        conn.transaction(:immediate) do 
-          obj.each{|k, s| conn.execute(s)}
-          conn.user_version = v
+    super("#{__dir__}/litequeue.sql.yml") do |conn|
+      conn.wal_autocheckpoint = 10000 
+      # check if there is an old database and convert entries to the new format
+      if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1
+        conn.transaction(:immediate) do
+          conn.execute("INSERT INTO queue(fire_at, name, value, created_at) SELECT fire_at, queue, value, created_at FROM _ul_queue_")
+          conn.execute("DROP TABLE _ul_queue_")
         end
       end
-    end 
-    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
-    # check if there is an old database and convert entries to the new format
-    if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1
-      conn.transaction(:immediate) do
-        conn.execute("INSERT INTO queue(fire_at, name, value, created_at) SELECT fire_at, queue, value, created_at FROM _ul_queue_")
-        conn.execute("DROP TABLE _ul_queue_")
-      end
     end
-    conn
   end
 
 end  

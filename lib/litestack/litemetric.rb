@@ -55,9 +55,12 @@ class Litemetric
   ## event capturing
   ##################
   
+  def current_time_slot
+    (Time.now.to_i / 300) * 300
+  end
   
   def capture(topic, event, key=event, value=nil)
-    @collector.capture(topic, event, key, value)
+    @collector.capture(topic, event, key, value, current_time_slot)
   end
       
   def capture_snapshot(topic, state)
@@ -83,18 +86,18 @@ class Litemetric
   def events_summaries(topic, resolution, order, dir, search, count)
     search = "%#{search}%" if search
     if dir.downcase == "desc" 
-      run_stmt(:events_summaries, topic, resolution, order, search, count).to_a
+      run_stmt_hash(:events_summaries, topic, resolution, order, search, count)
     else
-      run_stmt(:events_summaries_asc, topic, resolution, order, search, count).to_a
+      run_stmt_hash(:events_summaries_asc, topic, resolution, order, search, count)
     end
   end
   
   def keys_summaries(topic, event, resolution, order, dir, search, count)
     search = "%#{search}%" if search
     if dir.downcase == "desc" 
-      run_stmt(:keys_summaries, topic, event, resolution, order, search, count).to_a
+      run_stmt_hash(:keys_summaries, topic, event, resolution, order, search, count).to_a
     else
-      run_stmt(:keys_summaries_asc, topic, event, resolution, order, search, count).to_a
+      run_stmt_hash(:keys_summaries_asc, topic, event, resolution, order, search, count).to_a
     end 
   end
 
@@ -103,11 +106,11 @@ class Litemetric
   end 
 
   def event_data_points(step, count, resolution, topic, event)
-    run_stmt(:event_data_points, step, count, resolution, topic, event).to_a
+    run_stmt_hash(:event_data_points, step, count, resolution, topic, event).to_a
   end 
 
   def key_data_points(step, count, resolution, topic, event, key)
-    run_stmt(:key_data_points, step, count, resolution, topic, event, key).to_a
+    run_stmt_hash(:key_data_points, step, count, resolution, topic, event, key).to_a
   end 
 
   def snapshot(topic)
@@ -130,7 +133,21 @@ class Litemetric
   ###################
 
   private
-
+  
+  def run_stmt_hash(stmt, *args)
+    res = run_stmt(stmt, *args)
+    cols = run_stmt_method(stmt, :columns)
+    hashes = []
+    res.each do | row |
+      hash = {}
+      row.each_with_index do |field, i|
+        hash[cols[i]] = field
+      end
+      hashes << hash
+    end
+    hashes
+  end
+  
   def exit_callback
     STDERR.puts "--- Litemetric detected an exit, flushing metrics"
     @running = false
@@ -156,29 +173,13 @@ class Litemetric
   end
      
   def create_connection
-    conn = super
-    conn.wal_autocheckpoint = 10000 # checkpoint after 10000 pages are written
-    sql = YAML.load_file("#{__dir__}/litemetric.sql.yml")
-    version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj| 
-      if v > version
-        begin
-          conn.transaction do 
-            obj.each{|k, s| conn.execute(s)}
-            conn.user_version = v
-          end
-        rescue Exception => e
-          STDERR.puts e.message
-          raise e
-        end
-      end
-    end 
-    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
-    conn
+    super("#{__dir__}/litemetric.sql.yml") do |conn|
+      conn.wal_autocheckpoint = 10000 # checkpoint after 10000 pages are written
+    end
   end
   
   def create_flusher
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         sleep @options[:flush_interval]
         flush
@@ -187,7 +188,7 @@ class Litemetric
   end
   
   def create_summarizer
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running do
         sleep @options[:summarize_interval]
         summarize
@@ -210,7 +211,7 @@ class Litemetric
     end
 
     def create_snapshotter
-      Litesupport.spawn do
+      Litescheduler.spawn do
         while @running do
           sleep @litemetric.options[:snapshot_interval]
           capture_snapshot
@@ -235,7 +236,7 @@ class Litemetric
       t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC) 
       yield
       t2 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      value = (( t2 - t1 ) * 1000).round # capture time in milliseconds
+      value =  t2 - t1 
       capture(event, key, value)
       value # return value so other events can reuse it  
     end    
@@ -276,16 +277,16 @@ class Litemetric
       init(options)
     end
     
-    def capture(topic, event, key, value=nil)
+    def capture(topic, event, key, value=nil, time=nil)
       if key.is_a? Array
-        key.each{|k| capture_single_key(topic, event, k, value)}
+        key.each{|k| capture_single_key(topic, event, k, value, time)}
       else
-        capture_single_key(topic, event, key, value)
+        capture_single_key(topic, event, key, value, time)
       end
     end
         
-    def capture_single_key(topic, event, key, value)
-      run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, nil ,1, value)
+    def capture_single_key(topic, event, key, value, time=nil)
+      run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, time ,1, value)
     end
     
     def flush
@@ -305,37 +306,10 @@ class Litemetric
     end
 
     def create_connection
-      conn = super
-      conn.execute("ATTACH ? as m", @options[:dbpath].to_s)
-      conn.wal_autocheckpoint = 10000
-      sql = YAML.load_file("#{__dir__}/litemetric_collector.sql.yml")
-      version = conn.get_first_value("PRAGMA user_version")
-      sql["schema"].each_pair do |v, obj| 
-        if v > version
-          conn.transaction do 
-            obj.each do |k, s| 
-              begin
-                conn.execute(s)
-              rescue Exception => e
-                STDERR.puts "Error parsing #{k}"
-                STDERR.puts s
-                raise e
-              end
-            end
-            conn.user_version = v
-          end
-        end
-      end 
-      sql["stmts"].each do |k, v| 
-        begin
-          conn.stmts[k.to_sym] = conn.prepare(v) 
-        rescue Exception => e
-          STDERR.puts "Error parsing #{k}"
-          STDERR.puts v
-          raise e
-        end
+      super("#{__dir__}/litemetric_collector.sql.yml") do |conn|
+        conn.execute("ATTACH ? as m", @options[:dbpath].to_s)      
+        conn.wal_autocheckpoint = 10000
       end
-      conn
     end
     
   end

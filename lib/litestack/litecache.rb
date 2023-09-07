@@ -212,7 +212,7 @@ class Litecache
   end
     
   def spawn_worker
-    Litesupport.spawn do
+    Litescheduler.spawn do
       while @running
         @conn.acquire do |cache|
           begin
@@ -236,23 +236,12 @@ class Litecache
   end
   
   def create_connection
-    conn = super 
-    conn.cache_size = 2000
-    conn.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
-    conn.max_page_count = (@options[:size] / conn.page_size).to_i
-    conn.case_sensitive_like = true
-    sql = YAML.load_file("#{__dir__}/litecache.sql.yml")
-    version = conn.get_first_value("PRAGMA user_version")
-    sql["schema"].each_pair do |v, obj| 
-      if v > version
-        conn.transaction do 
-          obj.each{|k, s| conn.execute(s)}
-          conn.user_version = v
-        end
-      end
-    end 
-    sql["stmts"].each { |k, v| conn.stmts[k.to_sym] = conn.prepare(v) }
-    conn
+    super("#{__dir__}/litecache.sql.yml") do |conn|
+      conn.cache_size = 2000
+      conn.journal_size_limit = [(@options[:size]/2).to_i, @options[:min_size]].min
+      conn.max_page_count = (@options[:size] / conn.page_size).to_i
+      conn.case_sensitive_like = true
+    end
   end  
   
 end

@@ -1,22 +1,54 @@
 
-    <h5>All topics</h5>
-    <div id="search"><form><input id="search-field" type="text" placeholder="Search topics" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>
-    <table class="sortable table">
-      <tr>
-        <th width="20%" class="<%='sorted' if @order == 'topic'%>"><a href="<%=index_sort_url('topic')%>">Topics</a>  <%=dir('topic')%></th>
-        <th width="20%" class="<%='sorted' if @order == 'rcount'%>"><a href="<%=index_sort_url('rcount')%>">Total events</a>  <%=dir('rcount')%></th>
-        <th width="40%">Events over time</th>
-      </tr>
-      <% @topics.each do |topic|%>
-        <tr>
-          <td title="<%=topic[0]%>"><div class="label"><a href="./topics/<%=encode(topic[0])%>?res=<%=@res%>"><%=topic[0]%></a></div></td>
-          <td><%=topic[3]%></td>
-          <td class="chart"><span class="inlinecolumn hidden" data-label="Count"><%=Oj.dump(topic[4]) if topic[4]%></span></td>
-        </tr>
-      <%end%>
-      <% if @topics.empty? %>
-        <tr>
-         <td class="empty" colspan="5">No data to display</td>
-        </tr>
-      <% end %>
 
+ 
+
+<div class="container">
+   <% @topics.each do |topic|%>
+
+    <div class = "row justify-content-center">
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          <a href="./topics/<%=encode(topic[0])%>?res=<%=@res%>"><%=topic[0]%></a>
+        </div>
+        <div class="card-body">
+          <div class="container">
+            <div class= "row">
+              <div class= "col">
+                <h1><%=topic[3]%> <span class="fs-4">events</span></h1>
+              </div>
+              <div class= "col">
+                <span class="inlineminicolumn hidden" data-label="Count"><%=Oj.dump(topic[4].unshift(['Time', 'Count'])) if topic[4]%></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class = "row">
+  &nbsp;<br/>
+  </div>
+
+  
+  <%end%>
+  <% if @topics.empty? %>
+    <div class = "row justify-content-center">
+
+    <div class = "col-6">
+      <div class="card">
+        <div class="card-header">
+          Topics
+        </div>
+        <div class="card-body justify-content-center">
+          No data to display
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <%end%>
+</div>
