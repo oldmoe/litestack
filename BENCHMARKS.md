@@ -16,7 +16,7 @@ This produces
 SELECT * FROM posts WHERE id = ?
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|1.3K q/s|6.5K q/s|1.8K q/s|17.4K q/s|
 |2|2.6K q/s|13.9K q/s|3.5K q/s|33.2K q/s|
@@ -33,7 +33,7 @@ This produces
 SELECT * FROM posts WHERE user_id = ? LIMIT 5
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|345 q/s|482 q/s|937 q/s|1.1K q/s|
 |2|751 q/s|848 q/s|1.3K q/s|2.3K q/s|
@@ -51,7 +51,7 @@ This produces
 Update posts SET updated_at = ? WHERE id = ?
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|125 q/s|484 q/s|129 q/s|2.1K q/s|
 |2|265 q/s|576 q/s|333 q/s|2.5K q/s|
