@@ -1,6 +1,6 @@
 # Litestack Benchmarks
 
-This is a set of initial (simple) benchmars, designed to understand the baseline performance for different litestack components against their counterparts. 
+This is a set of initial (simple) benchmarks, designed to understand the baseline performance for different litestack components against their counterparts. 
 These are not real life scenarios and I hope I will be able to produce some interesting ones soon.
 
 > ![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_logo_teal.png?raw=true)
@@ -16,7 +16,7 @@ This produces
 SELECT * FROM posts WHERE id = ?
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|1.3K q/s|6.5K q/s|1.8K q/s|17.4K q/s|
 |2|2.6K q/s|13.9K q/s|3.5K q/s|33.2K q/s|
@@ -33,7 +33,7 @@ This produces
 SELECT * FROM posts WHERE user_id = ? LIMIT 5
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|345 q/s|482 q/s|937 q/s|1.1K q/s|
 |2|751 q/s|848 q/s|1.3K q/s|2.3K q/s|
@@ -51,7 +51,7 @@ This produces
 Update posts SET updated_at = ? WHERE id = ?
 ```
 
-|Prcoesses|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
+|Processes|AR:PG|AR:litedb|Sequel:PG|Sequel:litedb|
 |-:|-:|-:|-:|-:|
 |1|125 q/s|484 q/s|129 q/s|2.1K q/s|
 |2|265 q/s|576 q/s|333 q/s|2.5K q/s|
@@ -76,7 +76,7 @@ For testing the cache we attempted to try writing and reading different payload 
 
 ### Read
 
-|Payload Size (bytes)|Redis|litecahce|
+|Payload Size (bytes)|Redis|litecache|
 |-:|-:|-:|
 |10|5.0K q/s|69.4K q/s|
 |100|5.0K q/s|90.7K q/s|
@@ -85,11 +85,11 @@ For testing the cache we attempted to try writing and reading different payload 
 
 ### Increment an int value
 
-|Redis|litecahce|
+|Redis|litecache|
 |-:|-:|
 |5.1K q/s|16.9K q/s|
 
-It is not even a contest! litecache delivers way higher peroformance, specially in reading performance which is arguably the most important metric for a cache.
+It is not even a contest! litecache delivers way higher performance, specially in reading performance which is arguably the most important metric for a cache.
 
 > ![litejob](https://github.com/oldmoe/litestack/blob/master/assets/litejob_logo_teal.png?raw=true)
 
