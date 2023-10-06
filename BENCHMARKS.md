@@ -111,9 +111,7 @@ Running Litejob with fibers is producing much faster results than any threaded s
 
 > ![litecable](https://github.com/oldmoe/litestack/blob/master/assets/litecable_logo_teal.png?raw=true)
 
-A client written using the Iodine web server was used to generate the WS load in an event driven fashion
-
-
+A client written using the Iodine web server was used to generate the WS load in an event driven fashion. The Rails application, the Iodine based load generator and the Redis server were all run on the same machine to exclude network overheads (Redis still pays for the TCP stack overhead though)
 
 |Requests|Redis Req/Sec|Litestack Req/sec|Redis p90 Latency (ms)|Litestack p90 Latency (ms)|Redis p99 Latency (ms)|Litestack p99 Latancy (ms)| 
 |-:|-:|-:|-:|-:|-:|-:|
