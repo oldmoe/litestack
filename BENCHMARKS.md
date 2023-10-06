@@ -109,5 +109,16 @@ Two scenarios were benchmarked, an empty job and one with a 100ms sleep to simul
 
 Running Litejob with fibers is producing much faster results than any threaded solution. Still though, threaded Litejob remains ahead of Sidekiq in all scenarios. 
 
+> ![litecable](https://github.com/oldmoe/litestack/blob/master/assets/litecable_logo_teal.png?raw=true)
+
+A client written using the Iodine web server was used to generate the WS load in an event driven fashion
 
 
+
+|Requests|Redis Req/Sec|Litestack Req/sec|Redis p90 Latency (ms)|Litestack p90 Latency (ms)|Redis p99 Latency (ms)|Litestack p99 Latancy (ms)| 
+|-:|-:|-:|-:|-:|-:|-:|
+|1,000|2611|3058|34|27|153|78|
+|10,000|3110|5328|81|40|138|122
+|100,000|3403|5385|41|36|153|235
+
+On average, Litecable is quite faster than the Redis based version and offers better latenices for over 90% of the requests, though Redis usually delivers better p99 latencies, 
