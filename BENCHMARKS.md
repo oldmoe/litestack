@@ -3,6 +3,8 @@
 This is a set of initial (simple) benchmars, designed to understand the baseline performance for different litestack components against their counterparts. 
 These are not real life scenarios and I hope I will be able to produce some interesting ones soon.
 
+All these benchmarks were run on my AMD 5700U based laptop, in a Virtual Box VM
+
 > ![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_logo_teal.png?raw=true)
 
 ### Point Read
