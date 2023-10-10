@@ -4,11 +4,17 @@ require_relative 'litesupport'
 # all measurable components should require the litemetric class
 require_relative 'litemetric'
 
+# litedb in particular gets access to litesearch
+require_relative 'litesearch'
+
 # Litedb inherits from the SQLite3::Database class and adds a few initialization options
 class Litedb < ::SQLite3::Database
 
   # add litemetric support
   include Litemetric::Measurable
+  
+  # add litesearch support
+  include Litesearch
   
   # overrride the original initilaizer to allow for connection configuration
   def initialize(file, options = {}, zfs = nil )
