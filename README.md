@@ -1,12 +1,12 @@
 ![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
 
+All your data infratstructure, in a gem!
 
-litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It exploits the power and embeddedness of SQLite to include a full-fledged SQL database, a fast cache , a robust job queue, a reliable message broker and a full text search engine all in a single package.
+Litestack is a Ruby gem that provides both Ruby and  Ruby on Rails applications an all-in-one solution for web application data infrastructure. It exploits the power and embeddedness of SQLite to deliver a full-fledged SQL database, a fast cache , a robust job queue, a reliable message broker, a full text search engine and a metrics platform all in a single package.
 
-Compared to conventional approaches that require separate servers and databases, Litestack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
+Compared to conventional approaches that require separate servers and databases, Litestack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, Litestack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
 You can read more about why litestack can be a good choice for your next web application **[here](WHYLITESTACK.md)**, you might also be interested in litestack **[benchmarks](BENCHMARKS.md)**.
-
 
 litestack provides integration with popular libraries, including:
 
@@ -28,8 +28,6 @@ With litestack you only need to add a single gem to your app which would replace
 
 To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
 
-Litestack is still pretty young and under heavy development, but you are welcome to give it a try today!.
-
 ## Installation
 
 Add the `litestack` gem line to your application's Gemfile:
@@ -42,7 +40,7 @@ To configure a Rails application to run the full litestack, run:
 
 ## Usage
 
-litestack currently offers three main components
+litestack currently offers six main components
 
 - litedb
 - litecache
