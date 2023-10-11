@@ -54,6 +54,7 @@ module Litesearch::Model
     def search_all(term, options={})
       options[:offset] ||= 0
       options[:limit] ||= 25
+      options[:term] = term
       selects = [] 
       if models = options[:models]
         models_hash = {}
@@ -64,12 +65,12 @@ module Litesearch::Model
         models_hash = search_models
       end
       models_hash.each do |name, klass|
-        selects << "SELECT '#{name}' AS model, rowid, -rank AS search_rank FROM #{index_name_for_table(klass.table_name)}('#{term}')"
+        selects << "SELECT '#{name}' AS model, rowid, -rank AS search_rank FROM #{index_name_for_table(klass.table_name)}(:term)"
       end
       conn = get_connection
-      sql = selects.join(" UNION ") << " ORDER BY search_rank DESC LIMIT #{options[:limit]} OFFSET #{options[:offset]}"
+      sql = selects.join(" UNION ") << " ORDER BY search_rank DESC LIMIT :limit OFFSET :offset"
       result = []
-      rs = conn.query(sql) #, options[:limit], options[:offset])
+      rs = conn.query(sql, options) #, options[:limit], options[:offset])
       rs.each_hash do |row|
         obj = models_hash[row["model"]].fetch_row(row["rowid"])
         obj.search_rank = row["search_rank"]
@@ -156,7 +157,7 @@ module Litesearch::Model
       dataset.select(
         Sequel.lit("#{table_name}.*, -#{index_name}.rank AS search_rank")
       ).inner_join(
-        Sequel.lit("#{index_name}('#{term}') ON #{table_name}.id = #{index_name}.rowid AND rank != 0")
+        Sequel.lit("#{index_name}(:term) ON #{table_name}.id = #{index_name}.rowid AND rank != 0", {term: term})
       ).order(
         Sequel.lit('rank')
       )
