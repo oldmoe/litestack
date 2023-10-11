@@ -1,12 +1,12 @@
 ![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
 
+All your data infratstructure, in a gem!
 
-litestack is a revolutionary gem for Ruby and Ruby on Rails that provides an all-in-one solution for web application development. It exploits the power and embeddedness of SQLite to include a full-fledged SQL database, a fast cache and a robust job queue all in a single package.
+Litestack is a Ruby gem that provides both Ruby and  Ruby on Rails applications an all-in-one solution for web application data infrastructure. It exploits the power and embeddedness of SQLite to deliver a full-fledged SQL database, a fast cache , a robust job queue, a reliable message broker, a full text search engine and a metrics platform all in a single package.
 
-Compared to conventional approaches that require separate servers and databases, Litestack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, LiteStack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
+Compared to conventional approaches that require separate servers and databases, Litestack offers superior performance, efficiency, ease of use, and cost savings. Its embedded database and cache reduce memory and CPU usage, while its simple interface streamlines the development process. Overall, Litestack sets a new standard for web application development and is an excellent choice for those who demand speed, efficiency, and simplicity.
 
 You can read more about why litestack can be a good choice for your next web application **[here](WHYLITESTACK.md)**, you might also be interested in litestack **[benchmarks](BENCHMARKS.md)**.
-
 
 litestack provides integration with popular libraries, including:
 
@@ -24,10 +24,9 @@ With litestack you only need to add a single gem to your app which would replace
 - Cache Server (e.g. Redis, Memcached)
 - Job Processor (e.g. Sidekiq, Goodjob)
 - Pubsub Server (e.g. Redis, PostgreSQL)
+- Fulltext Search Server (e.g. Elasticsearch, Mielisearch)
 
 To make it even more efficient, litestack will detect the presence of Fiber based IO frameworks like Async (e.g. when you use the Falcon web server) or Polyphony. It will then switch its background workers for caches and queues to fibers (using the semantics of the existing framework). This is done transparently and will generally lead to lower CPU and memory utilization.
-
-Litestack is still pretty young and under heavy development, but you are welcome to give it a try today!.
 
 ## Installation
 
@@ -41,12 +40,14 @@ To configure a Rails application to run the full litestack, run:
 
 ## Usage
 
-litestack currently offers three main components
+litestack currently offers six main components
 
 - litedb
 - litecache
 - litejob
 - litecable
+- litesearch
+- litemetric
 
 > ![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_logo_teal.png?raw=true)
 
@@ -179,6 +180,79 @@ staging:
 
 production:
   adapter: litecable
+```
+
+> ![litesearch](https://github.com/oldmoe/litestack/blob/master/assets/litesearch_logo_teal.png?raw=true)
+
+### Litesearch
+
+Litesearch adds full text search capabilities to Litedb, you can use it in standalone mode as follows:
+
+```ruby
+require 'litestack/litedb'
+db = Litedb.new(":memory:")
+# create the index
+idx = db.search_index('index_name') do |schema|
+    schema.fields [:sender, :receiver, :body]
+    schema.field :subject, weight: 10
+    schema.tokenizer :trigram
+end
+# add documents
+idx.add({sender: 'Kamal', receiver: 'Laila', subject: 'Are the girls awake?', body: 'I got them the new phones they asked for, are they awake?'})
+# search the index, all fields
+idx.search('kamal')
+# search the index, specific field, partial workd (trigram)
+idx.search('subject: awa') 
+```
+
+Litesearch integrates tightly with ActiveRecord ans Sequel, here are integration examples
+
+#### ActiveRecord
+
+```ruby
+class Author < ActiveRecord::Base
+    has_many :books
+end
+
+class Book < ActiveRecord::Base
+    belongs_to :author
+
+    include Litesearch::Model
+
+    litesearch do |schema|
+        schema.fields [:title, :description]
+        schema.field :author, target: 'authors.name'
+        schema.tokenizer :porter
+    end
+end
+# insert records
+Author.create(name: 'Adam A. Writer') 
+Book.create(title: 'The biggest stunt', author_id: 1, description: 'a description') 
+# search the index, the search method integrates with AR's query interface
+Book.search('author: writer').limit(1).all
+```
+#### Sequel
+
+```ruby
+class Author < Sequel::Model
+    one_to_many :books
+end
+
+class Book < Sequel::Model
+    many_to_one :author
+
+    include Litesearch::Model
+    litesearch do |schema|
+        schema.fields [:title, :description]
+        schema.field :author, target: 'authors.name'
+        schema.tokenizer :porter
+    end
+end
+# insert records
+Author.create(name: 'Adam A. Writer') 
+Book.create(title: 'The biggest stunt', author_id: 1, description: 'a description') 
+# search the index, the search method integrates with Sequel's query interface
+Book.search('author: writer').limit(1).all
 ```
 
 ## Contributing
