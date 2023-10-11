@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.4.1] - 2023-10-11
+
+- Add missing Litesearch::Model dependency
+
 ## [0.4.0] - 2023-10-11
 
 - Introduced Litesearch, dynamic & fast full text search capability for Litedb
