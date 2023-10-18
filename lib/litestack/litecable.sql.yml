@@ -2,23 +2,34 @@ schema:
   1:
     create_table_messages: >
       CREATE TABLE IF NOT EXISTS messages(
-        id INTEGER PRIMARY KEY autoincrement, 
-        channel TEXT NOT NULL, 
-        value TEXT NOT NULL, 
-        pid INTEGER, 
+        id INTEGER PRIMARY KEY autoincrement,
+        channel TEXT NOT NULL,
+        value TEXT NOT NULL,
+        pid INTEGER,
         created_at INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT(unixepoch())
       );
     create_index_messages_by_date: >
-      CREATE INDEX IF NOT EXISTS messages_by_date ON messages(created_at);  
+      CREATE INDEX IF NOT EXISTS messages_by_date ON messages(created_at);
 
 stmts:
+  publish: >
+    INSERT INTO messages(channel, value, pid)
+    VALUES ($1, $2, $3);
 
-  publish: INSERT INTO messages(channel, value, pid) VALUES ($1, $2, $3)
+  last_id: >
+    SELECT max(id) FROM messages;
 
-  last_id: SELECT max(id) FROM messages
-  
-  fetch: SELECT id, channel, value, created_at FROM messages WHERE id > $1 and pid != $2
+  fetch: >
+    SELECT id, channel, value, created_at
+    FROM messages
+    WHERE id > $1
+      AND pid != $2;
 
-  prune: DELETE FROM messages WHERE created_at < (unixepoch() - $1)
+  prune: >
+    DELETE FROM messages
+    WHERE created_at < (unixepoch() - $1);
 
-  check_prune: SELECT count(*) FROM messages WHERE created_at < (unixepoch() - $1)
+  check_prune: >
+    SELECT count(*)
+    FROM messages
+    WHERE created_at < (unixepoch() - $1);

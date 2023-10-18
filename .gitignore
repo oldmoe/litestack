@@ -9,3 +9,4 @@
 /development/*.sqlite3*
 /test/*.sqlite3*
 /production/*.sqlite3*
+.DS_Store
