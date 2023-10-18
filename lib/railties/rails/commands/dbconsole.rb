@@ -1,6 +1,5 @@
 module Rails
   class DBConsole
-  
     def start
       ENV["RAILS_ENV"] ||= @options[:environment] || environment
       config = db_config.configuration_hash
@@ -31,14 +30,14 @@ module Rails
         find_cmd_and_exec(["mysql", "mysql5"], *args)
 
       when /^postgres|^postgis/
-        ENV["PGUSER"]         = config[:username] if config[:username]
-        ENV["PGHOST"]         = config[:host] if config[:host]
-        ENV["PGPORT"]         = config[:port].to_s if config[:port]
-        ENV["PGPASSWORD"]     = config[:password].to_s if config[:password] && @options[:include_password]
-        ENV["PGSSLMODE"]      = config[:sslmode].to_s if config[:sslmode]
-        ENV["PGSSLCERT"]      = config[:sslcert].to_s if config[:sslcert]
-        ENV["PGSSLKEY"]       = config[:sslkey].to_s if config[:sslkey]
-        ENV["PGSSLROOTCERT"]  = config[:sslrootcert].to_s if config[:sslrootcert]
+        ENV["PGUSER"] = config[:username] if config[:username]
+        ENV["PGHOST"] = config[:host] if config[:host]
+        ENV["PGPORT"] = config[:port].to_s if config[:port]
+        ENV["PGPASSWORD"] = config[:password].to_s if config[:password] && @options[:include_password]
+        ENV["PGSSLMODE"] = config[:sslmode].to_s if config[:sslmode]
+        ENV["PGSSLCERT"] = config[:sslcert].to_s if config[:sslcert]
+        ENV["PGSSLKEY"] = config[:sslkey].to_s if config[:sslkey]
+        ENV["PGSSLROOTCERT"] = config[:sslrootcert].to_s if config[:sslrootcert]
         find_cmd_and_exec("psql", db_config.database)
 
       when "sqlite3", "litedb"
@@ -49,7 +48,6 @@ module Rails
         args << File.expand_path(db_config.database, Rails.respond_to?(:root) ? Rails.root : nil)
 
         find_cmd_and_exec("sqlite3", *args)
-
 
       when "oracle", "oracle_enhanced"
         logon = ""
@@ -65,9 +63,9 @@ module Rails
       when "sqlserver"
         args = []
 
-        args += ["-d", "#{db_config.database}"] if db_config.database
-        args += ["-U", "#{config[:username]}"] if config[:username]
-        args += ["-P", "#{config[:password]}"] if config[:password]
+        args += ["-d", db_config.database.to_s] if db_config.database
+        args += ["-U", config[:username].to_s] if config[:username]
+        args += ["-P", config[:password].to_s] if config[:password]
 
         if config[:host]
           host_arg = +"tcp:#{config[:host]}"
@@ -81,7 +79,5 @@ module Rails
         abort "Unknown command-line client for #{db_config.database}."
       end
     end
-                                                                                                                                                                                           
-
   end
 end

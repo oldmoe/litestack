@@ -1,11 +1,11 @@
-require 'active_support'
-require_relative '../lib/litestack'
-require_relative './bench'
+require "active_support"
+require_relative "../lib/litestack"
+require_relative "./bench"
 
-cache = ActiveSupport::Cache::Litecache.new({path: '../db/rails_cache.db'})
+cache = ActiveSupport::Cache::Litecache.new({path: "../db/rails_cache.db"})
 
-#can only use the lookup method when the gem is installed
-#cache = ActiveSupport::Cache.lookup_store(:litecache, {path: '../db/rails_cache.db'})
+# can only use the lookup method when the gem is installed
+# cache = ActiveSupport::Cache.lookup_store(:litecache, {path: '../db/rails_cache.db'})
 
 redis = ActiveSupport::Cache.lookup_store(:redis_cache_store, {})
 
@@ -15,10 +15,10 @@ count = 1000
 
 [10, 100, 1000, 10000].each do |size|
   count.times do
-    keys << random_str(10) 
-    values << random_str(size) 
+    keys << random_str(10)
+    values << random_str(size)
   end
-  
+
   random_keys = keys.shuffle
   puts "Benchmarks for values of size #{size} bytes"
   puts "=========================================================="
@@ -41,11 +41,9 @@ count = 1000
   end
   puts "=========================================================="
 
-
   keys = []
   values = []
 end
-
 
 cache.write("somekey", 1, raw: true)
 
@@ -59,9 +57,8 @@ bench("litecache increment", count) do
 end
 
 bench("Redis increment", count) do
-  redis.increment("somekey", 1, raw: true )
+  redis.increment("somekey", 1, raw: true)
 end
 
 cache.clear
 redis.clear
-
