@@ -6,3 +6,6 @@
 /pkg/
 /spec/reports/
 /tmp/
+/development/*.sqlite3*
+/test/*.sqlite3*
+/production/*.sqlite3*
