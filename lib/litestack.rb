@@ -20,7 +20,9 @@ require_relative "./action_cable/subscription_adapter/litecable" if defined? Act
 require_relative "./litestack/railtie" if defined? Rails::Railtie
 
 module Litestack
-  class NotImplementedError < Exception; end
-  class TimeoutError < Exception; end
-  class DeadlockError < Exception; end
+  class NotImplementedError < RuntimeError; end
+
+  class TimeoutError < RuntimeError; end
+
+  class DeadlockError < RuntimeError; end
 end

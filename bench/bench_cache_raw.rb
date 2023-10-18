@@ -1,17 +1,17 @@
-require 'redis'
-require 'sqlite3'
-require_relative './bench'
+require "redis"
+require "sqlite3"
+require_relative "./bench"
 
-#require 'polyphony'
-require 'async/scheduler'
+# require 'polyphony'
+require "async/scheduler"
 
 Fiber.set_scheduler Async::Scheduler.new
 Fiber.scheduler.run
 
-require_relative '../lib/litestack/litecache'
-#require 'litestack'
+require_relative "../lib/litestack/litecache"
+# require 'litestack'
 
-cache = Litecache.new({path: '../db/cache.db'}) # default settings
+cache = Litecache.new({path: "../db/cache.db"}) # default settings
 redis = Redis.new # default settings
 
 values = []
@@ -21,13 +21,13 @@ count.times { keys << random_str(10) }
 
 [10, 100, 1000, 10000].each do |size|
   count.times do
-    values << random_str(size) 
+    values << random_str(size)
   end
-  
+
   random_keys = keys.shuffle
-  
+
   GC.compact
-  
+
   puts "Benchmarks for values of size #{size} bytes"
   puts "=========================================================="
   puts "== Writes =="
@@ -35,12 +35,11 @@ count.times { keys << random_str(10) }
     cache.set(keys[i], values[i])
   end
 
-  #bench("file writes", count) do |i|
+  # bench("file writes", count) do |i|
   #  f = File.open("../files/#{keys[i]}.data", 'w+')
   #  f.write(values[i])
   #  f.close
-  #end
-  
+  # end
 
   bench("Redis writes", count) do |i|
     redis.set(keys[i], values[i])
@@ -51,9 +50,9 @@ count.times { keys << random_str(10) }
     cache.get(random_keys[i])
   end
 
-  #bench("file reads", count) do |i|
+  # bench("file reads", count) do |i|
   #  data = File.read("../files/#{keys[i]}.data")
-  #end
+  # end
 
   bench("Redis reads", count) do |i|
     redis.get(random_keys[i])
@@ -61,10 +60,7 @@ count.times { keys << random_str(10) }
   puts "=========================================================="
 
   values = []
-  
-  
 end
-
 
 cache.set("somekey", 1)
 redis.set("somekey", 1)
@@ -80,5 +76,4 @@ end
 cache.clear
 redis.flushdb
 
-#sleep
-
+# sleep

@@ -1,13 +1,13 @@
 module Litesearch
   class Index; end
+
   class Schema; end
 end
 
-require_relative './litesearch/index'
-require_relative './litesearch/model'
+require_relative "./litesearch/index"
+require_relative "./litesearch/model"
 
 module Litesearch
-  
   def litesearch_index_cache
     @litesearch_index_cache ||= {}
   end
@@ -21,17 +21,14 @@ module Litesearch
     return index if index && !block_given?
     # if either there is no index in the cache or a block is given
     # create a new index instance and then place it in the cache and return
-    if block_given?
-      index = Index.new(self, name) do |schema|
+    index = if block_given?
+      Index.new(self, name) do |schema|
         yield schema
         schema.name(name)
       end
     else
-      index = Index.new(self, name)
+      Index.new(self, name)
     end
     litesearch_index_cache[name] = index
   end
-
 end
-
-

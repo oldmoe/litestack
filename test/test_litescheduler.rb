@@ -8,29 +8,29 @@ describe Litescheduler do
     after do
       Litescheduler.instance_variable_set(:@backend, nil)
     end
-    
+
     it "when Fiber.scheduler present, returns an instance of the Fiber adapter" do
       Scheduler = Class.new do # standard:disable Lint/ConstantDefinitionInBlock
         def block = nil
-      
+
         def unblock = nil
-      
+
         def kernel_sleep = nil
-      
+
         def io_wait = nil
       end
       Fiber.set_scheduler Scheduler.new
-      
+
       assert_equal :fiber, Litescheduler.backend
-      
+
       Fiber.set_scheduler nil
     end
 
     it "when Polyphony defined, returns an instance of the Polyphony adapter" do
       Polyphony = Class.new # standard:disable Lint/ConstantDefinitionInBlock
-      
+
       assert_equal :polyphony, Litescheduler.backend
-      
+
       Object.send(:remove_const, :Polyphony)
     end
 
