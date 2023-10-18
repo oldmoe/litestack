@@ -1,152 +1,149 @@
 # frozen_stringe_literal: true
 
-require_relative './litequeue'
-require_relative './litemetric'
+require_relative "./litequeue"
+require_relative "./litemetric"
 
 ##
-#Litejobqueue is a job queueing and processing system designed for Ruby applications. It is built on top of SQLite, which is an embedded relational database management system that is #lightweight and fast.
+# Litejobqueue is a job queueing and processing system designed for Ruby applications. It is built on top of SQLite, which is an embedded relational database management system that is #lightweight and fast.
 #
-#One of the main benefits of Litejobqueue is that it is very low on resources, making it an ideal choice for applications that need to manage a large number of jobs without incurring #high resource costs. In addition, because it is built on SQLite, it is easy to use and does not require any additional configuration or setup.
+# One of the main benefits of Litejobqueue is that it is very low on resources, making it an ideal choice for applications that need to manage a large number of jobs without incurring #high resource costs. In addition, because it is built on SQLite, it is easy to use and does not require any additional configuration or setup.
 #
-#Litejobqueue also integrates well with various I/O frameworks like Async and Polyphony, making it a great choice for Ruby applications that use these frameworks. It provides a #simple and easy-to-use API for adding jobs to the queue and for processing them.
+# Litejobqueue also integrates well with various I/O frameworks like Async and Polyphony, making it a great choice for Ruby applications that use these frameworks. It provides a #simple and easy-to-use API for adding jobs to the queue and for processing them.
 #
-#Overall, LiteJobQueue is an excellent choice for Ruby applications that require a lightweight, embedded job queueing and processing system that is fast, efficient, and easy to use.
+# Overall, LiteJobQueue is an excellent choice for Ruby applications that require a lightweight, embedded job queueing and processing system that is fast, efficient, and easy to use.
 class Litejobqueue < Litequeue
-
   include Litemetric::Measurable
 
   # the default options for the job queue
-  # can be overriden by passing new options in a hash 
+  # can be overriden by passing new options in a hash
   # to Litejobqueue.new, it will also be then passed to the underlying Litequeue object
   #   config_path: "./litejob.yml" -> were to find the configuration file (if any)
   #   path: "./db/queue.db"
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
   #   sync: 1 -> sync only when checkpointing
-  #   queues: [["default", 1, "spawn"]] -> an array of queues to process 
+  #   queues: [["default", 1, "spawn"]] -> an array of queues to process
   #   workers: 1 -> number of job processing workers
   #   sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 3.125] -> sleep intervals for workers
   # queues will be processed according to priority, such that if the queues are as such
   #   queues: [["default", 1, "spawn"], ["urgent", 10]]
   # it means that roughly, if the queues are full, for each 10 urgent jobs, 1 default job will be processed
-  # the priority value is mandatory. The optional "spawn" parameter tells the job workers to spawn a separate execution context (thread or fiber, based on environment) for each job. 
-  # This can be particularly useful for long running, IO bound jobs. It is not recommended though for threaded environments, as it can result in creating many threads that may consudme a lot of memory. 
+  # the priority value is mandatory. The optional "spawn" parameter tells the job workers to spawn a separate execution context (thread or fiber, based on environment) for each job.
+  # This can be particularly useful for long running, IO bound jobs. It is not recommended though for threaded environments, as it can result in creating many threads that may consudme a lot of memory.
   DEFAULT_OPTIONS = {
     config_path: "./litejob.yml",
     path: Litesupport.root.join("queue.sqlite3"),
     queues: [["default", 1]],
     workers: 5,
-    retries: 5, 
+    retries: 5,
     retry_delay: 60,
     retry_delay_multiplier: 10,
     dead_job_retention: 10 * 24 * 3600,
-    gc_sleep_interval: 7200, 
-    logger: 'STDOUT',
+    gc_sleep_interval: 7200,
+    logger: "STDOUT",
     sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 1.0, 2.0],
-    metrics: false 
+    metrics: false
   }
-  
+
   @@queue = nil
-  
+
   attr_reader :running
-  
+
   alias_method :_push, :push
-  
+
   # a method that returns a single instance of the job queue
   # for use by Litejob
   def self.jobqueue(options = {})
-    @@queue ||= Litescheduler.synchronize{self.new(options)}
+    @@queue ||= Litescheduler.synchronize { new(options) }
   end
 
   def self.new(options = {})
     return @@queue if @@queue
     @@queue = allocate
     @@queue.send(:initialize, options)
-    @@queue 
+    @@queue
   end
 
   # create new queue instance (only once instance will be created in the process)
   #   jobqueue = Litejobqueue.new
-  #   
+  #
   def initialize(options = {})
-
     @queues = [] # a place holder to allow workers to process
     super(options)
-    
+
     # group and order queues according to their priority
     pgroups = {}
     @options[:queues].each do |q|
       pgroups[q[1]] = [] unless pgroups[q[1]]
       pgroups[q[1]] << [q[0], q[2] == "spawn"]
     end
-    @queues = pgroups.keys.sort.reverse.collect{|p| [p, pgroups[p]]}
+    @queues = pgroups.keys.sort.reverse.collect { |p| [p, pgroups[p]] }
     collect_metrics if @options[:metrics]
   end
 
   def metrics_identifier
     "Litejob" # overrides default identifier
   end
-  
+
   # push a job to the queue
   #   class EasyJob
   #      def perform(any, number, of_params)
   #         # do anything
-  #      end 
+  #      end
   #   end
   #   jobqueue = Litejobqueue.new
   #   jobqueue.push(EasyJob, params) # the job will be performed asynchronously
-  def push(jobclass, params, delay=0, queue=nil)
+  def push(jobclass, params, delay = 0, queue = nil)
     payload = Oj.dump({klass: jobclass, params: params, retries: @options[:retries], queue: queue}, mode: :strict)
     res = super(payload, delay, queue)
     capture(:enqueue, queue)
     @logger.info("[litejob]:[ENQ] queue:#{res[1]} class:#{jobclass} job:#{res[0]}")
     res
   end
-  
-  def repush(id, job, delay=0, queue=nil)
+
+  def repush(id, job, delay = 0, queue = nil)
     res = super(id, Oj.dump(job, mode: :strict), delay, queue)
     capture(:enqueue, queue)
     @logger.info("[litejob]:[ENQ] queue:#{res[0]} class:#{job[:klass]} job:#{id}")
     res
   end
-  
+
   # delete a job from the job queue
   #   class EasyJob
   #      def perform(any, number, of_params)
   #         # do anything
-  #      end 
+  #      end
   #   end
   #   jobqueue = Litejobqueue.new
   #   id = jobqueue.push(EasyJob, params, 10) # queue for processing in 10 seconds
-  #   jobqueue.delete(id)    
+  #   jobqueue.delete(id)
   def delete(id)
     job = super(id)
     @logger.info("[litejob]:[DEL] job: #{job}")
     job = Oj.load(job[0], symbol_keys: true) if job
     job
   end
-  
+
   # delete all jobs in a certain named queue
   # or delete all jobs if the queue name is nil
-  #def clear(queue=nil)
-    #@queue.clear(queue)
-  #end
-  
+  # def clear(queue=nil)
+  # @queue.clear(queue)
+  # end
+
   # stop the queue object (does not delete the jobs in the queue)
   # specifically useful for testing
   def stop
     @running = false
-    #@@queue = nil
+    # @@queue = nil
     close
   end
-  
-  
+
   private
 
   def exit_callback
     @running = false # stop all workers
     puts "--- Litejob detected an exit, cleaning up"
     index = 0
-    while @jobs_in_flight > 0 and index < 30 # 3 seconds grace period for jobs to finish
+    while @jobs_in_flight > 0 && index < 30 # 3 seconds grace period for jobs to finish
       puts "--- Waiting for #{@jobs_in_flight} jobs to finish"
       sleep 0.1
       index += 1
@@ -157,76 +154,76 @@ class Litejobqueue < Litequeue
   def setup
     super
     @jobs_in_flight = 0
-    @workers = @options[:workers].times.collect{ create_worker }    
+    @workers = @options[:workers].times.collect { create_worker }
     @gc = create_garbage_collector
-    @mutex = Litesupport::Mutex.new 
+    @mutex = Litesupport::Mutex.new
   end
-  
+
   def job_started
-    Litescheduler.synchronize(@mutex){@jobs_in_flight += 1}
+    Litescheduler.synchronize(@mutex) { @jobs_in_flight += 1 }
   end
-  
+
   def job_finished
-    Litescheduler.synchronize(@mutex){@jobs_in_flight -= 1}
+    Litescheduler.synchronize(@mutex) { @jobs_in_flight -= 1 }
   end
-    
+
   # optionally run a job in its own context
   def schedule(spawn = false, &block)
     if spawn
-      Litescheduler.spawn &block
+      Litescheduler.spawn(&block)
     else
       yield
     end
-  end  
-    
+  end
+
   # create a worker according to environment
   def create_worker
     Litescheduler.spawn do
       worker_sleep_index = 0
-      while @running do
+      while @running
         processed = 0
         @queues.each do |priority, queues| # iterate through the levels
           queues.each do |queue, spawns| # iterate through the queues in the level
             batched = 0
-            
+
             while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
               capture(:dequeue, queue)
               processed += 1
               batched += 1
-              
+
               id, serialized_job = payload
               process_job(queue, id, serialized_job, spawns)
-              
+
               Litescheduler.switch # give other contexts a chance to run here
             end
           end
         end
-        if processed == 0 
-          sleep @options[:sleep_intervals][worker_sleep_index]      
-          worker_sleep_index += 1 if worker_sleep_index < @options[:sleep_intervals].length - 1          
+        if processed == 0
+          sleep @options[:sleep_intervals][worker_sleep_index]
+          worker_sleep_index += 1 if worker_sleep_index < @options[:sleep_intervals].length - 1
         else
           worker_sleep_index = 0 # reset the index
         end
       end
     end
-  end  
-  
+  end
+
   # create a gc for dead jobs
   def create_garbage_collector
     Litescheduler.spawn do
-      while @running do
-        while jobs = pop('_dead', 100)
+      while @running
+        while (jobs = pop("_dead", 100))
           if jobs[0].is_a? Array
             @logger.info "[litejob]:[DEL] garbage collector deleted #{jobs.length} dead jobs"
           else
             @logger.info "[litejob]:[DEL] garbage collector deleted 1 dead job"
           end
         end
-        sleep @options[:gc_sleep_interval]      
+        sleep @options[:gc_sleep_interval]
       end
     end
   end
-  
+
   def process_job(queue, id, serialized_job, spawns)
     job = Oj.load(serialized_job)
     @logger.info "[litejob]:[DEQ] queue:#{queue} class:#{job["klass"]} job:#{id}"

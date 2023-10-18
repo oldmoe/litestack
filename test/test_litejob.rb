@@ -362,7 +362,7 @@ describe Litejob do
 
   describe ".queue=" do
     it "sets the queue name for .perform_async" do
-      NoOpJob.queue=("test")
+      NoOpJob.queue = ("test")
       job_id, queue = NoOpJob.perform_async
 
       assert job_id
@@ -370,7 +370,7 @@ describe Litejob do
     end
 
     it "sets the queue name for .perform_at" do
-      NoOpJob.queue=("test")
+      NoOpJob.queue = ("test")
       job_id, queue = NoOpJob.perform_at(Time.now.to_i + 0.1)
 
       assert job_id
@@ -378,7 +378,7 @@ describe Litejob do
     end
 
     it "sets the queue name for .perform_in" do
-      NoOpJob.queue=("test")
+      NoOpJob.queue = ("test")
       job_id, queue = NoOpJob.perform_in(0.1)
 
       assert job_id
@@ -386,7 +386,7 @@ describe Litejob do
     end
 
     it "sets the queue name for .perform_after" do
-      NoOpJob.queue=("test")
+      NoOpJob.queue = ("test")
       job_id, queue = NoOpJob.perform_after(0.1)
 
       assert job_id
@@ -417,15 +417,15 @@ describe Litejob do
         assert_equal 1, Performance.performances
       end
 
-#       it "retries once retryable exception" do
-#         Litequeue.define_method(:push) do |value, delay = nil, queue = nil|
-#           Performance.performed!
-#           raise SQLite3::BusyException
-#         end
-# 
-#         assert_raises(SQLite3::BusyException) { NoOpJob.perform_async }
-#         assert_equal 2, Performance.performances
-#       end
+      #       it "retries once retryable exception" do
+      #         Litequeue.define_method(:push) do |value, delay = nil, queue = nil|
+      #           Performance.performed!
+      #           raise SQLite3::BusyException
+      #         end
+      #
+      #         assert_raises(SQLite3::BusyException) { NoOpJob.perform_async }
+      #         assert_equal 2, Performance.performances
+      #       end
     end
 
     describe "when processing a job" do
