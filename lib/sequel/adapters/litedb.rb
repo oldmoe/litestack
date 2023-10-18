@@ -1,11 +1,10 @@
-require_relative '../../litestack/litedb'
-require 'sequel'
-require 'sequel/adapters/sqlite'
+require_relative "../../litestack/litedb"
+require "sequel"
+require "sequel/adapters/sqlite"
 
 module Sequel
   module Litedb
-  
-  	include SQLite
+    include SQLite
 
     LITEDB_TYPES = SQLITE_TYPES
 

@@ -1,8 +1,7 @@
-require 'oj'
-require_relative './schema.rb'
+require "oj"
+require_relative "./schema"
 
 class Litesearch::Index
-  
   DEFAULT_SEARCH_OPTIONS = {limit: 25, offset: 0}
 
   def initialize(db, name)
@@ -17,7 +16,7 @@ class Litesearch::Index
     # if they differ in tokenizer then rebuild if auto-rebuild is on (error otherwise)
     # if they differ in both then update the structure and rebuild if auto-rebuild is on (error otherwise)
     load_index(name) if exists?(name)
-    
+
     if block_given?
       schema = Litesearch::Schema.new
       schema.schema[:name] = name
@@ -33,54 +32,56 @@ class Litesearch::Index
         end
         prepare_statements
       end
+    elsif exists?(name)
+      load_index(name)
+      prepare_statements
+    # an index already exists, load it from the database and return the index instance to the caller
     else
-      if exists?(name)
-        # an index already exists, load it from the database and return the index instance to the caller
-        load_index(name)
-        prepare_statements
-      else
-        raise "index does not exist and no schema was supplied"
-      end
+      raise "index does not exist and no schema was supplied"
     end
   end
-  
+
   def load_index(name)
     # we cannot use get_config_value here since the schema object is not created yet, should we allow something here?
-    @schema = Litesearch::Schema.new(Oj.load(@db.get_first_value("SELECT v from #{name}_config where k = ?", :litesearch_schema.to_s))) rescue nil
+    @schema = begin
+      Litesearch::Schema.new(Oj.load(@db.get_first_value("SELECT v from #{name}_config where k = ?", :litesearch_schema.to_s)))
+    rescue
+      nil
+    end
     raise "index configuration not found, either corrupted or not a litesearch index!" if @schema.nil?
     self
   end
-          
+
   def modify
     schema = Litesearch::Schema.new
     yield schema
     schema.schema[:name] = @schema.schema[:name]
     do_modify(schema)
   end
-  
+
   def rebuild!
     @db.transaction(:immediate) do
       do_rebuild
     end
   end
-  
+
   def add(document)
     @stmts[:insert].execute!(document)
-    return @db.last_insert_row_id
+    @db.last_insert_row_id
   end
-  
+
   def remove(id)
     @stmts[:delete].execute!(id)
   end
-  
+
   def count(term = nil)
     if term
       @stmts[:count].execute!(term)[0][0]
     else
-      @stmts[:count_all].execute!()[0][0]
+      @stmts[:count_all].execute![0][0]
     end
   end
-  
+
   # search options include
   # limit: how many records to return
   # offset: start from which record
@@ -90,31 +91,30 @@ class Litesearch::Index
     rs = @stmts[:search].execute(term, options[:limit], options[:offset])
     if @db.results_as_hash
       rs.each_hash do |hash|
-        result << hash 
+        result << hash
       end
     else
       result = rs.to_a
-    end    
+    end
     result
   end
-      
+
   def clear!
     @stmts[:delete_all].execute!(id)
   end
-  
+
   def drop!
     if @schema.get(:type) == :backed
       @db.execute_batch(@schema.sql_for(:drop_primary_triggers))
-      if secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers)
+      if @schema.sql_for(:create_secondary_triggers)
         @db.execute_batch(@schema.sql_for(:drop_secondary_triggers))
       end
     end
     @db.execute(@schema.sql_for(:drop))
   end
-  
-  
+
   private
-  
+
   def exists?(name)
     @db.get_first_value("SELECT count(*) FROM SQLITE_MASTER WHERE name = ? AND type = 'table' AND (sql like '%fts5%' OR sql like '%FTS5%')", name.to_s) == 1
   end
@@ -123,11 +123,11 @@ class Litesearch::Index
     stmt_names = [:insert, :delete, :delete_all, :drop, :count, :count_all, :search]
     stmt_names.each do |stmt_name|
       @stmts[stmt_name] = @db.prepare(@schema.sql_for(stmt_name))
-    end      
+    end
   end
-  
-  def do_create(schema)   
-    @schema = schema   
+
+  def do_create(schema)
+    @schema = schema
     @schema.clean
     # create index
     @db.execute(schema.sql_for(:create_index, true))
@@ -136,7 +136,7 @@ class Litesearch::Index
     # create triggers (if any)
     if @schema.get(:type) == :backed
       @db.execute_batch(@schema.sql_for(:create_primary_triggers))
-      if secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers)
+      if (secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers))
         @db.execute_batch(secondary_triggers_sql)
       end
       @db.execute(@schema.sql_for(:rebuild)) if @schema.get(:rebuild_on_create)
@@ -152,11 +152,11 @@ class Litesearch::Index
     requires_schema_change = false
     requires_trigger_change = false
     requires_rebuild = false
-    if changes[:fields] || changes[:table] || changes[:tokenizer] || changes[:filter_column] || changes[:removed_fields_count] > 0# any change here will require a schema change
+    if changes[:fields] || changes[:table] || changes[:tokenizer] || changes[:filter_column] || changes[:removed_fields_count] > 0 # any change here will require a schema change
       requires_schema_change = true
       # only a change in tokenizer
       requires_rebuild = changes[:tokenizer] || new_schema.get(:rebuild_on_modify)
-      requires_trigger_change = (changes[:table] || changes[:fields] || changes[:filter_column]) && @schema.get(:type) == :backed 
+      requires_trigger_change = (changes[:table] || changes[:fields] || changes[:filter_column]) && @schema.get(:type) == :backed
     end
     if requires_schema_change
       # 1. enable schema editing
@@ -169,12 +169,12 @@ class Litesearch::Index
       @db.execute(new_schema.sql_for(:expand_data), changes[:extra_fields_count])
       @db.execute(new_schema.sql_for(:expand_docsize), changes[:extra_fields_count])
       @db.execute("PRAGMA WRITABLE_SCHEMA = RESET")
-      # need to reprepare statements        
+      # need to reprepare statements
     end
     if requires_trigger_change
       @db.execute_batch(new_schema.sql_for(:drop_primary_triggers))
       @db.execute_batch(new_schema.sql_for(:create_primary_triggers))
-      if secondary_triggers_sql = new_schema.sql_for(:create_secondary_triggers)
+      if (secondary_triggers_sql = new_schema.sql_for(:create_secondary_triggers))
         @db.execute_batch(new_schema.sql_for(:drop_secondary_triggers))
         @db.execute_batch(secondary_triggers_sql)
       end
@@ -183,10 +183,10 @@ class Litesearch::Index
       @schema = new_schema
       set_config_value(:litesearch_schema, @schema.schema)
       prepare_statements
-      #save_schema
+      # save_schema
     end
     do_rebuild if requires_rebuild
-    # update the weights if they changed 
+    # update the weights if they changed
     @db.execute(@schema.sql_for(:ranks)) if changes[:weights]
   end
 
@@ -194,37 +194,36 @@ class Litesearch::Index
     # remove any zero weight columns
     if @schema.get(:type) == :backed
       @db.execute_batch(@schema.sql_for(:drop_primary_triggers))
-      if secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers)
+      if (secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers))
         @db.execute_batch(@schema.sql_for(:drop_secondary_triggers))
       end
       @db.execute(@schema.sql_for(:drop))
       @db.execute(@schema.sql_for(:create_index, true))
       @db.execute_batch(@schema.sql_for(:create_primary_triggers))
       @db.execute_batch(secondary_triggers_sql) if secondary_triggers_sql
-      @db.execute(@schema.sql_for(:rebuild)) 
+      @db.execute(@schema.sql_for(:rebuild))
     elsif @schema.get(:type) == :standalone
       removables = []
-      @schema.get(:fields).each_with_index{|f, i| removables << [f[0], i] if f[1][:weight] == 0  }
+      @schema.get(:fields).each_with_index { |f, i| removables << [f[0], i] if f[1][:weight] == 0 }
       removables.each do |col|
         @db.execute(@schema.sql_for(:drop_content_col, col[1]))
-        @schema.get(:fields).delete(col[0]) 
+        @schema.get(:fields).delete(col[0])
       end
       @db.execute("PRAGMA WRITABLE_SCHEMA = TRUE")
       @db.execute(@schema.sql_for(:update_index), @schema.sql_for(:create_index, true))
-      @db.execute(@schema.sql_for(:update_content_table), @schema.sql_for(:create_content_table, @schema.schema[:fields].count)) 
+      @db.execute(@schema.sql_for(:update_content_table), @schema.sql_for(:create_content_table, @schema.schema[:fields].count))
       @db.execute("PRAGMA WRITABLE_SCHEMA = RESET")
-      @db.execute(@schema.sql_for(:rebuild)) 
+      @db.execute(@schema.sql_for(:rebuild))
     end
     set_config_value(:litesearch_schema, @schema.schema)
-    @db.execute(@schema.sql_for(:ranks, true)) 
- end
-  
-  def get_config_value(key)
-    Oj.load(@db.get_first_value(@schema.sql_for(:get_config_value), key.to_s)) #rescue nil
+    @db.execute(@schema.sql_for(:ranks, true))
   end
-  
+
+  def get_config_value(key)
+    Oj.load(@db.get_first_value(@schema.sql_for(:get_config_value), key.to_s)) # rescue nil
+  end
+
   def set_config_value(key, value)
     @db.execute(@schema.sql_for(:set_config_value), key.to_s, Oj.dump(value))
   end
-
 end
