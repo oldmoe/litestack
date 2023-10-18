@@ -5,7 +5,7 @@ If you're developing a Ruby web application, you may be wondering which database
 ## Standing on the shoulder of a (figurative) giant!
 At its core, Litestack is built on top of SQLite, a highly regarded open-source relational database engine. This means that Litestack is highly efficient and resource-friendly, making it an excellent choice for small to medium-sized web applications. Additionally, because SQLite is a file-based database, it is incredibly easy to set up and manage, requiring no separate server installation or configuration.
 
-## Performance and Effeciency
+## Performance and Efficiency
 One of the most significant advantages of Litestack is its performance benefits. SQLite has a small memory footprint and is highly optimized, meaning that it can deliver fast and reliable database access. Additionally, Litestack's job queueing and caching functionality provide additional performance benefits, enabling you to execute tasks asynchronously and store frequently accessed data in memory for faster access.
 
 ## Dead simple Rails integration

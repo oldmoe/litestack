@@ -219,7 +219,7 @@ module Litesupport
     end
 
     def run_sql(sql, *args)
-      @conn.acquire { |q| q.execute(sql, *args) }
+      @conn.acquire { |q| q.execute(sql, args) }
     end
 
     def run_method(method, *args)

@@ -42,6 +42,7 @@ class Litecable
       subs[channel] = {} unless subs[channel]
       subs[channel][subscriber] = true
     end
+    success_callback&.call
     capture(:subscribe, channel)
   end
 
