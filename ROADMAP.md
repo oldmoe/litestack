@@ -32,6 +32,8 @@ This is a list of functional/non-functional features that litestack targets to i
 - [ ] Database maintenance scripts
   - [ ] Online backup
   - [ ] Restore
+  - [ ] Litestream integration
+  - [ ] CoW filesystems specific backup path
 - [ ] Zero downtime deployment scripts
   - [ ] Rails
   - [ ] Genereic Rack Applications
