@@ -22,7 +22,7 @@ class Litequeue
   include Litesupport::Liteconnection
 
   DEFAULT_OPTIONS = {
-    path: Litesupport.root_with_env.join("queue.sqlite3"),
+    path: Litesupport.root.join("queue.sqlite3"),
     mmap_size: 32 * 1024,
     sync: 0
   }

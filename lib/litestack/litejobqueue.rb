@@ -31,7 +31,7 @@ class Litejobqueue < Litequeue
   # This can be particularly useful for long running, IO bound jobs. It is not recommended though for threaded environments, as it can result in creating many threads that may consudme a lot of memory.
   DEFAULT_OPTIONS = {
     config_path: "./litejob.yml",
-    path: Litesupport.root_with_env.join("queue.sqlite3"),
+    path: Litesupport.root.join("queue.sqlite3"),
     queues: [["default", 1]],
     workers: 5,
     retries: 5,

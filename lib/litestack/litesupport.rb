@@ -41,18 +41,13 @@ module Litesupport
     db
   end
 
-  # Databases will be stored by default at this path which includes the environment.
-  def self.root_with_env
-    @root_with_env ||= ensure_root_volume Litesupport.root.join(Litesupport.environment)
-  end
-
   # Databases will be stored by default at this path.
-  def self.root
-    @root ||= ensure_root_volume detect_root
+  def self.root(env = Litesupport.environment)
+    ensure_root_volume detect_root(env)
   end
 
   # Default path where we'll store all of the databases.
-  def self.detect_root
+  def self.detect_root(env)
     path = if ENV["LITESTACK_DATA_PATH"]
       ENV["LITESTACK_DATA_PATH"]
     elsif defined? Rails
@@ -61,7 +56,7 @@ module Litesupport
       "."
     end
 
-    Pathname.new(path)#.join(Litesupport.environment)
+    Pathname.new(path).join(env)
   end
 
   def self.ensure_root_volume(path)

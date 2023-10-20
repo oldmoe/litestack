@@ -12,7 +12,7 @@ class Litemetric
 
   DEFAULT_OPTIONS = {
     config_path: "./litemetric.yml",
-    path: Litesupport.root_with_env.join("metrics.sqlite3"),
+    path: Litesupport.root.join("metrics.sqlite3"),
     sync: 1,
     mmap_size: 128 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
     flush_interval: 10, # flush data every 10 seconds
