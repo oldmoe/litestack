@@ -14,16 +14,17 @@ default: &default
   adapter: litedb
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   idle_timeout: 0
-  database: <%= Litesupport.root.join("data.sqlite3") %>
 
 development:
   <<: *default
+  database: <%= Litesupport.root.join("development/data.sqlite3") %>
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
   <<: *default
+  database: <%= Litesupport.root.join("test/data.sqlite3") %>
 
 # Warning: Make sure your production database path is on a persistent
 # volume, otherwise your application data could be deleted between deploys.
@@ -32,3 +33,5 @@ test:
 # `LITESTACK_DATA_PATH` environment variable.
 production:
   <<: *default
+  database: <%= Litesupport.root.join("production/data.sqlite3") %>
+

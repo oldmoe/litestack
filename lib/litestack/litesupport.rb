@@ -41,6 +41,11 @@ module Litesupport
     db
   end
 
+  # Databases will be stored by default at this path which includes the environment.
+  def self.root_with_env
+    Litesupport.root.join(Litesupport.environment)
+  end
+
   # Databases will be stored by default at this path.
   def self.root
     @root ||= ensure_root_volume detect_root
@@ -56,7 +61,7 @@ module Litesupport
       "."
     end
 
-    Pathname.new(path).join(Litesupport.environment)
+    Pathname.new(path)#.join(Litesupport.environment)
   end
 
   def self.ensure_root_volume(path)

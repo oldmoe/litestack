@@ -12,7 +12,7 @@ class Litemetric
 
   DEFAULT_OPTIONS = {
     config_path: "./litemetric.yml",
-    path: Litesupport.root.join("metrics.sqlite3"),
+    path: Litesupport.root_with_env.join("metrics.sqlite3"),
     sync: 1,
     mmap_size: 128 * 1024 * 1024, # 16MB of memory to easily process 1 year worth of data
     flush_interval: 10, # flush data every 10 seconds
@@ -148,9 +148,10 @@ class Litemetric
   end
 
   def exit_callback
+    return unless @collector.count > 0
     warn "--- Litemetric detected an exit, flushing metrics"
     @running = false
-    flush
+    @collector.flush
   end
 
   def setup
@@ -163,10 +164,6 @@ class Litemetric
     @flusher = create_flusher
   end
 
-  def flush
-    @collector.flush
-  end
-
   def create_connection
     super("#{__dir__}/litemetric.sql.yml") do |conn|
       conn.wal_autocheckpoint = 10000 # checkpoint after 10000 pages are written
@@ -177,7 +174,7 @@ class Litemetric
     Litescheduler.spawn do
       while @running
         sleep @options[:flush_interval]
-        flush
+        @collector.flush
       end
     end
   end
@@ -277,6 +274,10 @@ class Litemetric
 
     def capture_single_key(topic, event, key, value, time = nil)
       run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, time, 1, value)
+    end
+    
+    def count
+      run_stmt(:event_count)[0][0]
     end
 
     def flush

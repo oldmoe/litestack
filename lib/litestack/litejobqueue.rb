@@ -31,7 +31,7 @@ class Litejobqueue < Litequeue
   # This can be particularly useful for long running, IO bound jobs. It is not recommended though for threaded environments, as it can result in creating many threads that may consudme a lot of memory.
   DEFAULT_OPTIONS = {
     config_path: "./litejob.yml",
-    path: Litesupport.root.join("queue.sqlite3"),
+    path: Litesupport.root_with_env.join("queue.sqlite3"),
     queues: [["default", 1]],
     workers: 5,
     retries: 5,
@@ -141,6 +141,7 @@ class Litejobqueue < Litequeue
 
   def exit_callback
     @running = false # stop all workers
+    return unless @jobs_in_flight > 0
     puts "--- Litejob detected an exit, cleaning up"
     index = 0
     while @jobs_in_flight > 0 && index < 30 # 3 seconds grace period for jobs to finish
