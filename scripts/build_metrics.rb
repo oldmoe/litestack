@@ -10,7 +10,7 @@ lm = Litemetric.instance
 
 # initialize the queue to capture the options
 Litejobqueue.new({
-  path: "./q.db",
+  path: ":memory:",
   retries: 2,
   queues: [["normal", 1], ["urgent", 3], ["critical", 10]],
   metrics: true,
