@@ -86,19 +86,16 @@ class Litesearch::Index
   # limit: how many records to return
   # offset: start from which record
   def search(term, options = {})
-    result = []
     options = DEFAULT_SEARCH_OPTIONS.merge(options)
     rs = @stmts[:search].execute(term, options[:limit], options[:offset])
-    if @db.results_as_hash
-      rs.each_hash do |hash|
-        result << hash
-      end
-    else
-      result = rs.to_a
-    end
-    result
+    generate_results(rs)
   end
-
+  
+  def similar(id, limit=10)
+    rs = @stmts[:similar].execute(id, limit)
+    generate_results(rs)
+  end
+  
   def clear!
     @stmts[:delete_all].execute!(id)
   end
@@ -115,12 +112,24 @@ class Litesearch::Index
 
   private
 
+  def generate_results(rs)
+    result = []
+    if @db.results_as_hash
+      rs.each_hash do |hash|
+        result << hash
+      end
+    else
+      result = rs.to_a
+    end
+    result    
+  end
+
   def exists?(name)
     @db.get_first_value("SELECT count(*) FROM SQLITE_MASTER WHERE name = ? AND type = 'table' AND (sql like '%fts5%' OR sql like '%FTS5%')", name.to_s) == 1
   end
 
   def prepare_statements
-    stmt_names = [:insert, :delete, :delete_all, :drop, :count, :count_all, :search]
+    stmt_names = [:insert, :delete, :delete_all, :drop, :count, :count_all, :search, :similar]
     stmt_names.each do |stmt_name|
       @stmts[stmt_name] = @db.prepare(@schema.sql_for(stmt_name))
     end
@@ -131,6 +140,7 @@ class Litesearch::Index
     @schema.clean
     # create index
     @db.execute(schema.sql_for(:create_index, true))
+    @db.execute_batch(schema.sql_for(:create_vocab_tables))
     # adjust ranking function
     @db.execute(schema.sql_for(:ranks, true))
     # create triggers (if any)
@@ -185,9 +195,9 @@ class Litesearch::Index
       prepare_statements
       # save_schema
     end
-    do_rebuild if requires_rebuild
     # update the weights if they changed
-    @db.execute(@schema.sql_for(:ranks)) if changes[:weights]
+    @db.execute(@schema.sql_for(:ranks, true)) if changes[:weights]
+    do_rebuild if requires_rebuild
   end
 
   def do_rebuild

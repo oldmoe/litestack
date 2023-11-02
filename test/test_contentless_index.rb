@@ -15,6 +15,16 @@ class TestLitesearch < Minitest::Test
     @idx.add(id: 2, sender: "Foad", receiver: "Soad", subject: "A million dollars!", body: "In someone's bank account, he thought he was broke! saw it on the computer, what a piece!")
   end
 
+  def test_similar
+    @idx.add(id: 3, sender: "Hamada", receiver: "Anwar", subject: "Re: Computer is broken", body: "broken, it is in a thousand pieces")
+    @idx.add(id: 4, sender: "Hamada", receiver: "Anwar", subject: "Re: Computer is broken", body: "broken, it is in a thousand and one pieces")
+    rs = @idx.similar(1, 2)
+    assert_equal 2, rs.length
+    assert_equal 3, rs[0]["id"]
+    assert_equal 4, rs[1]["id"]
+  end
+
+
   def test_search
     rs = @idx.search("Hamada")
     assert_equal rs.length, 1

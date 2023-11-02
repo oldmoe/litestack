@@ -90,6 +90,16 @@ class TestSequelLitesearch < Minitest::Test
     #     #pp Book.get_connection.execute("select rowid from books_search_idx('Hanna')")
   end
 
+  def test_similar
+    newbook = Book.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)     
+    book = Book[1]
+    books = book.similar
+    assert_equal 1, books.length
+    assert_equal "A night", books.first.title
+    newbook.destroy
+  end
+
+
   def test_search
     rs = Author.search("Hanna").all
     assert_equal 1, rs.length

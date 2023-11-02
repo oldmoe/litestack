@@ -22,6 +22,14 @@ class TestLitesearch < Minitest::Test
     @db.execute("INSERT INTO email(subject, sender_id, receiver_id, body) VALUES ('hi', 3, 2, 'hello')")
   end
 
+  def test_similar
+    @db.execute("INSERT INTO email(subject, sender_id, receiver_id, body) VALUES ('ho ho ho', 3, 2, 'hey how are you?')")
+    @db.execute("INSERT INTO email(subject, sender_id, receiver_id, body) VALUES ('hi again', 3, 2, 'hello there')")
+    rs = @idx.similar(3, 2)
+    assert_equal 2, rs.length
+    assert_equal 5, rs[0]["id"]
+  end
+
   def test_search
     rs = @idx.search("Hamada")
     assert_equal 2, rs.length
@@ -251,17 +259,20 @@ class TestLitesearch < Minitest::Test
     assert_raises { @idx.search("urgency: high") }
   end
 
-  #   def test_update_schema_change_tokenizer_auto_rebuild
-  #     @idx.modify do |schema|
-  #       schema.fields [:body]
-  #       schema.field :sender, {target: "person.name"}
-  #       schema.field :receiver, {target: "person.name"}
-  #       schema.field :subject, {weight: 10}
-  #       schema.tokenizer :trigram
-  #       schema.rebuild_on_modify true
-  #     end
-  #     assert_equal @idx.search('puter').length, 2
-  #     @idx.add({sender: 'Kamal', receiver: 'Layla', subject: 'How are the girls?', body: 'I wanted to ask how are the girls doing with the computer?'})
-  #     assert_equal @idx.search('puter').length, 3
-  #   end
+  def test_update_schema_change_tokenizer_auto_rebuild
+   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
+   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
+   assert_equal @idx.search('computer').length, 2
+   @idx.modify do |schema|
+     schema.fields [:body]
+     schema.field :sender, {target: "person.name"}
+     schema.field :receiver, {target: "person.name"}
+     schema.field :subject, {weight: 10}
+     schema.tokenizer :trigram
+     schema.rebuild_on_modify true
+   end
+   assert_equal @idx.search('puter').length, 2
+   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")    
+    assert_equal @idx.search('puter').length, 3
+  end
 end

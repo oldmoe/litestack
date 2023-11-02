@@ -77,6 +77,7 @@ class Litesearch::Schema::BasicAdapter
 
   def generate_sql
     @sql[:create_index] = :create_index_sql
+    @sql[:create_vocab_tables] = :create_vocab_tables_sql
     @sql[:insert] = "INSERT OR REPLACE INTO #{name}(rowid, #{active_col_names_sql}) VALUES (:id, #{active_col_names_var_sql}) RETURNING rowid"
     @sql[:delete] = "DELETE FROM #{name} WHERE rowid = :id"
     @sql[:count] = "SELECT count(*) FROM #{name}(:term)"
@@ -89,11 +90,22 @@ class Litesearch::Schema::BasicAdapter
     @sql[:set_config_value] = "INSERT OR REPLACE INTO #{name}_config(k, v) VALUES (:key, :value)"
     @sql[:get_config_value] = "SELECT v FROM #{name}_config WHERE k = :key"
     @sql[:search] = "SELECT rowid AS id, -rank AS search_rank FROM #{name}(:term) WHERE rank !=0 ORDER BY rank LIMIT :limit OFFSET :offset"
+    @sql[:similarity_terms] = "SELECT DISTINCT term FROM #{name}_instance WHERE doc = :id AND FLOOR(term) IS NULL LIMIT 10"
+    @sql[:similarity_query] = "SELECT group_concat(term, ' OR ') FROM #{name}_row WHERE term IN (#{@sql[:similarity_terms]})"
+    @sql[:similarity_search] = "SELECT rowid AS id, -rank AS search_rank FROM #{name}(:term) WHERE rowid != :id ORDER BY rank LIMIT :limit"
+    @sql[:similar] = "SELECT rowid AS id, -rank AS search_rank FROM #{name} WHERE #{name} = (#{@sql[:similarity_query]}) AND rowid != :id ORDER BY rank LIMIT :limit"
     @sql[:update_index] = "UPDATE sqlite_schema SET sql = :sql WHERE name = '#{name}'"
     @sql[:update_content_table] = "UPDATE sqlite_schema SET sql = :sql WHERE name = '#{name}_content'"
   end
 
   private
+
+  def create_vocab_tables_sql
+    <<~SQL
+      CREATE VIRTUAL TABLE IF NOT EXISTS #{name}_row USING fts5vocab(#{name}, row);
+      CREATE VIRTUAL TABLE IF NOT EXISTS #{name}_instance USING fts5vocab(#{name}, instance);
+    SQL
+  end
 
   def ranks_sql(active = false)
     weights_sql = if active

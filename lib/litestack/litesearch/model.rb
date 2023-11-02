@@ -21,6 +21,22 @@ module Litesearch::Model
   end
 
   module InstanceMethods
+    def similar(limit=10)
+      conn = self.class.get_connection
+      idx = conn.search_index(self.class.send(:index_name))
+      r_a_h = conn.results_as_hash
+      conn.results_as_hash = true
+      rs = idx.similar(id, limit)
+      conn.results_as_hash = r_a_h
+      result = []
+      rs.each do |row|
+        obj = self.class.fetch_row(row["id"])
+        obj.search_rank = row["search_rank"]
+        result << obj
+      end
+      result
+    end
+        
   end
 
   module ClassMethods
@@ -77,10 +93,6 @@ module Litesearch::Model
       result
     end
 
-    # AR specific
-
-    private
-
     def index_name
       "#{table_name}_search_idx"
     end
@@ -118,8 +130,6 @@ module Litesearch::Model
       )
     end
 
-    private
-
     def create_instance(row)
       instantiate(row)
     end
@@ -153,8 +163,6 @@ module Litesearch::Model
         Sequel.lit("rank")
       )
     end
-
-    private
 
     def create_instance(row)
       # we need to convert keys to symbols first!

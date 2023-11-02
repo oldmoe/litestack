@@ -5,6 +5,7 @@ class Litesearch::Schema::StandaloneAdapter < Litesearch::Schema::BasicAdapter
     @sql[:adjust_temp_content] = "UPDATE sqlite_schema SET sql (SELECT sql FROM sqlite_schema WHERE name = '#{name}_content') WHERE name = #{name}_content_temp"
     @sql[:restore_content] = "ALTER TABLE #{name}_content_temp RENAME TO #{name}_content"
     @sql[:rebuild] = "INSERT INTO #{name}(#{name}) VALUES ('rebuild')"
+    @sql[:similar] = "SELECT rowid AS id, *, -rank AS search_rank FROM #{name} WHERE #{name} = (#{@sql[:similarity_query]}) AND rowid != :id ORDER BY rank LIMIT :limit"
     @sql[:drop_content_table] = "DROP TABLE #{name}_content"
     @sql[:drop_content_col] = :drop_content_col_sql
     @sql[:create_content_table] = :create_content_table_sql
