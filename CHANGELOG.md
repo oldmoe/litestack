@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+- Add similarity search support for Litesearch
+- Enable similarity search for ActiveRecord and Sequel models
+- Fix Litesearch tests
+- Suppress chatty Litejob exit detector when there are no jobs in flight
+- Tidy up the test folder
+
 ## [0.4.1] - 2023-10-11
 
 - Add missing Litesearch::Model dependency
