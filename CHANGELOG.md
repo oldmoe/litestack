@@ -5,6 +5,7 @@
 - Fix Litesearch tests
 - Suppress chatty Litejob exit detector when there are no jobs in flight
 - Tidy up the test folder
+- [#xx](https://github.com/oldmoe/litestack/pull/xx) - Add dummy Rails app for test suite and Github CI workflow
 
 ## [0.4.1] - 2023-10-11
 

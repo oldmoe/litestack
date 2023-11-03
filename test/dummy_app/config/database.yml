@@ -1,0 +1,7 @@
+development:
+  adapter: litedb
+  database: db/development/database.sqlite3.db
+
+test:
+  adapter: litedb
+  database: db/test/database.sqlite3.db
