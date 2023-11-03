@@ -1,0 +1,6 @@
+development:
+  adapter: litecable
+
+test:
+  adapter: test
+  #adapter: litecable

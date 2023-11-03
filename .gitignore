@@ -10,3 +10,7 @@
 /test/*.sqlite3*
 /production/*.sqlite3*
 .DS_Store
+/test/dummy_app/**/*.sqlite3*
+/test/dummy_app/**/*.log
+/test/dummy_app/tmp/
+Gemfile.lock

@@ -8,6 +8,8 @@ SimpleCov.start do
   enable_coverage :branch
 end
 
+require_relative "rails_helper"
+
 require "litestack"
 
 require "minitest/autorun"
