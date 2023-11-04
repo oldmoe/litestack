@@ -1,11 +1,13 @@
 ## [Unreleased]
 
-- Add similarity search support for Litesearch
+- Add similarity search support for Litesearch (works best for non-trigram indexes)
 - Enable similarity search for ActiveRecord and Sequel models
 - Fix Litesearch tests
 - Suppress chatty Litejob exit detector when there are no jobs in flight
 - Tidy up the test folder
 - [#41](https://github.com/oldmoe/litestack/pull/41) - Fix bug in Litecable where the `connected` event was not getting propogated
+- Add Litemetric and Liteboard info to README.doc
+- Fix the testing rake task
 
 ## [0.4.1] - 2023-10-11
 
