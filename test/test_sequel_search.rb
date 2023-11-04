@@ -4,6 +4,8 @@ require "sequel"
 
 DB = Sequel.connect(adapter: "litedb", database: ":memory:", max_connections: 1)
 
+TOKENIZER = :porter
+
 DB.create_table(:publishers) do
   primary_key :id
   String :name
@@ -55,7 +57,7 @@ class Book < Sequel::Model
     schema.field :author, target: "authors.name", col: :publisher_id
     schema.field :publisher, target: "publishers.name", col: :publisher_id
     schema.filter_column :active
-    schema.tokenizer :porter
+    schema.tokenizer TOKENIZER
   end
 end
 
@@ -73,21 +75,7 @@ require "minitest/autorun"
 
 class TestSequelLitesearch < Minitest::Test
   def setup
-    #     Book.dataset.delete
-    #     Author.dataset.delete
-    #     Publisher.dataset.delete
-    #     Book.litesearch do |schema|
-    #       schema.fields [:description, :state]
-    #       schema.field :publishing_year, col: :published_on
-    #       schema.field :title, weight: 10
-    #       schema.field :ignored, weight: 0
-    #       schema.field :author, target: "authors.name", col: :publisher_id
-    #       schema.field :publisher, target: "publishers.name", col: :publisher_id
-    #       schema.filter_column :active
-    #       schema.tokenizer :porter
-    #     end
-    #     #pp Book.get_connection.execute("select rowid from books_search_idx")
-    #     #pp Book.get_connection.execute("select rowid from books_search_idx('Hanna')")
+    # nothing to do here
   end
 
   def test_similar
@@ -98,7 +86,6 @@ class TestSequelLitesearch < Minitest::Test
     assert_equal "A night", books.first.title
     newbook.destroy
   end
-
 
   def test_search
     rs = Author.search("Hanna").all
@@ -126,6 +113,7 @@ class TestSequelLitesearch < Minitest::Test
       schema.field :ignored, weight: 0
       schema.field :author, target: "authors.name"
       schema.field :publisher, target: "publishers.name", col: :publisher_id
+      schema.tokenizer TOKENIZER
       schema.rebuild_on_modify true
     end
     rs = Book.search("night tale").all
@@ -141,6 +129,7 @@ class TestSequelLitesearch < Minitest::Test
       schema.field :author, target: "authors.name"
       schema.field :publisher, target: "publishers.name", col: :publisher_id
       schema.filter_column :active
+      schema.tokenizer TOKENIZER
       schema.rebuild_on_modify true
     end
   end
@@ -153,6 +142,7 @@ class TestSequelLitesearch < Minitest::Test
       schema.field :ignored, weight: 0
       schema.field :author, target: "authors.name"
       schema.field :publisher, target: "publishers.name", col: :publisher_id
+      schema.tokenizer TOKENIZER
     end
     rs = Book.search("night tale").all
     assert_equal 1, rs.length
@@ -166,6 +156,7 @@ class TestSequelLitesearch < Minitest::Test
       schema.field :ignored, weight: 0
       schema.field :author, target: "authors.name"
       schema.field :publisher, target: "publishers.name", col: :publisher_id
+      schema.tokenizer TOKENIZER
       schema.filter_column :active
       schema.rebuild_on_modify true
     end

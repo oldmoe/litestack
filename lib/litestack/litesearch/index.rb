@@ -92,7 +92,14 @@ class Litesearch::Index
   end
   
   def similar(id, limit=10)
-    rs = @stmts[:similar].execute(id, limit)
+    #pp term = @db.execute(@schema.sql_for(:similarity_query), id)
+    if @schema.schema[:tokenizer] == :trigram
+      # just use the normal similarity approach for now
+      # need to recondisder that for trigram indexes later
+      rs = @stmts[:similar].execute(id, limit)
+    else
+      rs = @stmts[:similar].execute(id, limit)
+    end
     generate_results(rs)
   end
   
