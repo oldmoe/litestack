@@ -255,6 +255,46 @@ Book.create(title: 'The biggest stunt', author_id: 1, description: 'a descriptio
 Book.search('author: writer').limit(1).all
 ```
 
+> ![litemetric](https://github.com/oldmoe/litestack/blob/master/assets/litemetric_logo_teal.png?raw=true)
+
+### Litemetric
+Litestack comes with a mdoule that can collect useful metrics for its different components, in each component, you need to add the following to the respective .yml file (database.yml in case of Litedb)
+```yml
+    metrics: true # default is false
+```
+If you have the metrics enabled, it will start collecting data from the various modules and will store them in a database file called metric.db located in the Litesupport.root folder
+
+Litemetric has an API that would enable collecting arbitrary metrics for non-litestack classes. The metrics will be in the database but currently the Liteboard is only able to show correct data for Litestack modules, displaying arbitrary metrics for other components will be included later.
+
+### Liteboard
+Liteboard is a simple web server that provides a web interface for the collected metrics, it should be available globally, for usage instructions type
+```
+    liteboard -h
+```
+It allows you to point to a specific metrics database file or a config file and then it will display the data in that metrics database
+
+Example metrics views:
+
+#### Litedb
+![litedb](https://github.com/oldmoe/litestack/blob/master/assets/litedb_metrics.png?raw=true)
+
+- Database size, number of tables & indexes
+- Number of read/write queries
+- Read/Write query ratio over time
+- Read/Write query time over time
+- Slowest queries
+- Most expensive queries (total run time = frequency * cost)
+
+#### Litecache
+![litecache](https://github.com/oldmoe/litestack/blob/master/assets/litecache_metrics.png?raw=true)
+
+- Cache size, % of size limit
+- Number of entries
+- Reads/Writes over time
+- Read hits/misses over time
+- Most written entries
+- Most read entries 
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/oldmoe/litestack.
