@@ -92,7 +92,7 @@ class Litesearch::Index
   end
   
   def similar(id, limit=10)
-    #pp term = @db.execute(@schema.sql_for(:similarity_query), id)
+    #   pp term = @db.execute(@schema.sql_for(:similarity_query), id)
     if @schema.schema[:tokenizer] == :trigram
       # just use the normal similarity approach for now
       # need to recondisder that for trigram indexes later
