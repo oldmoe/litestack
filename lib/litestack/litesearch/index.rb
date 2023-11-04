@@ -204,6 +204,7 @@ class Litesearch::Index
     end
     # update the weights if they changed
     @db.execute(@schema.sql_for(:ranks, true)) if changes[:weights]
+    @db.execute_batch(@schema.sql_for(:create_vocab_tables))
     do_rebuild if requires_rebuild
   end
 
@@ -232,6 +233,7 @@ class Litesearch::Index
       @db.execute("PRAGMA WRITABLE_SCHEMA = RESET")
       @db.execute(@schema.sql_for(:rebuild))
     end
+    @db.execute_batch(@schema.sql_for(:create_vocab_tables))
     set_config_value(:litesearch_schema, @schema.schema)
     @db.execute(@schema.sql_for(:ranks, true))
   end
