@@ -3,7 +3,7 @@ require "active_support/core_ext/enumerable"
 require "active_support/core_ext/array/extract_options"
 require "active_support/core_ext/numeric/time"
 require "active_support/cache"
-require_relative "../../litestack"
+require_relative "../../litestack/litecache"
 
 module ActiveSupport
   module Cache

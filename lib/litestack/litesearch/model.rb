@@ -77,6 +77,8 @@ module Litesearch::Model
       else
         models_hash = search_models
       end
+      # remove the models from the options hash before passing it ot the query
+      options.delete(:models)
       models_hash.each do |name, klass|
         selects << "SELECT '#{name}' AS model, rowid, -rank AS search_rank FROM #{index_name_for_table(klass.table_name)}(:term)"
       end

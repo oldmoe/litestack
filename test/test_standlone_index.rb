@@ -1,7 +1,7 @@
 require "minitest/autorun"
 require_relative "../lib/litestack/litedb"
 
-class TestLitesearch < Minitest::Test
+class TestStandaloneIndex < Minitest::Test
   def setup
     @db = Litedb.new(":memory:")
     @db.results_as_hash = true

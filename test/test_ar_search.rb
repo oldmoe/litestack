@@ -106,7 +106,7 @@ class TestActiveRecordLitesearch < Minitest::Test
   end
 
   def test_search_all
-    rs = Book.search_all("Hanna")
+    rs = Book.search_all("Hanna", {models: [Author, Book]})
     assert_equal 2, rs.length
     assert_equal true, [Author, Book] - [rs[0].class, rs[1].class] == []
   end

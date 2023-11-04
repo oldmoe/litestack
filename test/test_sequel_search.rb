@@ -27,13 +27,13 @@ DB.create_table(:books) do
   Integer :author_id
 end
 
-class Publisher < Sequel::Model
+class Publishers < Sequel::Model
   one_to_many :books
 
   include Litesearch::Model
 end
 
-class Author < Sequel::Model
+class Authors < Sequel::Model
   one_to_many :books
 
   include Litesearch::Model
@@ -43,7 +43,7 @@ class Author < Sequel::Model
   end
 end
 
-class Book < Sequel::Model
+class Books < Sequel::Model
   many_to_one :author
   many_to_one :publisher
 
@@ -61,15 +61,15 @@ class Book < Sequel::Model
   end
 end
 
-Publisher.create(name: "Penguin")
-Publisher.create(name: "Adams")
-Publisher.create(name: "Flashy")
-Author.create(name: "Hanna Spiegel")
-Author.create(name: "David Antrop")
-Author.create(name: "Aly Lotfy")
-Author.create(name: "Osama Penguin")
-Book.create(title: "In a middle of a night", description: "A tale of sleep", published_on: "2008-10-01", state: "available", active: true, publisher_id: 1, author_id: 1)
-Book.create(title: "In a start of a night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: false, publisher_id: 2, author_id: 2)
+Publishers.create(name: "Penguin")
+Publishers.create(name: "Adams")
+Publishers.create(name: "Flashy")
+Authors.create(name: "Hanna Spiegel")
+Authors.create(name: "David Antrop")
+Authors.create(name: "Aly Lotfy")
+Authors.create(name: "Osama Penguin")
+Books.create(title: "In a middle of a night", description: "A tale of sleep", published_on: "2008-10-01", state: "available", active: true, publisher_id: 1, author_id: 1)
+Books.create(title: "In a start of a night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: false, publisher_id: 2, author_id: 2)
 
 require "minitest/autorun"
 
@@ -79,8 +79,8 @@ class TestSequelLitesearch < Minitest::Test
   end
 
   def test_similar
-    newbook = Book.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)     
-    book = Book[1]
+    newbook = Books.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)     
+    book = Books[1]
     books = book.similar
     assert_equal 1, books.length
     assert_equal "A night", books.first.title
@@ -88,25 +88,25 @@ class TestSequelLitesearch < Minitest::Test
   end
 
   def test_search
-    rs = Author.search("Hanna").all
+    rs = Authors.search("Hanna").all
     assert_equal 1, rs.length
-    assert_equal Author, rs[0].class
+    assert_equal Authors, rs[0].class
   end
 
   def test_search_field
-    rs = Book.search("description: sleep").all
+    rs = Books.search("description: sleep").all
     assert_equal 1, rs.length
-    assert_equal Book, rs[0].class
+    assert_equal Books, rs[0].class
   end
 
   def test_search_all
-    rs = Book.search_all("Hanna")
+    rs = Books.search_all("Hanna", models: [Authors, Books])
     assert_equal 2, rs.length
-    assert_equal true, [Author, Book] - [rs[0].class, rs[1].class] == []
+    assert_equal true, [Authors, Books] - [rs[0].class, rs[1].class] == []
   end
 
   def test_modify_schema
-    Book.litesearch do |schema|
+    Books.litesearch do |schema|
       schema.fields [:description, :state]
       schema.field :publishing_year, col: :published_on
       schema.field :title, weight: 10
@@ -116,12 +116,12 @@ class TestSequelLitesearch < Minitest::Test
       schema.tokenizer TOKENIZER
       schema.rebuild_on_modify true
     end
-    rs = Book.search("night tale").all
+    rs = Books.search("night tale").all
     assert_equal 2, rs.length
-    Book.rebuild_index!
-    rs = Book.search("night tale").all
+    Books.rebuild_index!
+    rs = Books.search("night tale").all
     assert_equal 2, rs.length
-    Book.litesearch do |schema|
+    Books.litesearch do |schema|
       schema.fields [:description, :state]
       schema.field :publishing_year, col: :published_on
       schema.field :title, weight: 10
@@ -135,7 +135,7 @@ class TestSequelLitesearch < Minitest::Test
   end
 
   def test_modify_schema_rebuild_later
-    Book.litesearch do |schema|
+    Books.litesearch do |schema|
       schema.fields [:description, :state]
       schema.field :publishing_year, col: :published_on
       schema.field :title, weight: 10
@@ -144,12 +144,12 @@ class TestSequelLitesearch < Minitest::Test
       schema.field :publisher, target: "publishers.name", col: :publisher_id
       schema.tokenizer TOKENIZER
     end
-    rs = Book.search("night tale").all
+    rs = Books.search("night tale").all
     assert_equal 1, rs.length
-    Book.rebuild_index!
-    rs = Book.search("night tale").all
+    Books.rebuild_index!
+    rs = Books.search("night tale").all
     assert_equal 2, rs.length
-    Book.litesearch do |schema|
+    Books.litesearch do |schema|
       schema.fields [:description, :state]
       schema.field :publishing_year, col: :published_on
       schema.field :title, weight: 10
@@ -163,22 +163,22 @@ class TestSequelLitesearch < Minitest::Test
   end
 
   def test_update_referenced_column
-    rs = Book.search("Hanna").all
+    rs = Books.search("Hanna").all
     assert_equal 1, rs.length
-    Author[1].update(name: "Hayat")
-    rs = Book.search("Hanna").all
+    Authors[1].update(name: "Hayat")
+    rs = Books.search("Hanna").all
     assert_equal 0, rs.length
-    rs = Book.search("Hayat").all
+    rs = Books.search("Hayat").all
     assert_equal 1, rs.length
-    Author[1].update(name: "Hanna")
+    Authors[1].update(name: "Hanna")
   end
 
   def test_rebuild_on_create
-    Publisher.litesearch do |schema|
+    Publishers.litesearch do |schema|
       schema.field :name
       schema.rebuild_on_create true
     end
-    rs = Publisher.search("Penguin").all
+    rs = Publishers.search("Penguin").all
     assert_equal 1, rs.length
   end
 end

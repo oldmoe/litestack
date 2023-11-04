@@ -1,7 +1,7 @@
 require "minitest/autorun"
 require_relative "../lib/litestack/litedb"
 
-class TestLitesearch < Minitest::Test
+class TestBackedIndex < Minitest::Test
   def setup
     @type = :backed
     @db = Litedb.new(":memory:")

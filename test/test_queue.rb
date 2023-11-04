@@ -1,5 +1,5 @@
 require "minitest/autorun"
-require "../lib/litestack/litequeue"
+require_relative "../lib/litestack/litequeue"
 
 class TestQueue < Minitest::Test
   def setup

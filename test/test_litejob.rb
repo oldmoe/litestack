@@ -356,7 +356,7 @@ describe Litejob do
 
       result = NoOpJob.delete(job_id)
 
-      assert_equal({"klass" => "NoOpJob", "params" => [], "retries" => 1, "queue" => "default"}, result)
+      assert_equal({klass: "NoOpJob", params: [], retries: 1, queue: "default"}, result)
     end
   end
 
