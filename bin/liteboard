@@ -25,7 +25,7 @@ OptionParser.new do |parser|
   parser.on("-s", "--server SERVER", "use SERVER (e.g. puma/falcon/iodine)") { |v| options[:port] = v }
   parser.on("-H", "--host HOST", "listen on HOST (default: #{options[:Host]})") { |v| options[:Host] = v }
   parser.on("-p", "--port PORT", "use PORT (default: #{options[:Port]})") { |v| options[:Port] = v.to_i rescue options[:Port] }
-  parser.on("-D", "--deamonize", "run in the background") { |v| options[:deamonize] = true }  
+  parser.on("-D", "--daemonize", "run in the background") { |v| options[:daemonize] = true }  
   parser.on("-E", "--env ENVIRONMENT", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }  
   parser.on("-q", "--quiet", "turn off logging") { |v| options[:quiet] = true }  
   parser.on("-h", "--help", "print this message") do
