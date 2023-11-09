@@ -23,7 +23,7 @@ class Litesearch::Index
       yield schema
       schema.post_init
       # now that we have a schema object we need to check if we need to create or modify and existing index
-      @db.transaction(:immediate) do
+      if @db.transaction_active?
         if exists?(name)
           load_index(name)
           do_modify(schema)
@@ -31,6 +31,16 @@ class Litesearch::Index
           do_create(schema)
         end
         prepare_statements
+      else
+        @db.transaction(:immediate) do
+          if exists?(name)
+            load_index(name)
+            do_modify(schema)
+          else
+            do_create(schema)
+          end
+          prepare_statements
+        end
       end
     elsif exists?(name)
       load_index(name)
@@ -60,8 +70,10 @@ class Litesearch::Index
   end
 
   def rebuild!
-    @db.transaction(:immediate) do
-      do_rebuild
+    if @db.transaction_active?
+        do_rebuild
+    else
+      @db.transaction(:immediate) { do_rebuild }
     end
   end
 
