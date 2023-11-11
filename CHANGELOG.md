@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.4.2] - 2023-11-11
+
 - Add similarity search support for Litesearch (works best for non-trigram indexes)
 - Enable similarity search for ActiveRecord and Sequel models
 - Fix Litesearch tests
