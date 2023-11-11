@@ -45,7 +45,7 @@ def perform_enqueued_jobs(&block)
 
   # iterate over enqueued jobs and perform them
   until $litejobqueue.count.zero?
-    id, serialized_job = $litejobqueue.pop
+    id, serialized_job = $litejobqueue.pop("test_worker")
     next if id.nil?
     $litejobqueue.send(:process_job, "default", id, serialized_job, false)
   end
@@ -58,7 +58,7 @@ def perform_enqueued_job
   # get first enqueued jobs and perform it
   until performed
     attempts += 1
-    id, serialized_job = $litejobqueue.pop
+    id, serialized_job = $litejobqueue.pop("test_worker")
     next if id.nil?
     $litejobqueue.send(:process_job, "default", id, serialized_job, false)
     performed = true

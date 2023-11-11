@@ -28,6 +28,18 @@ module Litescheduler
     # we should never reach here
   end
 
+  def self.stop(thread)
+    if backend == :threaded || backend == :iodine || backend == :fiber
+      if thread.respond_to?(:kill)
+        thread.kill
+      else
+        thread.raise("Thread stopped")
+      end
+    elsif backend == :polyphony
+      thread.stop
+    end
+  end
+
   def self.storage
     if backend == :fiber || backend == :poylphony
       Fiber.current.storage

@@ -39,6 +39,9 @@ class Litejobqueue < Litequeue
     retry_delay_multiplier: 10,
     dead_job_retention: 10 * 24 * 3600,
     gc_sleep_interval: 7200,
+    abandoned_job_rescuer_sleep_interval: 7200,
+    worker_heartbeat_interval: 60,
+    number_of_missed_heartbeats_worker_is_considered_dead_after: 5,
     logger: "STDOUT",
     sleep_intervals: [0.001, 0.005, 0.025, 0.125, 0.625, 1.0, 2.0],
     metrics: false
@@ -157,6 +160,7 @@ class Litejobqueue < Litequeue
     @jobs_in_flight = 0
     @workers = @options[:workers].times.collect { create_worker }
     @gc = create_garbage_collector
+    @rescuer = create_abandoned_job_rescuer
     @mutex = Litesupport::Mutex.new
   end
 
@@ -181,13 +185,23 @@ class Litejobqueue < Litequeue
   def create_worker
     Litescheduler.spawn do
       worker_sleep_index = 0
+      worker_id = SecureRandom.uuid
+      register_worker(worker_id)
+
+      heartbeat = Litescheduler.spawn do
+        while @running do
+          sleep @options[:worker_heartbeat_interval]
+          worker_heartbeat(worker_id)
+        end
+      end
+
       while @running
         processed = 0
         @queues.each do |priority, queues| # iterate through the levels
           queues.each do |queue, spawns| # iterate through the queues in the level
             batched = 0
 
-            while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
+            while (batched < priority) && (payload = pop(worker_id, queue)) # fearlessly use the same queue object
               capture(:dequeue, queue)
               processed += 1
               batched += 1
@@ -199,12 +213,24 @@ class Litejobqueue < Litequeue
             end
           end
         end
+
         if processed == 0
           sleep @options[:sleep_intervals][worker_sleep_index]
           worker_sleep_index += 1 if worker_sleep_index < @options[:sleep_intervals].length - 1
         else
           worker_sleep_index = 0 # reset the index
         end
+      end
+
+      Litescheduler.stop(heartbeat)
+    end
+  end
+
+  def create_abandoned_job_rescuer
+    Litescheduler.spawn do
+      while @running
+        rescue_abandoned_jobs
+        sleep @options[:abandoned_job_rescuer_sleep_interval]
       end
     end
   end
@@ -213,7 +239,15 @@ class Litejobqueue < Litequeue
   def create_garbage_collector
     Litescheduler.spawn do
       while @running
-        while (jobs = pop("_dead", 100))
+        cutoff_time = Time.now.to_i - (@options[:number_of_missed_heartbeats_worker_is_considered_dead_after] * @options[:worker_heartbeat_interval])
+        while (workers = clear_dead_workers(cutoff_time))
+          if workers[0].is_a? Array
+            @logger.info "[litejob]:[DEL] garbage collector deleted #{workers.length} dead workers"
+          else
+            @logger.info "[litejob]:[DEL] garbage collector deleted 1 dead worker"
+          end
+        end
+        while (jobs = clear_dead_jobs(100))
           if jobs[0].is_a? Array
             @logger.info "[litejob]:[DEL] garbage collector deleted #{jobs.length} dead jobs"
           else
@@ -233,6 +267,7 @@ class Litejobqueue < Litequeue
       job_started # (Litesupport.current_context)
       begin
         measure(:perform, queue) { klass.new.perform(*job["params"]) }
+        delete(id)
         @logger.info "[litejob]:[END] queue:#{queue} class:#{job["klass"]} job:#{id}"
       rescue Exception => e # standard:disable Lint/RescueException
         # we can retry the failed job now

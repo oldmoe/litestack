@@ -52,18 +52,53 @@ class Litequeue
   end
 
   def repush(id, value, delay = 0, queue = "default")
-    run_stmt(:repush, id, queue, delay, value)[0]
+    @conn.acquire do |c|
+      c.transaction(:immediate) do
+        c.stmts[:delete].execute!(id)
+        c.stmts[:repush].execute!([id, queue, delay, value])[0]
+      end
+    end
+  end
+
+  def register_worker(worker_id)
+    run_stmt(:register_worker, worker_id)
+  end
+
+  def worker_heartbeat(worker_id)
+    run_stmt(:worker_heartbeat, worker_id)
   end
 
   alias_method :<<, :push
   alias_method :"<<<", :repush
 
   # pop an item from the queue, optionally with a specific queue name (default queue name is 'default')
-  def pop(queue = "default", limit = 1)
-    res = run_stmt(:pop, queue, limit)
+  def pop(worker_id, queue = "default")
+    res = run_stmt(:pop, worker_id, queue)
     return res[0] if res.length == 1
     return nil if res.empty?
     res
+  end
+
+  def clear_dead_workers(cutoff_time)
+    res = run_stmt(:clear_dead_workers, cutoff_time)
+    return res[0] if res.length == 1
+    return nil if res.empty?
+    res
+  end
+
+  def workers
+    run_stmt(:get_workers)
+  end
+
+  def clear_dead_jobs(count)
+    res = run_stmt(:clear_dead_jobs, count)
+    return res[0] if res.length == 1
+    return nil if res.empty?
+    res
+  end
+
+  def rescue_abandoned_jobs
+    run_stmt(:rescue_abandoned_jobs)
   end
 
   # delete an item from the queue

@@ -9,11 +9,20 @@ schema:
         created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE
       ) WITHOUT ROWID;
 
+  2:
+    update_table_queue: >
+      ALTER TABLE queue ADD COLUMN worker_id NULL ON CONFLICT REPLACE;
+
+    create_table_workers: >
+      CREATE TABLE IF NOT EXISTS workers(
+        id TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE,
+        last_healthy_at INTEGER NOT NULL ON CONFLICT REPLACE
+      ) WITHOUT ROWID;
+
     create_index_queue_by_name: >
       CREATE INDEX IF NOT EXISTS idx_queue_by_name ON queue(name, fire_at ASC);
 
 stmts:
-
   push: >
     INSERT INTO queue(id, name, fire_at, value)
     VALUES (hex(randomblob(32)), $1, (unixepoch() + $2), $3)
@@ -25,14 +34,15 @@ stmts:
     RETURNING name;
 
   pop: >
-    DELETE FROM queue
-    WHERE (name, fire_at, id)
-    IN (
-      SELECT name, fire_at, id FROM queue
-      WHERE name = ifnull($1, 'default')
-        AND fire_at <= (unixepoch())
+    UPDATE queue
+    SET worker_id = $1
+    WHERE id IN (
+      SELECT id FROM queue
+      WHERE name = $2
+      AND fire_at <= unixepoch()
+      AND worker_id IS NULL
       ORDER BY fire_at ASC
-      LIMIT ifnull($2, 1)
+      LIMIT 1
     )
     RETURNING id, value;
 
@@ -51,3 +61,39 @@ stmts:
     FROM queue
     GROUP BY name
     ORDER BY count DESC;
+
+  get_workers: >
+    SELECT id, last_healthy_at
+    FROM workers;
+
+  clear_dead_workers: >
+    DELETE FROM workers
+    WHERE id IN (
+      SELECT id from workers
+      WHERE last_healthy_at < $1
+    )
+    RETURNING id;
+
+  register_worker: >
+    INSERT INTO workers(id, last_healthy_at)
+    VALUES ($1, unixepoch())
+    ON CONFLICT(id) DO UPDATE SET last_healthy_at = unixepoch();
+
+  worker_heartbeat: >
+    UPDATE workers
+    SET last_healthy_at = unixepoch()
+    WHERE id = $1;
+
+  clear_dead_jobs: >
+    DELETE FROM queue
+    WHERE id IN (
+      SELECT id from queue
+      WHERE name = '_dead'
+      LIMIT ifnull($1, 1)
+    )
+    RETURNING id;
+
+  rescue_abandoned_jobs: >
+    UPDATE queue
+    SET worker_id = NULL
+    WHERE worker_id NOT IN (SELECT id FROM workers);
