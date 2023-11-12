@@ -2,6 +2,8 @@
 
 - [View Diff](https://github.com/litestack/compare/v0.4.1...master)
 - Add "sequel" as a development dependency
+- Diff links in CHANGELOG (thanks Weston Ganger)
+- Fix deamonize type in liteboard (thanks Julian Rubisch)
 
 ## [0.4.2] - 2023-11-11
 
