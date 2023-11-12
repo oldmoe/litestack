@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add "sequel" as a development dependency
+
 ## [0.4.2] - 2023-11-11
 
 - Add similarity search support for Litesearch (works best for non-trigram indexes)
