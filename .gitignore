@@ -10,4 +10,5 @@
 /test/*.sqlite3*
 /production/*.sqlite3*
 .DS_Store
+.idea/
 Gemfile.lock

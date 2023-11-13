@@ -1,5 +1,5 @@
 require "minitest/autorun"
-
+require "test_helper"
 require_relative "../lib/litestack/litedb"
 require_relative '../lib/active_record/connection_adapters/litedb_adapter'
 

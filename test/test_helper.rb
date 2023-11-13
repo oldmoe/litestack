@@ -1,20 +1,26 @@
 # frozen_string_literal: true
 
+ENV["APP_ENV"] = "test"
+ENV["LITEJOB_NO_AUTORUN"] = "1"
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 
 require "simplecov"
+require "timecop"
 
 SimpleCov.start do
   enable_coverage :branch
+
+  add_filter '/test/'
 end
 
 require "litestack"
+require "lite_job"
+require "lite_job/database_connection"
 
 require "minitest/autorun"
 
-$litejobqueue = Litejobqueue.jobqueue(path: ":memory:", retries: 1, retry_delay: 1, retry_delay_multiplier: 1, queues: [["test", 1]], logger: nil)
+Timecop.safe_mode = true
 
-# Setup a class to allow us to track and test whether code has been performed
 class Performance
   def self.reset!
     @performances = 0
@@ -40,27 +46,15 @@ class Performance
   end
 end
 
-def perform_enqueued_jobs(&block)
-  yield # enqueue jobs
-
-  # iterate over enqueued jobs and perform them
-  until $litejobqueue.count.zero?
-    id, serialized_job = $litejobqueue.pop
-    next if id.nil?
-    $litejobqueue.send(:process_job, "default", id, serialized_job, false)
+class LiteTestCase < Minitest::Test
+  def setup
+    LiteJob::DatabaseConnection.transaction
+    LiteJob.configuration.logger = nil
   end
-end
 
-def perform_enqueued_job
-  performed = false
-  attempts = 0
-
-  # get first enqueued jobs and perform it
-  until performed
-    attempts += 1
-    id, serialized_job = $litejobqueue.pop
-    next if id.nil?
-    $litejobqueue.send(:process_job, "default", id, serialized_job, false)
-    performed = true
+  def teardown
+    LiteJob::DatabaseConnection.rollback
+    LiteJob.reset!
+    ::Performance.reset!
   end
 end

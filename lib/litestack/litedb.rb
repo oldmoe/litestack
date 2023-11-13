@@ -15,20 +15,21 @@ class Litedb < ::SQLite3::Database
   # add litesearch support
   include Litesearch
 
-  # overrride the original initilaizer to allow for connection configuration
+  # override the original initializer to allow for connection configuration
   def initialize(file, options = {}, zfs = nil)
     if block_given?
       super(file, options, zfs) do |db|
-        init unless options[:noinit] == true
+        init(options) unless options[:noinit] == true
         yield db
       end
     else
       super(file, options, zfs)
-      init unless options[:noinit] == true
+      init(options) unless options[:noinit] == true
     end
     @running = true
     @collecting_metrics = options[:metrics]
     collect_metrics if @collecting_metrics
+    @cached_statements = {}
   end
 
   def collecting_metrics?
@@ -100,10 +101,18 @@ class Litedb < ::SQLite3::Database
     end
   end
 
+  def get_or_create_cached_statement(name, sql)
+    name = name.to_sym
+    return @cached_statements[name] if @cached_statements[name]
+    @cached_statements[name] = prepare(sql)
+    @cached_statements[name].must_be_open!
+    return @cached_statements[name]
+  end
+
   private
 
   # default connection configuration values
-  def init
+  def init(options = {})
     # version 3.37 is required for strict typing support and the newest json operators
     raise Litesupport::Error if SQLite3::SQLITE_VERSION_NUMBER < 3037000
     # time to wait to obtain a write lock before raising an exception
@@ -118,6 +127,30 @@ class Litedb < ::SQLite3::Database
     self.mmap_size = 128 * 1024 * 1024
     # increase the local connection cache to 2000 pages
     self.cache_size = 2000
+
+    ensure_database_is_migrated(options[:database_definition_file])
+  end
+
+  def ensure_database_is_migrated(database_definition_file)
+    return if database_definition_file.nil?
+
+    sql = YAML.load_file(database_definition_file)
+    return unless sql["schema"]
+
+    version = get_first_value("PRAGMA user_version")
+    sql["schema"].each_pair do |v, obj|
+      if v > version
+        transaction do
+          obj.each do |k, s|
+            execute(s)
+          rescue Exception => e # standard:disable Lint/RescueException
+            warn "Error parsing #{k}"
+            warn s
+            raise e
+          end
+        end
+      end
+    end
   end
 end
 

@@ -1,0 +1,13 @@
+schema:
+  1:
+    create_table_queue: >
+      CREATE TABLE IF NOT EXISTS queue(
+        id TEXT PRIMARY KEY DEFAULT(hex(randomblob(32))) NOT NULL ON CONFLICT REPLACE,
+        name TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE,
+        fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE,
+        value TEXT,
+        created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE
+      ) WITHOUT ROWID;
+
+    create_index_queue_by_name: >
+      CREATE INDEX IF NOT EXISTS idx_queue_by_name ON queue(name, fire_at ASC);

@@ -8,6 +8,7 @@ require_relative "./litestack/litemetric"
 require_relative "./litestack/litedb"
 require_relative "./litestack/litecache"
 require_relative "./litestack/litejob"
+require_relative "lite_job"
 require_relative "./litestack/litecable"
 
 # conditionally load integration with other libraries

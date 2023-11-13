@@ -1,7 +1,4 @@
 # frozen_stringe_literal: true
-
-require_relative "./litejobqueue"
-
 ##
 # Litejob is a Ruby module that enables seamless integration of the Litejobqueue job queueing system into Ruby applications. By including the Litejob module in a class and implementing the #perform method, developers can easily enqueue and process jobs asynchronously.
 #
@@ -41,21 +38,23 @@ require_relative "./litejobqueue"
 module Litejob
   def self.included(klass)
     klass.extend(ClassMethods)
-    klass.get_jobqueue
   end
 
   module ClassMethods
     def perform_async(*params)
-      get_jobqueue.push(name, params, 0, queue)
+      job = LiteJob.enqueue(self, params, 0, queue)
+      return [job.id, job.queue]
     end
 
     def perform_at(time, *params)
       delay = time.to_i - Time.now.to_i
-      get_jobqueue.push(name, params, delay, queue)
+      job = LiteJob.enqueue(self, params, delay, queue)
+      return [job.id, job.queue]
     end
 
     def perform_in(delay, *params)
-      get_jobqueue.push(name, params, delay, queue)
+      job = LiteJob.enqueue(self, params, delay, queue)
+      return [job.id, job.queue]
     end
 
     def perform_after(delay, *params)
@@ -63,11 +62,11 @@ module Litejob
     end
 
     def process_jobs
-      get_jobqueue
+      LiteJob.run
     end
 
     def delete(id)
-      get_jobqueue.delete(id)
+      LiteJob::Job.destroy(id)
     end
 
     def queue
@@ -75,19 +74,15 @@ module Litejob
     end
 
     def queue=(queue_name)
-      @queue_name = queue_name.to_s
+      @queue_name = queue_name
     end
 
-    def options
-      @options ||= begin
-        self::DEFAULT_OPTIONS
-      rescue
-        {}
-      end
+    def considered_dead_after(seconds)
+      @lite_job_considered_dead_after = seconds
     end
 
-    def get_jobqueue
-      Litejobqueue.jobqueue(options)
+    def lite_job_considered_dead_after
+      @lite_job_considered_dead_after ||= LiteJob.configuration.considered_dead_after
     end
   end
 end
