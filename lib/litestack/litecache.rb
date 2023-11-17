@@ -26,7 +26,7 @@ class Litecache
   #   expiry: 60 * 60 * 24 * 30 -> one month default expiry if none is provided
   #   size: 128 * 1024 * 1024 -> 128MB
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
-  #   min_size: 32 * 1024 -> 32MB
+  #   min_size: 32 * 1024 -> 32KB
   #   return_full_record: false -> only return the payload
   #   sleep_interval: 1 -> 1 second of sleep between cleanup runs
 
