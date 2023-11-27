@@ -11,7 +11,7 @@ Fiber.scheduler.run
 require_relative "../lib/litestack/litecache"
 # require 'litestack'
 
-cache = Litecache.new({path: "../db/cache.db"}) # default settings
+cache = Litecache.new #({path: "../db/cache.db"}) # default settings
 redis = Redis.new # default settings
 
 values = []
@@ -35,14 +35,23 @@ count.times { keys << random_str(10) }
     cache.set(keys[i], values[i])
   end
 
-  # bench("file writes", count) do |i|
-  #  f = File.open("../files/#{keys[i]}.data", 'w+')
-  #  f.write(values[i])
-  #  f.close
-  # end
-
   bench("Redis writes", count) do |i|
     redis.set(keys[i], values[i])
+  end
+
+  puts "== Multi Writes =="
+  bench("litecache multi-writes", count/5) do |i|
+    idx = i * 5 
+    payload = {} 
+    5.times {|j| payload[keys[idx + j]] = values[idx + j] }
+    cache.set_multi(payload)
+  end 
+
+  bench("Redis multi-writes", count/5) do |i|
+    idx = i * 5 
+    payload = [] 
+    5.times {|j| payload << keys[idx + j]; payload <<  values[idx + j]}
+    redis.mset(*payload)
   end
 
   puts "== Reads =="
@@ -50,13 +59,25 @@ count.times { keys << random_str(10) }
     cache.get(random_keys[i])
   end
 
-  # bench("file reads", count) do |i|
-  #  data = File.read("../files/#{keys[i]}.data")
-  # end
-
   bench("Redis reads", count) do |i|
     redis.get(random_keys[i])
   end
+
+  puts "== Multi Reads =="
+  bench("litecache multi-reads", count/5) do |i|
+    idx = i * 5
+    payload = []
+    5.times {|j| payload << random_keys[idx+j]}
+    cache.get_multi(*payload)
+  end
+
+  bench("Redis multi-reads", count/5) do |i|
+    idx = i * 5
+    payload = []
+    5.times {|j| payload << random_keys[idx+j]}
+    redis.mget(*payload)
+  end
+
   puts "=========================================================="
 
   values = []

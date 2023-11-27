@@ -3,10 +3,10 @@ schema:
     create_table_data: >
       CREATE TABLE IF NOT EXISTS data(
         id TEXT PRIMARY KEY,
-        value TEXT,
+        value ANY,
         expires_in INTEGER,
         last_used INTEGER
-      );
+      ) STRICT;
     create_expiry_index: >
       CREATE INDEX IF NOT EXISTS expiry_index ON data (expires_in);
     create_last_used_index: >
@@ -49,7 +49,7 @@ stmts:
       value = EXCLUDED.value,
       last_used = EXCLUDED.last_used,
       expires_in = EXCLUDED.expires_in;
-
+  
   inserter: >
     INSERT INTO data (id, value, expires_in, last_used)
     VALUES ($1, $2, unixepoch('now') + $3, unixepoch('now'))
@@ -65,7 +65,7 @@ stmts:
     SELECT id FROM data WHERE id = $1;
   
   getter: >
-    SELECT id, value, expires_in FROM data WHERE id = $1;
+    SELECT id, value, expires_in FROM data WHERE id = $1 AND expires_in >= unixepoch('now');
   
   deleter: >
     delete FROM data WHERE id = $1 RETURNING value;
@@ -78,6 +78,8 @@ stmts:
       value = CAST(value AS int) + CAST(EXCLUDED.value AS int),
       last_used = EXCLUDED.last_used,
       expires_in = EXCLUDED.expires_in;
+  
+      
   
   counter: >
     SELECT count(*) FROM data;

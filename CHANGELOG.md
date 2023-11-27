@@ -4,6 +4,10 @@
 - Add "sequel" as a development dependency
 - Diff links in CHANGELOG (thanks Weston Ganger)
 - Fix deamonize type in liteboard (thanks Julian Rubisch)
+- Better Litecache schema (streamlined numeric value support)
+- Support for set_multi and get_multi in Litecache (read_multi and write_multi support for Rails Cache store)
+- More tests written for Litecache and Rails Litecache store
+- Experimenting with removing the Rails LocalCache as it doesn't show enough improvement in perfromance to compensate for the memory overhead 
 
 ## [0.4.2] - 2023-11-11
 

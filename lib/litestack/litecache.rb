@@ -65,13 +65,14 @@ class Litecache
     options[:size] = DEFAULT_OPTIONS[:min_size] if options[:size] && options[:size] < DEFAULT_OPTIONS[:min_size]
     @last_visited = {}
     init(options)
+    @expires_in = @options[:expiry] || 60 * 60 * 24 * 30
     collect_metrics if @options[:metrics]
   end
 
   # add a key, value pair to the cache, with an optional expiry value (number of seconds)
   def set(key, value, expires_in = nil)
     key = key.to_s
-    expires_in = @options[:expires_in] if expires_in.nil? || expires_in.zero?
+    expires_in ||= @expires_in 
     @conn.acquire do |cache|
       cache.stmts[:setter].execute!(key, value, expires_in)
       capture(:set, key)
@@ -82,11 +83,30 @@ class Litecache
     end
     true
   end
+  
+  # set multiple keys and values in one shot set_multi({k1: v1, k2: v2, ... })
+  def set_multi(keys_and_values, expires_in = nil)
+    expires_in ||= @expires_in 
+    transaction do |conn|
+      keys_and_values.each_pair do |k, v|
+        begin
+          key = k.to_s
+          conn.stmts[:setter].execute!(key, v, expires_in)
+          capture(:set, key)
+        rescue SQLite3::FullException
+          conn.stmts[:extra_pruner].execute!(0.2)
+          conn.execute("vacuum")
+          retry
+        end
+      end
+    end
+    true    
+  end 
 
   # add a key, value pair to the cache, but only if the key doesn't exist, with an optional expiry value (number of seconds)
   def set_unless_exists(key, value, expires_in = nil)
     key = key.to_s
-    expires_in = @options[:expires_in] if expires_in.nil? || expires_in.zero?
+    expires_in ||= @expires_in 
     changes = 0
     @conn.acquire do |cache|
       cache.transaction(:immediate) do
@@ -114,6 +134,25 @@ class Litecache
     capture(:get, key, 0)
     nil
   end
+  
+  # get multiple values by their keys, a hash with values corresponding to the keys
+  # is returned,
+  def get_multi(*keys)
+    results = {}
+    transaction(:deferred) do |conn|
+      keys.length.times do |i|
+        key = keys[i].to_s
+        if (record = conn.stmts[:getter].execute!(key)[0]) 
+          results[keys[i]] = record[1] # use the original key format
+          @last_visited[key] = true
+          capture(:get, key, 1)
+        else
+          capture(:get, key, 0) 
+        end
+      end
+    end
+    results
+  end
 
   # delete a key, value pair from the cache
   def delete(key)
@@ -127,7 +166,7 @@ class Litecache
 
   # increment an integer value by amount, optionally add an expiry value (in seconds)
   def increment(key, amount, expires_in = nil)
-    expires_in ||= @expires_in
+    expires_in ||= @expires_in 
     @conn.acquire { |cache| cache.stmts[:incrementer].execute!(key.to_s, amount, expires_in) }
   end
 
@@ -189,11 +228,15 @@ class Litecache
   end
 
   # low level access to SQLite transactions, use with caution
-  def transaction(mode, acquire = true)
-    return cache.transaction(mode) { yield } unless acquire
+  def transaction(mode=:immediate)
     @conn.acquire do |cache|
-      cache.transaction(mode) do
+      if cache.transaction_active?
+        puts "active"
         yield
+      else
+        cache.transaction(mode) do
+          yield cache
+        end
       end
     end
   end
@@ -219,7 +262,7 @@ class Litecache
           retry
         rescue SQLite3::FullException
           cache.stmts[:extra_pruner].execute!(0.2)
-        rescue Exception # standard:disable Lint/RescueException
+        rescue Exception => e # standard:disable Lint/RescueException
           # database is closed
         end
         sleep @options[:sleep_interval]
