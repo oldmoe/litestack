@@ -1,5 +1,9 @@
 ![litestack](https://github.com/oldmoe/litestack/blob/master/assets/litestack_logo_teal_large.png?raw=true)
 
+<a href="https://badge.fury.io/rb/litestack" target="_blank"><img height="21" style='border:0px;height:21px;' border='0' src="https://badge.fury.io/rb/litestack.svg" alt="Gem Version"></a>
+<a href='https://github.com/oldmoe/litestack/actions' target='_blank'><img src="https://github.com/oldmoe/litestack/actions/workflows/ruby.yml/badge.svg?branch=master" style="max-width:100%;" height='21' style='border:0px;height:21px;' border='0' alt="CI Status"></a>
+<a href='https://rubygems.org/gems/litestack' target='_blank'><img height='21' style='border:0px;height:21px;' src='https://img.shields.io/gem/dt/litestack?color=brightgreen&label=Rubygems%20Downloads' border='0' alt='RubyGems Downloads' /></a>
+
 All your data infrastructure, in a gem!
 
 Litestack is a Ruby gem that provides both Ruby and  Ruby on Rails applications an all-in-one solution for web application data infrastructure. It exploits the power and embeddedness of SQLite to deliver a full-fledged SQL database, a fast cache , a robust job queue, a reliable message broker, a full text search engine and a metrics platform all in a single package.
