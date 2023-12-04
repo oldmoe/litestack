@@ -12,7 +12,7 @@ schema:
         created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL ON CONFLICT REPLACE,
         resolution TEXT DEFAULT('minute') NOT NULL,
         PRIMARY KEY(resolution, created_at, topic, name, key)
-      ) STRICT;
+      );
 
 stmts:
   capture_event: >

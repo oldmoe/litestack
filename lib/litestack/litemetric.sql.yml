@@ -19,7 +19,7 @@ schema:
         created_at INTEGER DEFAULT((unixepoch()/300*300)) NOT NULL,
         resolution TEXT DEFAULT('minute') NOT NULL,
         PRIMARY KEY(resolution, created_at, topic, name, key)
-      ) STRICT;
+      );
 
     create_topic_index_on_events: >
       CREATE INDEX events_topic_index ON events (resolution, created_at, topic) WHERE name = '___';
