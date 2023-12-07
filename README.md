@@ -262,7 +262,7 @@ Book.search('author: writer').limit(1).all
 > ![litemetric](https://github.com/oldmoe/litestack/blob/master/assets/litemetric_logo_teal.png?raw=true)
 
 ### Litemetric
-Litestack comes with a mdoule that can collect useful metrics for its different components, in each component, you need to add the following to the respective .yml file (database.yml in case of Litedb)
+Litestack comes with a module that can collect useful metrics for its different components, in each component, you need to add the following to the respective .yml file (database.yml in case of Litedb)
 ```yml
     metrics: true # default is false
 ```
