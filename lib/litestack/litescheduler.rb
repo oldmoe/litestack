@@ -29,7 +29,7 @@ module Litescheduler
   end
 
   def self.storage
-    if backend == :fiber || backend == :polyphony
+    if fiber_backed?
       Fiber.current.storage
     else
       Thread.current
@@ -37,7 +37,7 @@ module Litescheduler
   end
 
   def self.current
-    if backend == :fiber || backend == :polyphony
+    if fiber_backed?
       Fiber.current
     else
       Thread.current
@@ -64,7 +64,7 @@ module Litescheduler
   # they must send (true) as a parameter to this method
   # else it is a no-op for fibers
   def self.synchronize(fiber_sync = false, &block)
-    if (backend == :fiber) || (backend == :polyphony)
+    if fiber_backed?
       yield # do nothing, just run the block as is
     else
       mutex.synchronize(&block)
@@ -72,7 +72,7 @@ module Litescheduler
   end
 
   def self.max_contexts
-    return 50 if backend == :fiber || backend == :polyphony
+    return 50 if fiber_backed?
     5
   end
 
@@ -80,5 +80,11 @@ module Litescheduler
   def self.mutex
     # a single mutex per process (is that ok?)
     @@mutex ||= Mutex.new
+  end
+
+  private
+
+  def self.fiber_backed?
+    backend == :fiber || backend == :polyphony
   end
 end
