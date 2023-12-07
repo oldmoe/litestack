@@ -18,14 +18,14 @@ module Litescheduler
 
   # spawn a new execution context
   def self.spawn(&block)
-    if backend == :fiber
+    case backend
+    in :fiber
       Fiber.schedule(&block)
-    elsif backend == :polyphony
+    in :polyphony
       spin(&block)
-    elsif (backend == :threaded) || (backend == :iodine)
+    in :threaded | :iodine
       Thread.new(&block)
     end
-    # we should never reach here
   end
 
   def self.storage
