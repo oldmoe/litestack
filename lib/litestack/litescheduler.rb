@@ -29,7 +29,7 @@ module Litescheduler
   end
 
   def self.storage
-    if backend == :fiber || backend == :poylphony
+    if backend == :fiber || backend == :polyphony
       Fiber.current.storage
     else
       Thread.current
@@ -37,7 +37,7 @@ module Litescheduler
   end
 
   def self.current
-    if backend == :fiber || backend == :poylphony
+    if backend == :fiber || backend == :polyphony
       Fiber.current
     else
       Thread.current
