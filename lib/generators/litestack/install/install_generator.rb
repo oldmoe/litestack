@@ -28,8 +28,8 @@ class Litestack::InstallGenerator < Rails::Generators::Base
     append_file ".gitignore", <<~TEXT
 
       # Ignore default Litestack SQLite databases.
-      /db/**/*.sqlite3
-      /db/**/*.sqlite3-*
+      /storage/**/*.sqlite3
+      /storage/**/*.sqlite3-*
     TEXT
   end
 end

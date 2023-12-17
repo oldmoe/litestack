@@ -5,10 +5,10 @@
 #   gem "sqlite3"
 #
 # `Litesupport.root.join("data.sqlite3")` stores
-# application data in the path `./db/#{Rails.env}/data.sqlite3`
+# application data in the path `./storage/#{Rails.env}/data.sqlite3`
 #
 # `Litesupport.root(env).join(path)` stores 
-# application data in the path `./db/#{env}/#{path}`
+# application data in the path `./storage/#{env}/#{path}`
 #
 # idle_timeout should be set to zero, to avoid recycling sqlite connections
 # and losing the page cache
@@ -20,14 +20,14 @@ default: &default
 
 development:
   <<: *default
-  database: <%= Litesupport.root("development").join("data.sqlite3") %>
+  database: <%= Litesupport.root.join("data.sqlite3") %>
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: <%= Litesupport.root("test").join("data.sqlite3") %>
+  database: <%= Litesupport.root.join("data.sqlite3") %>
 
 # Warning: Make sure your production database path is on a persistent
 # volume, otherwise your application data could be deleted between deploys.
@@ -36,5 +36,5 @@ test:
 # `LITESTACK_DATA_PATH` environment variable.
 production:
   <<: *default
-  database: <%= Litesupport.root("production").join("data.sqlite3") %>
+  database: <%= Litesupport.root.join("data.sqlite3") %>
 
