@@ -11,3 +11,4 @@
 /production/*.sqlite3*
 .DS_Store
 Gemfile.lock
+*~

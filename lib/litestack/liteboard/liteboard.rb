@@ -11,6 +11,7 @@ class Liteboard
   @@resolutions = {"minute" => [300, 12], "hour" => [3600, 24], "day" => [3600 * 24, 7], "week" => [3600 * 24 * 7, 53], "year" => [3600 * 24 * 365, 100]}
   @@res_mapping = {"hour" => "minute", "day" => "hour", "week" => "day", "year" => "week"}
   @@templates = {}
+  @@base_path = ""
   @@app = Hanami::Router.new do
     get "/", to: ->(env) do
       Liteboard.new(env).call(:index)
@@ -342,23 +343,23 @@ class Liteboard
   end
 
   def index_url
-    "/?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
+    "#{@@base_path}//?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
   end
 
   def topic_url(topic)
-    "/topics/#{encode(topic)}?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
+    "#{@@base_path}/topics/#{encode(topic)}?res=#{@res}&order=#{@order}&dir=#{@dir}&search=#{@search}"
   end
 
   def index_sort_url(field)
-    "/?#{compose_query(field)}"
+    "#{@@base_path}//?#{compose_query(field)}"
   end
 
   def topic_sort_url(field)
-    "/topics/#{encode(@topic)}?#{compose_query(field)}"
+    "#{@@base_path}//topics/#{encode(@topic)}?#{compose_query(field)}"
   end
 
   def event_sort_url(field)
-    "/topics/#{encode(@topic)}/events/#{encode(@event)}?#{compose_query(field)}"
+    "#{@@base_path}//topics/#{encode(@topic)}/events/#{encode(@event)}?#{compose_query(field)}"
   end
 
   def compose_query(field)
@@ -398,7 +399,8 @@ class Liteboard
     whole
   end
 
-  def self.app
+  def self.app(base_path = "")
+    @@base_path = base_path
     @@app
   end
 
