@@ -358,6 +358,10 @@ class Liteboard
     "#{@@base_path}//topics/#{encode(@topic)}?#{compose_query(field)}"
   end
 
+  def event_url(event)
+    "#{@@base_path}//topics/#{encode(@topic)}/events/#{encode(event)}?#{compose_query(field)}"
+  end
+
   def event_sort_url(field)
     "#{@@base_path}//topics/#{encode(@topic)}/events/#{encode(@event)}?#{compose_query(field)}"
   end

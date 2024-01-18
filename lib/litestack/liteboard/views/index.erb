@@ -10,7 +10,7 @@
     <div class = "col-6">
       <div class="card">
         <div class="card-header">
-          <a href="liteboard/topics/<%=encode(topic[0])%>?res=<%=@res%>"><%=topic[0]%></a>
+          <a href="<%= topic_url(topic[0]) %>"><%=topic[0]%></a>
         </div>
         <div class="card-body">
           <div class="container">
