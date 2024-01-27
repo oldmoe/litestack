@@ -27,7 +27,7 @@ module Rails
 
         args << db_config.database
 
-        find_cmd_and_exec(["mysql", "mysql5"], *args)
+        ActiveRecord::Base.connection.class.find_cmd_and_exec(["mysql", "mysql5"], *args)
 
       when /^postgres|^postgis/
         ENV["PGUSER"] = config[:username] if config[:username]
@@ -38,7 +38,7 @@ module Rails
         ENV["PGSSLCERT"] = config[:sslcert].to_s if config[:sslcert]
         ENV["PGSSLKEY"] = config[:sslkey].to_s if config[:sslkey]
         ENV["PGSSLROOTCERT"] = config[:sslrootcert].to_s if config[:sslrootcert]
-        find_cmd_and_exec("psql", db_config.database)
+        ActiveRecord::Base.connection.class.find_cmd_and_exec("psql", db_config.database)
 
       when "sqlite3", "litedb"
         args = []
@@ -47,7 +47,7 @@ module Rails
         args << "-header" if @options[:header]
         args << File.expand_path(db_config.database, Rails.respond_to?(:root) ? Rails.root : nil)
 
-        find_cmd_and_exec("sqlite3", *args)
+        ActiveRecord::Base.connection.class.find_cmd_and_exec("sqlite3", *args)
 
       when "oracle", "oracle_enhanced"
         logon = ""
@@ -58,7 +58,7 @@ module Rails
           logon << "@#{db_config.database}" if db_config.database
         end
 
-        find_cmd_and_exec("sqlplus", logon)
+        ActiveRecord::Base.connection.class.find_cmd_and_exec("sqlplus", logon)
 
       when "sqlserver"
         args = []
@@ -73,7 +73,7 @@ module Rails
           args += ["-S", host_arg]
         end
 
-        find_cmd_and_exec("sqlcmd", *args)
+        ActiveRecord::Base.connection.class.find_cmd_and_exec("sqlcmd", *args)
 
       else
         abort "Unknown command-line client for #{db_config.database}."
