@@ -15,6 +15,7 @@ options = {
   Port: 9292,
   Host: 'localhost',
   environment: 'production',
+  pid: 'tmp/pids/liteboard.pid',
   quiet: false
 }
 
