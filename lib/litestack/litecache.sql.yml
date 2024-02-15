@@ -14,7 +14,7 @@ schema:
 
 stmts:
   pruner: >
-    DELETE FROM data WHERE expires_in <= $1;
+    DELETE FROM data WHERE expires_in <= unixepoch('now');
 
   extra_pruner: >
     DELETE FROM data WHERE id IN (

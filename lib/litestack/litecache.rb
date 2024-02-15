@@ -39,7 +39,7 @@ class Litecache
     mmap_size: 128 * 1024 * 1024, # 128MB
     min_size: 8 * 1024 * 1024, # 16MB
     return_full_record: false, # only return the payload
-    sleep_interval: 1, # 1 second
+    sleep_interval: 30, # 30 seconds
     metrics: false
   }
 
@@ -63,7 +63,7 @@ class Litecache
 
   def initialize(options = {})
     options[:size] = DEFAULT_OPTIONS[:min_size] if options[:size] && options[:size] < DEFAULT_OPTIONS[:min_size]
-    @last_visited = {}
+    #@last_visited = {}
     init(options)
     @expires_in = @options[:expiry] || 60 * 60 * 24 * 30
     collect_metrics if @options[:metrics]
@@ -127,7 +127,7 @@ class Litecache
   def get(key)
     key = key.to_s
     if (record = @conn.acquire { |cache| cache.stmts[:getter].execute!(key)[0] })
-      @last_visited[key] = true
+      #@last_visited[key] = true
       capture(:get, key, 1)
       return record[1]
     end
@@ -144,7 +144,7 @@ class Litecache
         key = keys[i].to_s
         if (record = conn.stmts[:getter].execute!(key)[0]) 
           results[keys[i]] = record[1] # use the original key format
-          @last_visited[key] = true
+          #@last_visited[key] = true
           capture(:get, key, 1)
         else
           capture(:get, key, 0) 
@@ -231,7 +231,6 @@ class Litecache
   def transaction(mode=:immediate)
     @conn.acquire do |cache|
       if cache.transaction_active?
-        puts "active"
         yield
       else
         cache.transaction(mode) do
@@ -252,12 +251,7 @@ class Litecache
     Litescheduler.spawn do
       while @running
         @conn.acquire do |cache|
-          cache.transaction(:immediate) do
-            @last_visited.delete_if do |k| # there is a race condition here, but not a serious one
-              cache.stmts[:toucher].execute!(k) || true
-            end
-            cache.stmts[:pruner].execute!
-          end
+          cache.stmts[:pruner].execute!
         rescue SQLite3::BusyException
           retry
         rescue SQLite3::FullException

@@ -196,7 +196,7 @@ module Litesupport
     end
 
     def setup
-      @conn = create_pooled_connection
+      @conn = create_pooled_connection(@options[:connection_count])
       @logger = create_logger
       @running = true
     end
@@ -231,7 +231,8 @@ module Litesupport
     end
 
     def create_pooled_connection(count = 1)
-      Litesupport::Pool.new(1) { create_connection }
+      count = 1 unless count and count.is_a? Integer
+      Litesupport::Pool.new(count) { create_connection }
     end
 
     # common db object options
