@@ -63,7 +63,6 @@ class Litecache
 
   def initialize(options = {})
     options[:size] = DEFAULT_OPTIONS[:min_size] if options[:size] && options[:size] < DEFAULT_OPTIONS[:min_size]
-    #@last_visited = {}
     init(options)
     @expires_in = @options[:expiry] || 60 * 60 * 24 * 30
     collect_metrics if @options[:metrics]
@@ -127,7 +126,6 @@ class Litecache
   def get(key)
     key = key.to_s
     if (record = @conn.acquire { |cache| cache.stmts[:getter].execute!(key)[0] })
-      #@last_visited[key] = true
       capture(:get, key, 1)
       return record[1]
     end
@@ -144,7 +142,6 @@ class Litecache
         key = keys[i].to_s
         if (record = conn.stmts[:getter].execute!(key)[0]) 
           results[keys[i]] = record[1] # use the original key format
-          #@last_visited[key] = true
           capture(:get, key, 1)
         else
           capture(:get, key, 0) 
