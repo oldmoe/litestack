@@ -37,6 +37,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "tilt"
   spec.add_dependency "erubi"
   
+  spec.add_development_dependency "activerecord"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "railties"
   spec.add_development_dependency "minitest"
