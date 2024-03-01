@@ -1,4 +1,5 @@
 require "delegate"
+require "active_support"
 require "active_support/core_ext/enumerable"
 require "active_support/core_ext/array/extract_options"
 require "active_support/core_ext/numeric/time"
@@ -73,6 +74,14 @@ module ActiveSupport
 
       private
 
+      def serialize_entrys(entry, **options)
+        Marshal.dump(entry)
+      end
+
+      def deserialize_entrys(entry)
+        Marshal.load(entry.to_s)
+      end
+
       # Read an entry from the cache.
       def read_entry(key, **options)
         deserialize_entry(@cache.get(key))
@@ -94,7 +103,7 @@ module ActiveSupport
       def write_multi_entries(entries, **options)
         return if entries.empty?
         entries.each_pair {|k,v| entries[k] = serialize_entry(v, **options)}
-        expires_in = options[:expires_in].to_i
+        expires_in = options[:expires_in].to_i if options[:expires_in]
         if options[:race_condition_ttl] && expires_in > 0 && !options[:raw]
           expires_in += 5.minutes
         end
@@ -102,7 +111,7 @@ module ActiveSupport
       end
 
       def write_serialized_entry(key, payload, **options)
-        expires_in = options[:expires_in].to_i
+        expires_in = options[:expires_in].to_i if options[:expires_in]
         if options[:race_condition_ttl] && expires_in > 0 && !options[:raw]
           expires_in += 5.minutes
         end

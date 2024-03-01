@@ -162,13 +162,13 @@ class Litecache
   end
 
   # increment an integer value by amount, optionally add an expiry value (in seconds)
-  def increment(key, amount, expires_in = nil)
+  def increment(key, amount=1, expires_in = nil)
     expires_in ||= @expires_in 
     @conn.acquire { |cache| cache.stmts[:incrementer].execute!(key.to_s, amount, expires_in) }
   end
 
   # decrement an integer value by amount, optionally add an expiry value (in seconds)
-  def decrement(key, amount, expires_in = nil)
+  def decrement(key, amount=1, expires_in = nil)
     increment(key, -amount, expires_in)
   end
 
