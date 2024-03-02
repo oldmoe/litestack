@@ -1,7 +1,7 @@
 require "minitest/autorun"
 require_relative "../lib/active_support/cache/litecache"
 
-class TestCache < Minitest::Test
+class TestCacheRails < Minitest::Test
   def setup
     @cache = ActiveSupport::Cache::Litecache.new({path: ":memory:", sleep_interval: 1})
     @cache.clear

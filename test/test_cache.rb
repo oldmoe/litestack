@@ -3,24 +3,24 @@ require_relative "../lib/litestack/litecache"
 
 class TestCache < Minitest::Test
   def setup
-    @cache = Litecache.new({path: ":memory:", sleep_interval: 1})
+    @cache = ::Litecache.new({path: ":memory:", sleep_interval: 1})
     @cache.clear
   end
-  
-  def test_caceh_set
+
+  def test_cache_set
     @cache.set("key", "value")
     assert_equal "value", @cache.get("key")
     @cache.set("key", "new_value")
     assert_equal "new_value", @cache.get("key")
   end
 
-  def test_caceh_set_unless_exists
+  def test_cache_set_unless_exists
     @cache.set("key", "value")
     assert_equal "value", @cache.get("key")
     @cache.set_unless_exists("key", "new_value")
     assert_equal "value", @cache.get("key")
   end
-  
+
   def test_cache_set_multi
     data = {k1: "v1", k2: "v2", k3: "v3"}
     @cache.set_multi(data)
