@@ -59,7 +59,7 @@ litedb is a wrapper around SQLite3, offering a better default configuration that
 
 #### Direct litedb usage
 
-litedb can be used exactly as the SQLite3 gem, since litedb iherits from SQLite3
+litedb can be used exactly as the SQLite3 gem, since litedb inherits from SQLite3
 
 ```ruby
 require 'litestack'
