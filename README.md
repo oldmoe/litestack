@@ -209,7 +209,7 @@ idx.search('kamal')
 idx.search('subject: awa') 
 ```
 
-Litesearch integrates tightly with ActiveRecord ans Sequel, here are integration examples
+Litesearch integrates tightly with ActiveRecord and Sequel, here are integration examples
 
 #### ActiveRecord
 
