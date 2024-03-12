@@ -1,4 +1,4 @@
-    <h5><a href="/?res=<%=@res%>">All Topics</a> > <a href="/topics/<%=@topic%>?res=<%=@res%>"><%=@topic%></a> > <%= @event %></h5>
+    <h5><a href="<%= index_url %>">All Topics</a> > <a href="<%= topic_url(@topic) %>"><%=@topic%></a> > <%= @event %></h5>
     <div id="search"><form><input id="search-field" type="text" placeholder="Search keys" onkeydown="search_kd(this)" onkeyup="search_ku(this)" value="<%=@search%>"/></form></div>
     <table class="table sortable">
       <tr>
