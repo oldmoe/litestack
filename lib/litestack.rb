@@ -19,6 +19,9 @@ require_relative "./active_job/queue_adapters/litejob_adapter" if defined? Activ
 require_relative "./action_cable/subscription_adapter/litecable" if defined? ActionCable
 require_relative "./litestack/railtie" if defined? Rails::Railtie
 
+# register litedb adapter for Rails >= 7.2
+ActiveRecord::ConnectionAdapters.register("litedb", "ActiveRecord::ConnectionAdapters::LitedbAdapter", "active_record/connection_adapters/litedb_adapter") if defined? ActiveRecord && ActiveRecord::ConnectionAdapters.respond_to?(:register)
+
 module Litestack
   class NotImplementedError < RuntimeError; end
 
