@@ -179,6 +179,7 @@ class Litejobqueue < Litequeue
 
   # create a worker according to environment
   def create_worker
+    return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0
       while @running
