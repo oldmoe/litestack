@@ -6,6 +6,7 @@ require "oj"
 require "yaml"
 require "pathname"
 require "fileutils"
+require "erb"
 
 require_relative "./litescheduler"
 
@@ -182,7 +183,7 @@ module Litesupport
       end
       @options = defaults.merge(options)
       config = begin
-        YAML.load_file(@options[:config_path])
+        YAML.load(ERB.new(File.read(@options[:config_path])).result)
       rescue
         {}
       end # an empty hash won't hurt

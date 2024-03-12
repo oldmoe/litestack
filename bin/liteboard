@@ -2,6 +2,8 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'erb'
+require 'yaml'
 require_relative '../lib/litestack/liteboard/liteboard'
 DEFAULTS = {
   config_path: Litemetric::DEFAULT_OPTIONS[:config_path],
@@ -49,7 +51,7 @@ check_database(options[:path]) if options[:path]
 config = nil
 if options[:config_path]
   begin
-    config = Yaml.load_file(options[:config_path]) 
+    config = YAML.load(ERB.new(File.read(options[:config_path])).result)
   rescue
     puts "liteboard: missing or bad config file, please ensure the config file path is correct"
     puts "liteboard: exiting"
