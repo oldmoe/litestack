@@ -125,11 +125,11 @@ On average, Litecable is quite faster than the Redis based version and offers be
 
 > ![litesearch](https://github.com/oldmoe/litestack/blob/master/assets/litesearch_logo_teal.png?raw=true)
 
-Litesearch was benchmarked against Mielsearch, both using their respective ActiveRecord integrations. Mielsearch was running on the same machine as the benchmark script and was using the default configuration options. The dataset used for testing was the infamous Enron email corpus. Redisearch was not benchmarked due to the clients being not Rails 7.1 compatible (yet), will probably bench Redisearch when they are.
+Litesearch was benchmarked against Meilisearch, both using their respective ActiveRecord integrations. Meilisearch was running on the same machine as the benchmark script and was using the default configuration options. The dataset used for testing was the infamous Enron email corpus. Redisearch was not benchmarked due to the clients being not Rails 7.1 compatible (yet), will probably bench Redisearch when they are.
 
 ### Building the index
 
-||MieliSearch|Litesearch|
+||Meilisearch|Litesearch|
 |-:|-:|-:|
 |Time to insert 10K docs|265.42 seconds|29.06 seconds|
 |Inserted docs/second|38|344|
@@ -137,4 +137,4 @@ Litesearch was benchmarked against Mielsearch, both using their respective Activ
 |Searches/second|133|19608|
 |Index rebuild|0.822|0.626|
 
-We only limited the test to 10K documents becuause MieliSearch was taking a long time to index, so we decided to stop at a reasonable sample size. The search numbers for litesearch were double checked, event against a 100K document set and they remained virtually the same. It is clear that litesearch is much faster than MieliSearch in both indexing and searching, this could be partially attributed to litesearch being a simpler text search engine, but still, the difference is huge! For rebuilding the index though, Litesearch is not that much faster than Mielisearch.
+We only limited the test to 10K documents becuause Meilisearch was taking a long time to index, so we decided to stop at a reasonable sample size. The search numbers for litesearch were double checked, event against a 100K document set and they remained virtually the same. It is clear that litesearch is much faster than Meilisearch in both indexing and searching, this could be partially attributed to litesearch being a simpler text search engine, but still, the difference is huge! For rebuilding the index though, Litesearch is not that much faster than Meilisearch.
