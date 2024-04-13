@@ -21,25 +21,25 @@ This is a list of functional/non-functional features that litestack targets to i
   - [ ] Automated testing matrix
   - [ ] Automated gem builds
 - [ ] Litedb improvements
-  - [ ] ActiveRecord Sqlite3 Adapter compatibility mode    
+  - [ ] ActiveRecord Sqlite3 Adapter compatibility mode
   - [ ] Sequel Sqlite3 Adapter compatibility mode
-  - [ ] Extension bundling/loading    
+  - [ ] Extension bundling/loading
 - [ ] Liteiob improvements
   - [ ] Persist jobs even during execution
   - [ ] Zombie job detection
-  - [ ] Better process exit handling 
+  - [ ] Better process exit handling
   - [ ] Faster job dispatch for the no delay case
 - [ ] Database maintenance scripts
   - [ ] Online backup
   - [ ] Restore
   - [ ] Litestream integration
-  - [ ] CoW filesystems specific backup path
+  - [ ] CoW filesystem-specific backup path
 - [ ] Zero downtime deployment scripts
   - [ ] Rails
-  - [ ] Genereic Rack Applications
+  - [ ] Generic Rack Applications
 - [ ] Litemetric improvements
   - [ ] Rails performance module
   - [ ] Ruby Memory/GC module
   - [ ] Restore generic module
   - [ ] Better HTML/CSS
-- [ ] Kredis replacement implementation?    
+- [ ] Kredis replacement implementation?

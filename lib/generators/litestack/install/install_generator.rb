@@ -1,10 +1,10 @@
 class Litestack::InstallGenerator < Rails::Generators::Base
   source_root File.expand_path("templates", __dir__)
 
-  # Force copy configuratioon files so Rails installs don't ask questions
+  # Force copy configuration files so Rails installs don't ask questions
   # that less experienced people might not understand. The more Sr folks.
   # will know to check git to look at what changed.
-  def modify_database_adapater
+  def modify_database_adapter
     copy_file "database.yml", "config/database.yml", force: true
   end
 

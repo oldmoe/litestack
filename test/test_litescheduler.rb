@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "./test_helper"
+require_relative "helper"
 require_relative "../lib/litestack/litescheduler"
 
 describe Litescheduler do
   describe "#backend" do
-    
     before do
       Litescheduler.instance_variable_set(:@backend, nil)
     end

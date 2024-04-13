@@ -11,7 +11,7 @@ class Client
   end
 
   def call(*args)
-    warn "[#{Process.pid}]:#{object_id} recieved #{args} from #{@channel}"
+    warn "[#{Process.pid}]:#{object_id} received #{args} from #{@channel}"
   end
 end
 

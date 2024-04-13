@@ -17,14 +17,14 @@ Litejobqueue.new({
   log: nil
 })
 
-$time = Time.now.to_i #- 10800
+$time = Time.now.to_i # - 10800
 $start_time = Time.now.to_i
 
 class NormalJob
   include Litejob
   self.queue = "normal"
   def perform(time)
-    $time = time #-= (rand * 100).to_i #10 seconds in the past
+    $time = time # -= (rand * 100).to_i #10 seconds in the past
     sleep 0.001
     warn "performing some normal action"
   end

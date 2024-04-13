@@ -715,7 +715,7 @@ module Sequel
 
       # Handle uniqueness violations when inserting, by using a specified
       # resolution algorithm. With no options, uses INSERT OR REPLACE. SQLite
-      # supports the following conflict resolution algoriths: ROLLBACK, ABORT,
+      # supports the following conflict resolution algorithms: ROLLBACK, ABORT,
       # FAIL, IGNORE and REPLACE.
       #
       # On SQLite 3.24.0+, you can pass a hash to use an ON CONFLICT clause.
@@ -877,7 +877,7 @@ module Sequel
       end
 
       # Use from_self for aggregate dataset using VALUES.
-      def aggreate_dataset_use_from_self?
+      def aggregate_dataset_use_from_self?
         super || @opts[:values]
       end
 

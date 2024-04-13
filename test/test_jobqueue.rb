@@ -12,13 +12,16 @@ class MyJob
 
   def perform(time)
     # puts "performing"
-    raise "An error occured" if Time.now.to_i < time
+    raise "An error occurred" if Time.now.to_i < time
   end
 end
 
 class TestJobQueue < Minitest::Test
   def setup
     @jobqueue = Litejobqueue.new({path: ":memory:", logger: nil, retries: 2, retry_delay: 1, retry_delay_multiplier: 1, queues: [["test", 1]]})
+  end
+
+  def teardown
     @jobqueue.clear
   end
 
@@ -27,7 +30,6 @@ class TestJobQueue < Minitest::Test
     assert @jobqueue.count != 0
     sleep 1.2
     assert @jobqueue.count == 0
-    @jobqueue.clear
   end
 
   def test_delete
@@ -37,7 +39,6 @@ class TestJobQueue < Minitest::Test
     @jobqueue.count
     @jobqueue.delete(id[0])
     assert @jobqueue.count == 0
-    @jobqueue.clear
   end
 
   def test_push_with_delay
@@ -48,7 +49,6 @@ class TestJobQueue < Minitest::Test
     assert @jobqueue.count != 0
     sleep 2
     assert @jobqueue.count == 0
-    @jobqueue.clear
   end
 
   def test_retry
@@ -66,6 +66,5 @@ class TestJobQueue < Minitest::Test
     assert @jobqueue.count != 0
     sleep 2.1
     assert @jobqueue.count("test") == 0
-    @jobqueue.clear
   end
 end

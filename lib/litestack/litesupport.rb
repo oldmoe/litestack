@@ -7,7 +7,7 @@ require "yaml"
 require "pathname"
 require "fileutils"
 
-require_relative "./litescheduler"
+require_relative "litescheduler"
 
 module Litesupport
   class Error < StandardError; end
@@ -174,7 +174,7 @@ module Litesupport
     end
 
     def configure(options = {})
-      # detect enviornment (production, development, etc.)
+      # detect environment (production, development, etc.)
       defaults = begin
         self.class::DEFAULT_OPTIONS
       rescue
@@ -186,7 +186,7 @@ module Litesupport
       rescue
         {}
       end # an empty hash won't hurt
-      config = config[Litesupport.environment] if config[Litesupport.environment] # if there is a config for the current enviornment defined then use it, otherwise use the top level declaration
+      config = config[Litesupport.environment] if config[Litesupport.environment] # if there is a config for the current environment defined then use it, otherwise use the top level declaration
       config.keys.each do |k| # symbolize keys
         config[k.to_sym] = config[k]
         config.delete k
@@ -231,7 +231,7 @@ module Litesupport
     end
 
     def create_pooled_connection(count = 1)
-      count = 1 unless count and count.is_a? Integer
+      count = 1 unless count&.is_a?(Integer)
       Litesupport::Pool.new(count) { create_connection }
     end
 

@@ -79,7 +79,7 @@ class TestSequelLitesearch < Minitest::Test
   end
 
   def test_similar
-    newbook = Books.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)     
+    newbook = Books.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)
     book = Books[1]
     books = book.similar
     assert_equal 1, books.length

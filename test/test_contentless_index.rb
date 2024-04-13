@@ -24,7 +24,6 @@ class TestContentlessIndex < Minitest::Test
     assert_equal 4, rs[1]["id"]
   end
 
-
   def test_search
     rs = @idx.search("Hamada")
     assert_equal rs.length, 1
