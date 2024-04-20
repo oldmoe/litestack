@@ -18,6 +18,10 @@ module ActiveJob
         # Job.options = DEFAULT_OPTIONS.merge(options)
       end
 
+      def enqueue_after_transaction_commit?
+        Job.options[:enqueue_after_transaction_commit]
+      end
+
       def enqueue(job) # :nodoc:
         Job.queue = job.queue_name
         Job.perform_async(job.serialize)
@@ -31,7 +35,8 @@ module ActiveJob
       class Job # :nodoc:
         DEFAULT_OPTIONS = {
           config_path: "./config/litejob.yml",
-          logger: nil # Rails performs its logging already
+          logger: nil, # Rails performs its logging already
+          enqueue_after_transaction_commit: true
         }
 
         include ::Litejob
