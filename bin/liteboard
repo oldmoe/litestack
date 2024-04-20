@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'rackup'
 require_relative '../lib/litestack/liteboard/liteboard'
 DEFAULTS = {
   config_path: Litemetric::DEFAULT_OPTIONS[:config_path],
@@ -15,7 +16,7 @@ options = {
   Port: 9292,
   Host: 'localhost',
   environment: 'production',
-  pid: 'tmp/pids/liteboard.pid',
+  pid: './liteboard.pid',
   quiet: false
 }
 
@@ -79,4 +80,4 @@ options[:app] = Liteboard.app
 require_relative '../lib/litestack'
 puts "Starting Liteboard version #{Litestack::VERSION}"
 
-Rack::Server.start(options)
+Rackup::Server.start(options)

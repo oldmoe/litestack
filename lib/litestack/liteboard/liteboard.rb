@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "hanami/router"
+require "rack"
 require "tilt"
 require "erubi"
 
@@ -11,37 +11,32 @@ class Liteboard
   @@resolutions = {"minute" => [300, 12], "hour" => [3600, 24], "day" => [3600 * 24, 7], "week" => [3600 * 24 * 7, 53], "year" => [3600 * 24 * 365, 100]}
   @@res_mapping = {"hour" => "minute", "day" => "hour", "week" => "day", "year" => "week"}
   @@templates = {}
-  @@app = Hanami::Router.new do
-    get "/", to: ->(env) do
+  @@app = proc do |env|
+    case path = env["PATH_INFO"]
+    when "/"
       Liteboard.new(env).call(:index)
-    end
-
-    get "/topics/Litejob", to: ->(env) do
+    when "/topics/Litejob"
       Liteboard.new(env).call(:litejob)
-    end
-
-    get "/topics/Litecache", to: ->(env) do
+    when "/topics/Litecache"
       Liteboard.new(env).call(:litecache)
-    end
-
-    get "/topics/Litedb", to: ->(env) do
+    when "/topics/Litedb"
       Liteboard.new(env).call(:litedb)
-    end
-
-    get "/topics/Litecable", to: ->(env) do
+    when "/topics/Litecable"
       Liteboard.new(env).call(:litecable)
     end
+
   end
 
   def initialize(env)
     @env = env
-    @params = @env["router.params"]
+    @req = Rack::Request.new(@env)
+    @params = @req.params 
     @running = true
     @lm = Litemetric.instance
   end
 
   def params(key)
-    URI.decode_uri_component(@params[key].to_s)
+    URI.decode_uri_component(@params[key.to_s].to_s)
   end
 
   def call(method)
@@ -227,9 +222,9 @@ class Liteboard
     @topic = "Litejob"
     @events = @lm.events_summaries(@topic, @resolution, @order, @dir, @search, @step * @count)
     @events.each do |event|
-      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event["name"])
+      data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event[:name])
       event["counts"] = data_points.collect { |r| [r["rtime"], r["rcount"] || 0] }
-      event["values"] = data_points.collect { |r| [r["rtime"], r["rtotal"] || 0] }
+      event["values"] = data_points.collect { |r| [r["rtime"], (r["rtotal"] || 0.0)] }
     end
     @snapshot = read_snapshot(@topic)
     @size = begin
@@ -391,6 +386,7 @@ class Liteboard
   end
 
   def format(float)
+    float = float.round(3)
     string = float.to_s
     whole, decimal = string.split(".")
     whole = whole.chars.reverse.each_slice(3).map(&:join).join(",").reverse
