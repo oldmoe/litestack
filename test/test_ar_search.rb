@@ -1,16 +1,19 @@
 require "minitest/autorun"
 
-require_relative "../lib/litestack/litedb"
-require_relative "../lib/active_record/connection_adapters/litedb_adapter"
+#require_relative "../lib/litestack/litedb"
 
 require "active_record"
+require "active_record/base"
+
+require_relative "patch_ar_adapter_path"
+require_relative "../lib/active_record/connection_adapters/litedb_adapter"
 
 ActiveRecord::Base.establish_connection(
   adapter: "litedb",
   database: ":memory:"
 )
 
-# ActiveRecord::Base.logger = Logger.new(STDOUT)
+#ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 db = ActiveRecord::Base.connection.raw_connection
 db.execute("CREATE TABLE authors(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
