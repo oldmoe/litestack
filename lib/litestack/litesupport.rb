@@ -15,7 +15,7 @@ module Litesupport
 
   # Detect the Rack or Rails environment.
   def self.detect_environment
-    if defined? Rails
+    if defined?(Rails) && Rails.respond_to?(:env)
       Rails.env
     elsif ENV["RACK_ENV"]
       ENV["RACK_ENV"]
