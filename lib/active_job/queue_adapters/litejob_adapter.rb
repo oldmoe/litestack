@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require_relative "../../litestack/litejob"
+require "active_support"
 require "active_support/core_ext/enumerable"
+require "active_support/core_ext/numeric/time"
 require "active_support/core_ext/array/access"
 require "active_job"
 
@@ -27,9 +29,10 @@ module ActiveJob
         Job.perform_async(job.serialize)
       end
 
-      def enqueue_at(job, timestamp) # :nodoc:
+      def enqueue_at(job, time) # :nodoc:
+        time  = time.from_now if time.respond_to?(:from_now) #is_a?(ActiveSupport::Duration)
         Job.queue = job.queue_name
-        Job.perform_at(timestamp, job.serialize)
+        Job.perform_at(time, job.serialize)
       end
 
       class Job # :nodoc:

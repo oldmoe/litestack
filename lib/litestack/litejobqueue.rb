@@ -180,7 +180,7 @@ class Litejobqueue < Litequeue
 
   # create a worker according to environment
   def create_worker
-    return if defined?(Rails) && !defined?(Rails::Server)
+    #return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0
       while @running
@@ -188,7 +188,7 @@ class Litejobqueue < Litequeue
         @queues.each do |priority, queues| # iterate through the levels
           queues.each do |queue, spawns| # iterate through the queues in the level
             batched = 0
-
+            
             while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
               capture(:dequeue, queue)
               processed += 1
@@ -203,7 +203,7 @@ class Litejobqueue < Litequeue
         end
         if processed == 0
           sleep @options[:sleep_intervals][worker_sleep_index]
-          worker_sleep_index += 1 if worker_sleep_index < @options[:sleep_intervals].length - 1
+          worker_sleep_index += 1 if worker_sleep_index < (@options[:sleep_intervals].length - 1)
         else
           worker_sleep_index = 0 # reset the index
         end
