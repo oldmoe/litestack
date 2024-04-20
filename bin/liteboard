@@ -11,10 +11,10 @@ DEFAULTS = {
   path: Litemetric::DEFAULT_OPTIONS[:path]
 }
 
-options = { 
+options = {
   config_path: nil,
   path: nil,
-  deamonize: false,
+  daemonize: false,
   Port: 9292,
   Host: 'localhost',
   environment: 'production',
@@ -29,9 +29,9 @@ OptionParser.new do |parser|
   parser.on("-s", "--server SERVER", "use SERVER (e.g. puma/falcon/iodine)") { |v| options[:port] = v }
   parser.on("-H", "--host HOST", "listen on HOST (default: #{options[:Host]})") { |v| options[:Host] = v }
   parser.on("-p", "--port PORT", "use PORT (default: #{options[:Port]})") { |v| options[:Port] = v.to_i rescue options[:Port] }
-  parser.on("-D", "--daemonize", "run in the background") { |v| options[:daemonize] = true }  
-  parser.on("-E", "--env ENVIRONMENT", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }  
-  parser.on("-q", "--quiet", "turn off logging") { |v| options[:quiet] = true }  
+  parser.on("-D", "--daemonize", "run in the background") { |v| options[:daemonize] = true }
+  parser.on("-E", "--env ENVIRONMENT", "which environment to use (default: #{options[:environment]})") { |v| options[:environment] = v }
+  parser.on("-q", "--quiet", "turn off logging") { |v| options[:quiet] = true }
   parser.on("-h", "--help", "print this message") do
     puts parser
     exit
@@ -39,14 +39,14 @@ OptionParser.new do |parser|
 end.parse!
 
 def check_database(path)
-  unless File.exist?(path) 
+  unless File.exist?(path)
     puts "liteboard: missing database file, please ensure the db path is correct"
     puts "liteboard: exiting"
     exit
   end
 end
 
-check_database(options[:path]) if options[:path] 
+check_database(options[:path]) if options[:path]
 
 # if there is a config file then we need to check it
 config = nil
@@ -57,7 +57,7 @@ if options[:config_path]
     puts "liteboard: missing or bad config file, please ensure the config file path is correct"
     puts "liteboard: exiting"
     exit
-  end 
+  end
 else # no config path! use the default
   config = YAML.load(ERB.new(File.read(DEFAULTS[:config_path])).result) rescue nil 
 end
@@ -66,12 +66,11 @@ if config
   if options[:path].nil?
     path = config['path'] || config[options[:environment]]['path']
     options[:path] = path
-  end  
+  end
 end
 
 # if still no path we assume a default db path
 options[:path] = DEFAULTS[:path] if options[:path].nil?
-
 
 # check the validity of the path before starting the server
 check_database(options[:path])

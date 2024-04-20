@@ -2,7 +2,7 @@
 
 require "singleton"
 
-require_relative "./litesupport"
+require_relative "litesupport"
 
 # this class is a singleton
 # and should remain so
@@ -276,7 +276,7 @@ class Litemetric
     def capture_single_key(topic, event, key, value, time = nil)
       run_stmt(:capture_event, topic.to_s, event.to_s, key.to_s, time, 1, value)
     end
-    
+
     def count
       run_stmt(:event_count)[0][0]
     end

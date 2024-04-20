@@ -1,7 +1,7 @@
 # frozen_stringe_literal: true
 
-require_relative "./litequeue"
-require_relative "./litemetric"
+require_relative "litequeue"
+require_relative "litemetric"
 
 ##
 # Litejobqueue is a job queueing and processing system designed for Ruby applications. It is built on top of SQLite, which is an embedded relational database management system that is #lightweight and fast.
@@ -15,7 +15,7 @@ class Litejobqueue < Litequeue
   include Litemetric::Measurable
 
   # the default options for the job queue
-  # can be overriden by passing new options in a hash
+  # can be overridden by passing new options in a hash
   # to Litejobqueue.new, it will also be then passed to the underlying Litequeue object
   #   config_path: "./litejob.yml" -> were to find the configuration file (if any)
   #   path: "./db/queue.db"

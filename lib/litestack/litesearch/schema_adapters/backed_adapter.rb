@@ -92,7 +92,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       if field[:target] && !field[:target].start_with?("#{table}.")
         field[:target] = field[:target].downcase
         target_table, target_col = field[:target].split(".")
-        field[:col] = "#{name}_id".to_sym unless field[:col]
+        field[:col] = :"#{name}_id" unless field[:col]
         field[:target_table] = target_table.to_sym
         field[:target_col] = target_col.to_sym
         field[:sql] = "(SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE id = NEW.#{field[:col]})"

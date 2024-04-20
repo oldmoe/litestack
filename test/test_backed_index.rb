@@ -204,7 +204,7 @@ class TestBackedIndex < Minitest::Test
     end
     assert_equal @idx.search("computer").length, 0
     assert_raises do
-      @idx.search("reciever: sarah")
+      @idx.search("receiver: sarah")
     end
     @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body, urgency) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer', 'high')")
     assert_equal @idx.search("computer").length, 1
@@ -260,19 +260,19 @@ class TestBackedIndex < Minitest::Test
   end
 
   def test_update_schema_change_tokenizer_auto_rebuild
-   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
-   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
-   assert_equal @idx.search('computer').length, 2
-   @idx.modify do |schema|
-     schema.fields [:body]
-     schema.field :sender, {target: "person.name"}
-     schema.field :receiver, {target: "person.name"}
-     schema.field :subject, {weight: 10}
-     schema.tokenizer :trigram
-     schema.rebuild_on_modify true
-   end
-   assert_equal @idx.search('puter').length, 2
-   @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")    
-    assert_equal @idx.search('puter').length, 3
+    @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
+    @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
+    assert_equal @idx.search("computer").length, 2
+    @idx.modify do |schema|
+      schema.fields [:body]
+      schema.field :sender, {target: "person.name"}
+      schema.field :receiver, {target: "person.name"}
+      schema.field :subject, {weight: 10}
+      schema.tokenizer :trigram
+      schema.rebuild_on_modify true
+    end
+    assert_equal @idx.search("puter").length, 2
+    @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
+    assert_equal @idx.search("puter").length, 3
   end
 end

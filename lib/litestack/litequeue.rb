@@ -13,7 +13,7 @@ require_relative "litesupport"
 
 class Litequeue
   # the default options for the queue
-  # can be overriden by passing new options in a hash
+  # can be overridden by passing new options in a hash
   # to Litequeue.new
   #   path: "./queue.db"
   #   mmap_size: 128 * 1024 * 1024 -> 128MB to be held in memory
@@ -80,7 +80,7 @@ class Litequeue
     run_sql("DELETE FROM queue WHERE iif(?1 IS NOT NULL, name = ?1,  TRUE)", queue)
   end
 
-  # returns a count of entries in all queues, or if a queue name is given, reutrns the count of entries in that queue
+  # returns a count of entries in all queues, or if a queue name is given, returns the count of entries in that queue
   def count(queue = nil)
     run_sql("SELECT count(*) FROM queue WHERE iif(?1 IS NOT NULL, name = ?1, TRUE)", queue)[0][0]
   end

@@ -1,5 +1,5 @@
 require "oj"
-require_relative "./schema"
+require_relative "schema"
 
 class Litesearch::Index
   DEFAULT_SEARCH_OPTIONS = {limit: 25, offset: 0}
@@ -71,7 +71,7 @@ class Litesearch::Index
 
   def rebuild!
     if @db.transaction_active?
-        do_rebuild
+      do_rebuild
     else
       @db.transaction(:immediate) { do_rebuild }
     end
@@ -102,19 +102,20 @@ class Litesearch::Index
     rs = @stmts[:search].execute(term, options[:limit], options[:offset])
     generate_results(rs)
   end
-  
-  def similar(id, limit=10)
+
+  def similar(id, limit = 10)
     #   pp term = @db.execute(@schema.sql_for(:similarity_query), id)
-    if @schema.schema[:tokenizer] == :trigram
+    rs = if @schema.schema[:tokenizer] == :trigram
       # just use the normal similarity approach for now
       # need to recondisder that for trigram indexes later
-      rs = @stmts[:similar].execute(id, limit)
+      @stmts[:similar].execute(id, limit) # standard:disable Style/IdenticalConditionalBranches
     else
-      rs = @stmts[:similar].execute(id, limit)
+      @stmts[:similar].execute(id, limit) # standard:disable Style/IdenticalConditionalBranches
     end
+
     generate_results(rs)
   end
-  
+
   def clear!
     @stmts[:delete_all].execute!(id)
   end
@@ -140,7 +141,7 @@ class Litesearch::Index
     else
       result = rs.to_a
     end
-    result    
+    result
   end
 
   def exists?(name)
@@ -175,7 +176,7 @@ class Litesearch::Index
 
   def do_modify(new_schema)
     changes = @schema.compare(new_schema)
-    # ensure the new schema maintains feild order
+    # ensure the new schema maintains field order
     new_schema.order_fields(@schema)
     # with the changes object decide what needs to be done to the schema
     requires_schema_change = false

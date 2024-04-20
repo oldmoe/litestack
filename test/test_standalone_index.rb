@@ -176,5 +176,4 @@ class TestStandaloneIndex < Minitest::Test
     @idx.add({sender: "Kamal", receiver: "Layla", subject: "How are the girls?", body: "I wanted to ask how are the girls doing with the computer?"})
     assert_equal @idx.search("puter").length, 3
   end
-
 end

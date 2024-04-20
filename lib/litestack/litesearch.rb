@@ -4,8 +4,8 @@ module Litesearch
   class Schema; end
 end
 
-require_relative "./litesearch/index"
-require_relative "./litesearch/model"
+require_relative "litesearch/index"
+require_relative "litesearch/model"
 
 module Litesearch
   def litesearch_index_cache

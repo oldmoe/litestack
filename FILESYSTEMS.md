@@ -1,10 +1,10 @@
 # Filesystems & Litestack
 
-In the containerized world we live in, many layers of the hardware/software stacks are far abstracted that we no longer know they exist. For the filesystem enthusiasts out there this is a quick overview of how Litestack (and hence SQLite) can benefit from different filesytems 
+In the containerized world we live in, many layers of the hardware/software stacks are far abstracted that we no longer know they exist. For the filesystem enthusiasts out there this is a quick overview of how Litestack (and hence SQLite) can benefit from different filesystem
 
 ## XFS
 
-A very stable and trusted filesystem with excellent performance charactersitcs 
+A very stable and trusted filesystem with excellent performance characteristics
 
 - Fast reads / writes
 
@@ -14,7 +14,7 @@ Another stable and performant filesystem
 
 - Fast reads / writes
 
-## F2FS 
+## F2FS
 
 Specially built for solid state storage, has an atomic write mode that is supported by SQLite
 
@@ -32,7 +32,7 @@ Copy-on-write filesystem with a nifty set of features, very fast snapshotting bu
 - fast device cache
 - Compression
 
-## Btrfs 
+## Btrfs
 
 Another CoW filesystem that delivers snapshotting and incremental send/recv at a much granular level.
 
@@ -52,4 +52,4 @@ A new CoW filesystem built on the foundations of the bcache module. Improving ra
 
 
 
- 
+

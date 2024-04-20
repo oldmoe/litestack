@@ -1,6 +1,6 @@
 require "active_support"
 require_relative "../lib/litestack"
-require_relative "./bench"
+require_relative "bench"
 
 cache = ActiveSupport::Cache::Litecache.new
 
@@ -32,17 +32,17 @@ count = 1000
   end
 
   puts "== Multi Writes =="
-  bench("litecache multi-writes", count/5) do |i|
-    idx = i * 5 
-    payload = {} 
-    5.times {|j| payload[keys[idx + j]] = values[idx + j] }
+  bench("litecache multi-writes", count / 5) do |i|
+    idx = i * 5
+    payload = {}
+    5.times { |j| payload[keys[idx + j]] = values[idx + j] }
     cache.write_multi(payload)
   end
 
-  bench("Redis multi-writes", count/5) do |i|
-    idx = i * 5 
-    payload = {} 
-    5.times {|j| payload[keys[idx + j]] = values[idx + j] }
+  bench("Redis multi-writes", count / 5) do |i|
+    idx = i * 5
+    payload = {}
+    5.times { |j| payload[keys[idx + j]] = values[idx + j] }
     redis.write_multi(payload)
   end
 
@@ -56,20 +56,19 @@ count = 1000
   end
 
   puts "== Multi Reads =="
-  bench("litecache multi-reads", count/5) do |i|
+  bench("litecache multi-reads", count / 5) do |i|
     idx = i * 5
     payload = []
-    5.times {|j| payload << random_keys[idx+j]}
+    5.times { |j| payload << random_keys[idx + j] }
     cache.read_multi(*payload)
   end
 
-  bench("Redis multi-reads", count/5) do |i|
+  bench("Redis multi-reads", count / 5) do |i|
     idx = i * 5
     payload = []
-    5.times {|j| payload << random_keys[idx+j]}
+    5.times { |j| payload << random_keys[idx + j] }
     redis.read_multi(*payload)
   end
-
 
   puts "=========================================================="
 
