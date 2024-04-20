@@ -1,11 +1,11 @@
 PATH
   remote: ..
   specs:
-    litestack (0.4.3)
+    litestack (0.4.4)
       erubi
-      hanami-router
       oj
       rack
+      rackup
       sqlite3
       tilt
 
