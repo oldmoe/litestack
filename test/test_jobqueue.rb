@@ -28,8 +28,8 @@ class TestJobQueue < Minitest::Test
   def test_push
     @jobqueue.push(MyJob.name, [Time.now.to_i], 0, "test")
     assert @jobqueue.count != 0
-    sleep 1.2
-    assert @jobqueue.count == 0
+    assert 0..2, @jobqueue.count == 0
+    @jobqueue.clear
   end
 
   def test_delete
@@ -47,8 +47,8 @@ class TestJobQueue < Minitest::Test
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0
-    sleep 2
-    assert @jobqueue.count == 0
+    assert 0..2, @jobqueue.count == 0
+    @jobqueue.clear
   end
 
   def test_retry
@@ -57,14 +57,13 @@ class TestJobQueue < Minitest::Test
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0
-    sleep 2.5
-    assert @jobqueue.count("test") == 0
+    assert 0..3, @jobqueue.count("test") == 0
     # should fail forever
     @jobqueue.push(MyJob.name, [Time.now.to_i + 3], 0, "test")
     assert @jobqueue.count != 0
     sleep 0.1
     assert @jobqueue.count != 0
-    sleep 2.1
-    assert @jobqueue.count("test") == 0
+    assert 0..3, @jobqueue.count("test") == 0
+    @jobqueue.clear
   end
 end

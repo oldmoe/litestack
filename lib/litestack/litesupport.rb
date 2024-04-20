@@ -6,6 +6,7 @@ require "oj"
 require "yaml"
 require "pathname"
 require "fileutils"
+require "erb"
 
 require_relative "litescheduler"
 
@@ -14,7 +15,7 @@ module Litesupport
 
   # Detect the Rack or Rails environment.
   def self.detect_environment
-    if defined? Rails
+    if defined?(Rails) && Rails.respond_to?(:env)
       Rails.env
     elsif ENV["RACK_ENV"]
       ENV["RACK_ENV"]
@@ -182,7 +183,7 @@ module Litesupport
       end
       @options = defaults.merge(options)
       config = begin
-        YAML.load_file(@options[:config_path])
+        YAML.load(ERB.new(File.read(@options[:config_path])).result)
       rescue
         {}
       end # an empty hash won't hurt

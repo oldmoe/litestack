@@ -148,10 +148,11 @@ class Litemetric
   end
 
   def exit_callback
-    return unless @collector.count > 0
-    warn "--- Litemetric detected an exit, flushing metrics"
     @running = false
-    @collector.flush
+    if @collector.count > 0
+      warn "--- Litemetric detected an exit, flushing metrics"
+      @collector.flush
+    end
   end
 
   def setup
@@ -203,8 +204,8 @@ class Litemetric
     def create_snapshotter
       Litescheduler.spawn do
         while @running
-          sleep @litemetric.options[:snapshot_interval]
           capture_snapshot
+          sleep @litemetric.options[:snapshot_interval]
         end
       end
     end

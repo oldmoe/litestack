@@ -33,10 +33,10 @@ Gem::Specification.new do |spec|
   spec.add_dependency "sqlite3"
   spec.add_dependency "oj"
   spec.add_dependency "rack"
-  spec.add_dependency "hanami-router", "~> 2.0"
+  spec.add_dependency "rackup"
   spec.add_dependency "tilt"
   spec.add_dependency "erubi"
-
+  spec.add_development_dependency "activerecord"
   spec.add_development_dependency "rake"
   spec.add_development_dependency "activerecord"
   spec.add_development_dependency "railties"
