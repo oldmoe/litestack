@@ -21,7 +21,7 @@ module Litesearch::Model
   end
 
   module InstanceMethods
-    def similar(limit=10)
+    def similar(limit = 10)
       conn = self.class.get_connection
       idx = conn.search_index(self.class.send(:index_name))
       r_a_h = conn.results_as_hash
@@ -36,7 +36,6 @@ module Litesearch::Model
       end
       result
     end
-        
   end
 
   module ClassMethods
@@ -77,7 +76,7 @@ module Litesearch::Model
       else
         models_hash = search_models
       end
-      # remove the models from the options hash before passing it ot the query
+      # remove the models from the options hash before passing it to the query
       options.delete(:models)
       models_hash.each do |name, klass|
         selects << "SELECT '#{name}' AS model, rowid, -rank AS search_rank FROM #{index_name_for_table(klass.table_name)}(:term)"

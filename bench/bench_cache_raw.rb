@@ -1,6 +1,6 @@
 require "redis"
 require "sqlite3"
-require_relative "./bench"
+require_relative "bench"
 
 # require 'polyphony'
 require "async/scheduler"
@@ -11,7 +11,7 @@ Fiber.scheduler.run
 require_relative "../lib/litestack/litecache"
 # require 'litestack'
 
-cache = Litecache.new #({path: "../db/cache.db"}) # default settings
+cache = Litecache.new # ({path: "../db/cache.db"}) # default settings
 redis = Redis.new # default settings
 
 values = []
@@ -40,17 +40,20 @@ count.times { keys << random_str(10) }
   end
 
   puts "== Multi Writes =="
-  bench("litecache multi-writes", count/5) do |i|
-    idx = i * 5 
-    payload = {} 
-    5.times {|j| payload[keys[idx + j]] = values[idx + j] }
+  bench("litecache multi-writes", count / 5) do |i|
+    idx = i * 5
+    payload = {}
+    5.times { |j| payload[keys[idx + j]] = values[idx + j] }
     cache.set_multi(payload)
-  end 
+  end
 
-  bench("Redis multi-writes", count/5) do |i|
-    idx = i * 5 
-    payload = [] 
-    5.times {|j| payload << keys[idx + j]; payload <<  values[idx + j]}
+  bench("Redis multi-writes", count / 5) do |i|
+    idx = i * 5
+    payload = []
+    5.times { |j|
+      payload << keys[idx + j]
+      payload << values[idx + j]
+    }
     redis.mset(*payload)
   end
 
@@ -64,17 +67,17 @@ count.times { keys << random_str(10) }
   end
 
   puts "== Multi Reads =="
-  bench("litecache multi-reads", count/5) do |i|
+  bench("litecache multi-reads", count / 5) do |i|
     idx = i * 5
     payload = []
-    5.times {|j| payload << random_keys[idx+j]}
+    5.times { |j| payload << random_keys[idx + j] }
     cache.get_multi(*payload)
   end
 
-  bench("Redis multi-reads", count/5) do |i|
+  bench("Redis multi-reads", count / 5) do |i|
     idx = i * 5
     payload = []
-    5.times {|j| payload << random_keys[idx+j]}
+    5.times { |j| payload << random_keys[idx + j] }
     redis.mget(*payload)
   end
 

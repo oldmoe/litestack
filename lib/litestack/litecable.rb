@@ -113,7 +113,7 @@ class Litecable
   def create_listener
     Litescheduler.spawn do
       while @running
-        @last_fetched_id ||= (run_stmt(:last_id)[0][0] || 0)
+        @last_fetched_id ||= run_stmt(:last_id)[0][0] || 0
         run_stmt(:fetch, @last_fetched_id, @pid).to_a.each do |msg|
           @logger.info "RECEIVED #{msg}"
           @last_fetched_id = msg[0]

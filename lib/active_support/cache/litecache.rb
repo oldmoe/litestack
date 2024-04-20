@@ -9,7 +9,7 @@ require_relative "../../litestack/litecache"
 module ActiveSupport
   module Cache
     class Litecache < Store
-      #prepend Strategy::LocalCache
+      # prepend Strategy::LocalCache
 
       def self.supports_cache_versioning?
         true
@@ -27,9 +27,9 @@ module ActiveSupport
         # todo: fix me
         # this is currently a hack to avoid dealing with Rails cache encoding and decoding
         # and it can result in a race condition as it stands
-        # @cache.transaction(:immediate) do 
-          # currently transactions are not compatible with acquiring connections 
-          # this needs fixing by storing the connection to the context once acquired
+        # @cache.transaction(:immediate) do
+        # currently transactions are not compatible with acquiring connections
+        # this needs fixing by storing the connection to the context once acquired
         if (value = read(key, options))
           value = value.to_i + amount
           write(key, value, options)
@@ -52,7 +52,7 @@ module ActiveSupport
         @cache.prune(limit)
       end
 
-      def clear(options=nil)
+      def clear(options = nil)
         @cache.clear
       end
 
@@ -74,11 +74,11 @@ module ActiveSupport
 
       private
 
-      def serialize_entrys(entry, **options)
+      def serialize_entries(entry, **options)
         Marshal.dump(entry)
       end
 
-      def deserialize_entrys(entry)
+      def deserialize_entries(entry)
         Marshal.load(entry.to_s)
       end
 
@@ -91,23 +91,23 @@ module ActiveSupport
         results = {}
         return results if names == []
         rs = @cache.get_multi(*names.flatten)
-        rs.each_pair{|k, v| results[k] = deserialize_entry(v).value }
+        rs.each_pair { |k, v| results[k] = deserialize_entry(v).value }
         results
       end
-      
+
       # Write an entry to the cache.
       def write_entry(key, entry, **options)
         write_serialized_entry(key, serialize_entry(entry, **options), **options)
       end
-      
+
       def write_multi_entries(entries, **options)
         return if entries.empty?
-        entries.each_pair {|k,v| entries[k] = serialize_entry(v, **options)}
+        entries.each_pair { |k, v| entries[k] = serialize_entry(v, **options) }
         expires_in = options[:expires_in].to_i if options[:expires_in]
         if options[:race_condition_ttl] && expires_in > 0 && !options[:raw]
           expires_in += 5.minutes
         end
-        @cache.set_multi(entries, expires_in)        
+        @cache.set_multi(entries, expires_in)
       end
 
       def write_serialized_entry(key, payload, **options)

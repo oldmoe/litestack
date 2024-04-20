@@ -5,11 +5,11 @@
 - [View Diff](https://github.com/oldmoe/litestack/compare/v0.4.1...master)
 - Add "sequel" as a development dependency
 - Diff links in CHANGELOG (thanks Weston Ganger)
-- Fix deamonize type in liteboard (thanks Julian Rubisch)
+- Fix daemonize type in liteboard (thanks Julian Rubisch)
 - Better Litecache schema (streamlined numeric value support)
 - Support for set_multi and get_multi in Litecache (read_multi and write_multi support for Rails Cache store)
 - More tests written for Litecache and Rails Litecache store
-- Experimenting with removing the Rails LocalCache as it doesn't show enough improvement in perfromance to compensate for the memory overhead 
+- Experimenting with removing the Rails LocalCache as it doesn't show enough improvement in performance to compensate for the memory overhead
 - Switch Litecache to a FIFO eviction model vs LRU (thanks Julian Rubisch and Stephen Margheim)
 
 ## [0.4.2] - 2023-11-11
@@ -20,7 +20,7 @@
 - Fix Litesearch tests
 - Suppress chatty Litejob exit detector when there are no jobs in flight
 - Tidy up the test folder
-- [#41](https://github.com/oldmoe/litestack/pull/41) - Fix bug in Litecable where the `connected` event was not getting propogated
+- [#41](https://github.com/oldmoe/litestack/pull/41) - Fix bug in Litecable where the `connected` event was not getting propagated
 - Add Litemetric and Liteboard info to README.doc
 - Fix the testing rake task
 

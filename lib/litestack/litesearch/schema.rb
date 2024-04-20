@@ -1,4 +1,4 @@
-require_relative "./schema_adapters"
+require_relative "schema_adapters"
 
 class Litesearch::Schema
   TOKENIZERS = {

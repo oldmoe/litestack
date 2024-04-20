@@ -1,6 +1,6 @@
 # frozen_stringe_literal: true
 
-require_relative "./litejobqueue"
+require_relative "litejobqueue"
 
 ##
 # Litejob is a Ruby module that enables seamless integration of the Litejobqueue job queueing system into Ruby applications. By including the Litejob module in a class and implementing the #perform method, developers can easily enqueue and process jobs asynchronously.

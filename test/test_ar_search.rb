@@ -1,7 +1,7 @@
 require "minitest/autorun"
 
 require_relative "../lib/litestack/litedb"
-require_relative '../lib/active_record/connection_adapters/litedb_adapter'
+require_relative "../lib/active_record/connection_adapters/litedb_adapter"
 
 require "active_record"
 
@@ -83,9 +83,9 @@ class TestActiveRecordLitesearch < Minitest::Test
     Book.create(title: "In a middle of a night", description: "A tale of sleep", published_on: "2008-10-01", state: "available", active: true, publisher_id: 1, author_id: 1)
     Book.create(title: "In a start of a night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: false, publisher_id: 2, author_id: 1)
   end
-  
+
   def test_similar
-    newbook = Book.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)     
+    newbook = Book.create(title: "A night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: true, publisher_id: 2, author_id: 2)
     book = Book.find 1
     books = book.similar
     assert_equal 1, books.length

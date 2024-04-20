@@ -82,9 +82,8 @@ module Litescheduler
     @@mutex ||= Mutex.new
   end
 
-  private
-
   def self.fiber_backed?
     backend == :fiber || backend == :polyphony
   end
+  private_class_method :fiber_backed?
 end

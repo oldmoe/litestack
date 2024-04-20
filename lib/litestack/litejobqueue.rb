@@ -1,7 +1,7 @@
 # frozen_stringe_literal: true
 
-require_relative "./litequeue"
-require_relative "./litemetric"
+require_relative "litequeue"
+require_relative "litemetric"
 
 ##
 # Litejobqueue is a job queueing and processing system designed for Ruby applications. It is built on top of SQLite, which is an embedded relational database management system that is #lightweight and fast.
@@ -15,7 +15,7 @@ class Litejobqueue < Litequeue
   include Litemetric::Measurable
 
   # the default options for the job queue
-  # can be overriden by passing new options in a hash
+  # can be overridden by passing new options in a hash
   # to Litejobqueue.new, it will also be then passed to the underlying Litequeue object
   #   config_path: "./litejob.yml" -> were to find the configuration file (if any)
   #   path: "./db/queue.db"
@@ -141,15 +141,16 @@ class Litejobqueue < Litequeue
 
   def exit_callback
     @running = false # stop all workers
-    return unless @jobs_in_flight > 0
-    puts "--- Litejob detected an exit, cleaning up"
-    index = 0
-    while @jobs_in_flight > 0 && index < 30 # 3 seconds grace period for jobs to finish
-      puts "--- Waiting for #{@jobs_in_flight} jobs to finish"
-      sleep 0.1
-      index += 1
+    if @jobs_in_flight > 0
+      puts "--- Litejob detected an exit, cleaning up"
+      index = 0
+      while @jobs_in_flight > 0 && index < 30 # 3 seconds grace period for jobs to finish
+        puts "--- Waiting for #{@jobs_in_flight} jobs to finish"
+        sleep 0.1
+        index += 1
+      end
+      puts " --- Exiting with #{@jobs_in_flight} jobs in flight"
     end
-    puts " --- Exiting with #{@jobs_in_flight} jobs in flight"
   end
 
   def setup
@@ -179,6 +180,7 @@ class Litejobqueue < Litequeue
 
   # create a worker according to environment
   def create_worker
+    return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0
       while @running
