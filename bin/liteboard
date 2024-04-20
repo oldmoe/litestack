@@ -4,6 +4,7 @@
 require 'optparse'
 require 'erb'
 require 'yaml'
+require 'rackup'
 require_relative '../lib/litestack/liteboard/liteboard'
 DEFAULTS = {
   config_path: Litemetric::DEFAULT_OPTIONS[:config_path],
@@ -17,7 +18,7 @@ options = {
   Port: 9292,
   Host: 'localhost',
   environment: 'production',
-  pid: 'tmp/pids/liteboard.pid',
+  pid: './liteboard.pid',
   quiet: false
 }
 
@@ -58,7 +59,7 @@ if options[:config_path]
     exit
   end 
 else # no config path! use the default
-  config = Yaml.load_file(DEFAULTS[:config_path]) rescue nil 
+  config = YAML.load(ERB.new(File.read(DEFAULTS[:config_path])).result) rescue nil 
 end
 
 if config
@@ -81,4 +82,4 @@ options[:app] = Liteboard.app
 require_relative '../lib/litestack'
 puts "Starting Liteboard version #{Litestack::VERSION}"
 
-Rack::Server.start(options)
+Rackup::Server.start(options)
