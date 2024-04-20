@@ -1,13 +1,14 @@
-require "delegate"
 require "active_support"
-require "active_support/core_ext/enumerable"
-require "active_support/core_ext/array/extract_options"
 require "active_support/core_ext/numeric/time"
 require "active_support/cache"
+
 require_relative "../../litestack/litecache"
 
 module ActiveSupport
   module Cache
+
+    self.format_version = 7.0
+
     class Litecache < Store
       # prepend Strategy::LocalCache
 
