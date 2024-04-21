@@ -30,19 +30,20 @@ Gem::Specification.new do |spec|
   spec.executables = ["liteboard"]
   spec.require_paths = ["lib", "lib/litestack"]
 
-  spec.add_dependency "sqlite3"
-  spec.add_dependency "oj"
-  spec.add_dependency "rack"
-  spec.add_dependency "rackup"
-  spec.add_dependency "tilt"
-  spec.add_dependency "erubi"
+  spec.add_dependency "sqlite3", ['>= 1.6.0', '< 2.0.0']
+  spec.add_dependency "oj", '~> 3'
+  spec.add_dependency "rack", '~> 3' 
+  spec.add_dependency "rackup", '~> 2'
+  spec.add_dependency "tilt", '~> 2'
+  spec.add_dependency "erubi", '~> 1'
 
-  spec.add_development_dependency "rake"
-  spec.add_development_dependency "activerecord"
-  spec.add_development_dependency "railties"
-  spec.add_development_dependency "minitest"
-  spec.add_development_dependency "simplecov"
-  spec.add_development_dependency "standard"
-  spec.add_development_dependency "sequel"
-  spec.add_development_dependency "debug"
+  spec.add_development_dependency "rake", '~> 13'
+  spec.add_development_dependency "activerecord", '~> 7'
+  spec.add_development_dependency "activejob", '~> 7'
+  spec.add_development_dependency "railties", '~> 7'
+  spec.add_development_dependency "minitest", '~> 5'
+  spec.add_development_dependency "simplecov", '~> 0.2'
+  spec.add_development_dependency "standard", '~> 1'
+  spec.add_development_dependency "sequel", '~> 5'
+  spec.add_development_dependency "debug", '~> 1'
 end

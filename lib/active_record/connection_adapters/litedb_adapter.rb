@@ -1,4 +1,5 @@
 require_relative "../../litestack/litedb"
+
 require "active_record"
 require "active_record/connection_adapters/sqlite3_adapter"
 require "active_record/tasks/sqlite_database_tasks"

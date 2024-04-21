@@ -5,4 +5,4 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in litestack.gemspec
 gemspec
 
-gem "rails"
+# gem "rails"

@@ -1,11 +1,11 @@
 require "minitest/autorun"
 
 #require_relative "../lib/litestack/litedb"
-
 require "active_record"
 require "active_record/base"
 
 require_relative "patch_ar_adapter_path"
+
 require_relative "../lib/active_record/connection_adapters/litedb_adapter"
 
 ActiveRecord::Base.establish_connection(
