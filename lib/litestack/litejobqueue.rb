@@ -136,8 +136,15 @@ class Litejobqueue < Litequeue
     # @@queue = nil
     close
   end
-
+  
   private
+  
+  def prepare_search_options(opts)
+    sql_opts = super(opts)
+    sql_opts[:klass] = opts[:klass]
+    sql_opts[:params] = opts[:params]
+    sql_opts  
+  end
 
   def exit_callback
     @running = false # stop all workers
@@ -180,6 +187,7 @@ class Litejobqueue < Litequeue
 
   # create a worker according to environment
   def create_worker
+    # temporarily stop this feature until a better solution is implemented
     #return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0

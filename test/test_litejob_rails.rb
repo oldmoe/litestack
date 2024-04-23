@@ -60,6 +60,25 @@ class TestLitejobRails < Minitest::Test
     assert Job.sink[:one_second]
   end
 
+  def test_find_job_by_class_name_and_params
+    Job.set(wait: 2.seconds).perform_later(:two_seconds, Time.now)
+    Job.set(wait: 3.seconds).perform_later(:three_seconds, Time.now)
+    res = $ljq.find(created_at: [nil, Time.now.to_i + 1])
+    assert_equal 2, res.length
+    res = $ljq.find(klass: "Job", params: "seconds")
+    assert_equal 2, res.length
+    res = $ljq.find(klass: "NonExistentJob")
+    assert_equal 0, res.length
+    res = $ljq.find(params: "SeCoNd")
+    assert_equal 2, res.length
+    res = $ljq.find(params: "notfoundparam")
+    assert_equal 0, res.length
+    res = $ljq.find(params: "three")
+    assert_equal 1, res.length
+  end
+
+  private
+
   def wait_for(condition, time)
     slept = 0
     step = 0.01

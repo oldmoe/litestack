@@ -40,7 +40,25 @@ stmts:
     DELETE FROM queue
     WHERE id = $1
     RETURNING value;
-
+  
+  search: >
+    SELECT *,  :params, value ->> '$.params', value ->> '$.params' LIKE '%'||'three_second'||'%' FROM queue 
+    WHERE
+      name = ifnull(:name, name)
+    AND
+      iif(:fire_at_from, fire_at >= :fire_at_from, true)
+    AND
+      iif(:fire_at_to, fire_at <= :fire_at_to, true)
+    AND
+      iif(:created_at_from, created_at >= :created_at_from, true)
+    AND
+      iif(:created_at_to, created_at <= :created_at_to, true)
+    AND
+      iif(:klass IS NOT NULL, value ->> '$.klass' LIKE '%'||:klass||'%', true)  
+    AND
+      iif(:params IS NOT NULL, value ->> '$.params' LIKE '%'||:params||'%', true)  
+    ORDER BY created_at * :dir;
+    
   info: >
     SELECT
       name,
