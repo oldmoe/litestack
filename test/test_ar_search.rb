@@ -60,6 +60,16 @@ class Book < ApplicationRecord
   end
 end
 
+# no table items was created
+class Item < ApplicationRecord
+  include Litesearch::Model
+
+  litesearch do |schema|
+    schema.field :name
+  end
+end
+
+
 class TestActiveRecordLitesearch < Minitest::Test
   def setup
     Book.drop_index!
@@ -165,4 +175,18 @@ class TestActiveRecordLitesearch < Minitest::Test
     rs = Publisher.search("Penguin")
     assert_equal 1, rs.length
   end
+  
+  def test_uncreated_table
+    db = ActiveRecord::Base.connection.raw_connection
+    db.execute("CREATE TABLE items(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
+    rs = Item.search('some') 
+    assert_equal 0, rs.length   
+    Item.create(name: 'some item')
+    rs = Item.search('some') 
+    assert_equal 1, rs.length   
+    Item.create(name: 'another item')
+    rs = Item.search('item') 
+    assert_equal 2, rs.length   
+  end
+  
 end

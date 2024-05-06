@@ -34,6 +34,10 @@ class Litesearch::Schema
     @schema[:fields] = {} unless @schema[:fields]
   end
 
+  def merge(other_schema)
+    @schema.merge!(other_schema.schema)
+  end
+
   # schema definition API
   def name(new_name)
     @schema[:name] = new_name

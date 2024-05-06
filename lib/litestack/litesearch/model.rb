@@ -40,6 +40,27 @@ module Litesearch::Model
 
   module ClassMethods
     def litesearch
+      # it is possible that this code is running when there is no table created yet
+      if !defined?(ActiveRecord::Base).nil? && ancestors.include?(ActiveRecord::Base)
+        unless table_exists?
+          # capture the schema block
+          @schema = ::Litesearch::Schema.new
+          @schema.type :backed
+          @schema.table table_name.to_sym
+          yield @schema
+          @schema.post_init
+          @schema_not_created = true
+          after_initialize do
+            if self.class.instance_variable_get(:@schema_not_created)
+              idx = self.class.get_connection.search_index(self.class.index_name) do |schema|
+                schema.merge(self.class.instance_variable_get(:@schema))
+              end
+              self.class.instance_variable_set(:@schema_not_created, false)
+            end
+          end
+          return nil
+        end
+      end
       idx = get_connection.search_index(index_name) do |schema|
         schema.type :backed
         schema.table table_name.to_sym
@@ -120,6 +141,12 @@ module Litesearch::Model
     end
 
     def search(term)
+      if @schema_not_created
+        idx = get_connection.search_index(index_name) do |schema|
+          schema.merge(@schema)
+        end
+        @schema_not_created = false
+      end
       self.select(
         "#{table_name}.*"
       ).joins(
