@@ -45,7 +45,7 @@ module Litesearch::Model
         unless table_exists?
           # capture the schema block
           @schema = ::Litesearch::Schema.new
-          @schema.type :backed
+          @schema.type :backed 
           @schema.table table_name.to_sym
           yield @schema
           @schema.post_init

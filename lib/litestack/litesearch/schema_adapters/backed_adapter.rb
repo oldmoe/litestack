@@ -25,7 +25,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
 
   def create_primary_triggers_sql(active = false)
     when_stmt = "TRUE"
-    cols = active_cols_names
+    cols = active_cols_names.select{|n| !n.nil?}
     if (filter = @schema[:filter_column])
       when_stmt = "NEW.#{filter} = TRUE"
       cols << filter
@@ -51,19 +51,41 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     "DROP TRIGGER IF EXISTS #{target_table}_#{target_col}_#{col}_#{name}_update;"
   end
 
+  def drop_secondary_trigger_poly_sql(target_table, target_col, col)
+    "DROP TRIGGER IF EXISTS #{target_table}_#{target_col}_#{name}_update;"
+  end
+
   def create_secondary_trigger_sql(target_table, target_col, col)
     <<~SQL
-      CREATE TRIGGER #{target_table}_#{target_col}_#{col}_#{name}_update AFTER UPDATE OF #{target_col} ON #{target_table} BEGIN
+      CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{col}_#{name}_update AFTER UPDATE OF #{target_col} ON #{target_table} BEGIN
         #{rebuild_sql} AND #{table}.#{col} = NEW.id;
       END;
     SQL
   end
 
+  def create_secondary_trigger_poly_sql(target_table, target_col, col, conditions)
+    conditions_sql = conditions.collect{|k, v| "NEW.#{k} = '#{v}'"}.join(" AND ")
+    <<~SQL
+      CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{name}_insert AFTER INSERT ON #{target_table} WHEN #{conditions_sql} BEGIN
+        #{rebuild_sql};
+      END;
+      CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{name}_update AFTER UPDATE OF #{target_col} ON #{target_table} WHEN #{conditions_sql} BEGIN
+        #{rebuild_sql};
+      END;
+    SQL
+  end
+
+
+
   def drop_secondary_triggers_sql
     sql = ""
     @schema[:fields].each do |name, field|
       if field[:trigger_sql]
-        sql << drop_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
+        if field[:col]
+          sql << drop_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
+        elsif field[:source]
+          sql << drop_secondary_trigger_poly_sql(field[:target_table], field[:target_col], name)
+        end
       end
     end
     sql.empty? ? nil : sql
@@ -73,18 +95,18 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     sql = ""
     @schema[:fields].each do |name, field|
       if field[:trigger_sql]
-        sql << create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
+        if field[:col]
+          sql << create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
+        elsif field[:source]
+          sql << create_secondary_trigger_poly_sql(field[:target_table], field[:target_col], name, field[:conditions])
+        end
       end
     end
     sql.empty? ? nil : sql
   end
 
   def rebuild_sql
-    conditions = ""
-    jcs = join_conditions_sql
-    fs = filter_sql
-    conditions = " ON #{jcs} #{fs}" unless jcs.empty? && fs.empty?
-    "INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) SELECT #{table}.id, #{select_cols_sql} FROM #{join_tables_sql} #{conditions}"
+    "INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) SELECT #{table}.id, #{select_cols_sql} FROM #{joins_sql} #{filter_sql}"
   end
 
   def enrich_schema
@@ -98,6 +120,17 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
         field[:sql] = "(SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE id = NEW.#{field[:col]})"
         field[:trigger_sql] = true # create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
         field[:target_table_alias] = "#{field[:target_table]}_#{name}"
+      elsif field[:source]
+        field[:source] = field[:source].downcase
+        target_table, target_col = field[:source].split(".")
+        field[:target_table] = target_table.to_sym
+        field[:target_col] = target_col.to_sym
+        field[:conditions_sql] = field[:conditions].collect{|k, v| "#{k} = '#{v}'"}.join(" AND ") if field[:conditions]
+        field[:sql] = "SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE #{field[:reference]} = NEW.id"
+        field[:sql] += " AND #{field[:conditions_sql]}" if field[:conditions_sql]       
+        field[:sql] = "(#{field[:sql]})"
+        field[:trigger_sql] = true 
+        field[:target_table_alias] = "#{field[:target_table]}_#{name}"
       else
         field[:col] = name unless field[:col]
         field[:sql] = field[:col]
@@ -109,7 +142,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
 
   def filter_sql
     sql = ""
-    sql << " AND #{@schema[:filter_column]} = TRUE " if @schema[:filter_column]
+    sql << " WHERE #{@schema[:filter_column]} = TRUE " if @schema[:filter_column]
     sql
   end
 
@@ -124,20 +157,27 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       (!field[:trigger_sql].nil?) ? "#{field[:target_table_alias]}.#{field[:target_col]}" : field[:target]
     end.join(", ")
   end
-
-  def join_tables_sql
-    tables = [@schema[:table]]
+  
+  def joins_sql
+    joins = [@schema[:table]]
     active_fields.each do |name, field|
-      tables << "#{field[:target_table]} AS #{field[:target_table_alias]}" if field[:trigger_sql]
+      if field[:trigger_sql]
+        join_table = ""
+        join_table << "#{field[:target_table]} AS #{field[:target_table_alias]} ON "
+        if field[:col]
+          join_table << "#{field[:target_table_alias]}.id = #{@schema[:table]}.#{field[:col]}" if field[:col]
+        elsif field[:source]
+          join_table << "#{field[:target_table_alias]}.#{field[:reference]} = #{@schema[:table]}.id"
+          if field[:conditions]
+            join_table << " AND "
+            join_table << field[:conditions].collect{|k, v| "#{field[:target_table_alias]}.#{k} = '#{v}'"}.join(" AND ") 
+          end
+        end
+        joins << join_table 
+      end
     end
-    tables.uniq.join(", ")
+    joins.join(" LEFT JOIN ")
   end
 
-  def join_conditions_sql
-    conditions = []
-    active_fields.each do |name, field|
-      conditions << "#{field[:target_table_alias]}.id = #{@schema[:table]}.#{field[:col]}" if field[:trigger_sql]
-    end
-    conditions.join(" AND ")
-  end
+
 end

@@ -185,7 +185,7 @@ class Litesearch::Schema
   end
 
   def allowed_attributes
-    [:weight, :col, :target]
+    [:weight, :col, :target, :source, :conditions, :reference]
   end
 end
 

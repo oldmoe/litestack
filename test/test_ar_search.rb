@@ -48,7 +48,7 @@ class Book < ApplicationRecord
 
   include Litesearch::Model
 
-  Book.litesearch do |schema|
+  litesearch do |schema|
     schema.fields [:description, :state]
     schema.field :publishing_year, col: :published_on
     schema.field :title, weight: 10
