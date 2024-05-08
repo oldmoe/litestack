@@ -1,8 +1,15 @@
 ## [Unreleased]
 
+- [View Diff](https://github.com/oldmoe/litestack/compare/v0.4.3...master)
+- Fix a table not defined bug for Litesearch
+- Add conditional mapping of external fields to Litesearch (backed index)
+- As a consequence of the above, support AR polymorphic associations
+- As a consequence of the above, support indexing and searching for ActionText attributes
+- Remove 'hanami-router' as a dependency, rely on vanilla Rack for Liteboard 
+
 ## [0.4.3] - 2024-02-15
 
-- [View Diff](https://github.com/oldmoe/litestack/compare/v0.4.1...master)
+- [View Diff](https://github.com/oldmoe/litestack/compare/v0.4.2...v0.4.3)
 - Add "sequel" as a development dependency
 - Diff links in CHANGELOG (thanks Weston Ganger)
 - Fix daemonize type in liteboard (thanks Julian Rubisch)
