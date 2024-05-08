@@ -91,3 +91,10 @@ module ActiveRecord
     end
   end
 end
+
+ActiveRecord::ConnectionAdapters.register(
+  "litedb", "ActiveRecord::ConnectionAdapters::LitedbAdapter", 
+  "active_record/connection_adapters/litedb_adapter"
+) if ActiveRecord::ConnectionAdapters.respond_to?(:register)
+
+
