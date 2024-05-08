@@ -19,6 +19,10 @@ db = ActiveRecord::Base.connection.raw_connection
 db.execute("CREATE TABLE authors(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
 db.execute("CREATE TABLE publishers(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
 db.execute("CREATE TABLE books(id INTEGER PRIMARY KEY, title TEXT, description TEXT, published_on TEXT, author_id INTEGER, publisher_id INTEGER, state TEXT, created_at TEXT, updated_at TEXT, active INTEGER)")
+db.execute("CREATE TABLE reviews(id INTEGER PRIMARY KEY, book_id INTEGER)")
+db.execute("CREATE TABLE comments(id INTEGER PRIMARY KEY, review_id INTEGER)")
+# simulate action text
+db.execute("CREATE TABLE rich_texts(id INTEGER PRIMARY KEY, body TEXT, record_id INTEGER, record_type TEXT, created_at TEXT, updated_at TEXT) ")
 
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
@@ -45,6 +49,7 @@ end
 class Book < ApplicationRecord
   belongs_to :author
   belongs_to :publisher
+  has_many :reviews
 
   include Litesearch::Model
 
@@ -58,6 +63,45 @@ class Book < ApplicationRecord
     schema.filter_column :active
     schema.tokenizer :porter
   end
+end
+
+class RichText < ApplicationRecord
+  
+  belongs_to :record, polymorphic: true
+
+  def self.table_name
+    "rich_texts"
+  end
+
+end
+
+module ActionText
+  class RichText < ::RichText
+  end
+end
+
+class Review < ApplicationRecord
+  belongs_to :book
+  has_one :rich_text, as: :record
+
+  include Litesearch::Model
+
+  litesearch do |schema|
+    schema.field :body, target: "rich_texts.body", as: :record
+  end
+
+end
+
+class Comment < ApplicationRecord
+  belongs_to :review
+  has_one :rich_text, as: :record
+
+  include Litesearch::Model
+
+  litesearch do |schema|
+    schema.field :body, rich_text: true
+  end
+
 end
 
 # no table items was created
@@ -95,6 +139,28 @@ class TestActiveRecordLitesearch < Minitest::Test
     Author.create(name: "Osama Penguin")
     Book.create(title: "In a middle of a night", description: "A tale of sleep", published_on: "2008-10-01", state: "available", active: true, publisher_id: 1, author_id: 1)
     Book.create(title: "In a start of a night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: false, publisher_id: 2, author_id: 1)
+  end
+
+  def test_polymorphic
+    review = Review.create(book_id: 1)
+    rt = RichText.create(record: review, body: "a new review")
+    rs = Review.search("review")    
+    assert_equal 1, rs.length
+    rt.destroy
+    review.destroy 
+  end
+
+  def test_rich_text
+    review = Review.create(book_id: 1)
+    rt = RichText.create(record: review, body: "a new review")
+    comment = Comment.create(review: review)
+    ct = RichText.create(record: comment, body: "a new comment on the review")
+    rs = Comment.search("comment")
+    assert_equal 1, rs.length
+    ct.destroy
+    comment.destroy
+    rt.destroy
+    review.destroy 
   end
 
   def test_similar

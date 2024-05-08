@@ -30,15 +30,19 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       when_stmt = "NEW.#{filter} = TRUE"
       cols << filter
     end
+    update_filter = ""
+    if cols.length > 0
+      " OF #{cols.join(', ')} " 
+    end
 
     <<-SQL
   CREATE TRIGGER #{name}_insert AFTER INSERT ON #{table} WHEN #{when_stmt} BEGIN
     INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) VALUES (NEW.rowid, #{trigger_cols_sql});
   END;
-  CREATE TRIGGER #{name}_update AFTER UPDATE OF #{cols.join(", ")} ON #{table} WHEN #{when_stmt} BEGIN
+  CREATE TRIGGER #{name}_update AFTER UPDATE #{update_filter} ON #{table} WHEN #{when_stmt} BEGIN
     INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) VALUES (NEW.rowid, #{trigger_cols_sql});
   END;
-  CREATE TRIGGER #{name}_update_not AFTER UPDATE OF #{cols.join(", ")} ON #{table} WHEN NOT #{when_stmt} BEGIN
+  CREATE TRIGGER #{name}_update_not AFTER UPDATE #{update_filter} ON #{table} WHEN NOT #{when_stmt} BEGIN
     DELETE FROM #{name} WHERE rowid = NEW.rowid;
   END;
   CREATE TRIGGER #{name}_delete AFTER DELETE ON #{table} BEGIN
@@ -69,7 +73,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{name}_insert AFTER INSERT ON #{target_table} WHEN #{conditions_sql} BEGIN
         #{rebuild_sql};
       END;
-      CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{name}_update AFTER UPDATE OF #{target_col} ON #{target_table} WHEN #{conditions_sql} BEGIN
+      CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{name}_update AFTER UPDATE ON #{target_table} WHEN #{conditions_sql} BEGIN
         #{rebuild_sql};
       END;
     SQL

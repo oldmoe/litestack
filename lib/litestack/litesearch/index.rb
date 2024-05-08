@@ -159,17 +159,14 @@ class Litesearch::Index
     @schema = schema
     @schema.clean
     # create index
-    #puts schema.sql_for(:create_index, true)
     @db.execute(schema.sql_for(:create_index, true))
     @db.execute_batch(schema.sql_for(:create_vocab_tables))
     # adjust ranking function
     @db.execute(schema.sql_for(:ranks, true))
     # create triggers (if any)
     if @schema.get(:type) == :backed
-      #puts @schema.sql_for :create_primary_triggers
       @db.execute_batch(@schema.sql_for(:create_primary_triggers))
       if (secondary_triggers_sql = @schema.sql_for(:create_secondary_triggers))
-        #puts secondary_triggers_sql
         @db.execute_batch(secondary_triggers_sql)
       end
       @db.execute(@schema.sql_for(:rebuild)) if @schema.get(:rebuild_on_create)

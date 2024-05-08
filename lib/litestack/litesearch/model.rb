@@ -11,6 +11,7 @@ module Litesearch::Model
       klass.include Litesearch::Model::ActiveRecordInstanceMethods
       klass.extend Litesearch::Model::ActiveRecordClassMethods
       ActiveRecord::Base.extend Litesearch::Model::BaseClassMethods
+      Litesearch::Schema.prepend Litesearch::Model::ActiveRecordSchemaMethods
     end
   end
 
@@ -39,12 +40,14 @@ module Litesearch::Model
   end
 
   module ClassMethods
+  
     def litesearch
       # it is possible that this code is running when there is no table created yet
       if !defined?(ActiveRecord::Base).nil? && ancestors.include?(ActiveRecord::Base)
         unless table_exists?
           # capture the schema block
           @schema = ::Litesearch::Schema.new
+          @schema.model_class = self if @schema.respond_to? :model_class
           @schema.type :backed 
           @schema.table table_name.to_sym
           yield @schema
@@ -52,7 +55,8 @@ module Litesearch::Model
           @schema_not_created = true
           after_initialize do
             if self.class.instance_variable_get(:@schema_not_created)
-              idx = self.class.get_connection.search_index(self.class.index_name) do |schema|
+              self.class.get_connection.search_index(self.class.index_name) do |schema|
+                @schema.model_class = self.class if @schema.respond_to? :model_class
                 schema.merge(self.class.instance_variable_get(:@schema))
               end
               self.class.instance_variable_set(:@schema_not_created, false)
@@ -64,6 +68,7 @@ module Litesearch::Model
       idx = get_connection.search_index(index_name) do |schema|
         schema.type :backed
         schema.table table_name.to_sym
+        schema.model_class = self if schema.respond_to? :model_class
         yield schema
         schema.post_init
         @schema = schema # save the schema
@@ -129,6 +134,32 @@ module Litesearch::Model
     end
   end
 
+  module ActiveRecordSchemaMethods
+        
+    attr_accessor :model_class
+    
+    def field(name, attributes = {})
+      keys = attributes.keys
+      if keys.include?(:action_text) || keys.include?(:rich_text)
+        attributes[:source] = "#{ActionText::RichText.table_name}.body" rescue "action_text_rich_texts.body"
+        attributes[:reference] =  :record_id
+        attributes[:conditions] = { record_type:  model_class.name }
+        attributes[:target] = nil
+      elsif keys.include? :as
+        attributes[:source] = attributes[:target] unless attributes[:source] 
+        attributes[:reference] = "#{attributes[:as]}_id"
+        attributes[:conditions] = {"#{attributes[:as]}_type".to_sym => model_class.name }
+        attributes[:target] = nil
+      end
+      super(name, attributes)
+    end    
+
+  def allowed_attributes
+    super + [:polymorphic, :as, :action_text]
+  end
+ 
+  end
+
   module ActiveRecordInstanceMethods; end
 
   module ActiveRecordClassMethods
@@ -142,8 +173,9 @@ module Litesearch::Model
 
     def search(term)
       if @schema_not_created
-        idx = get_connection.search_index(index_name) do |schema|
+        get_connection.search_index(index_name) do |schema|
           schema.merge(@schema)
+          schema.model_class = self if schema.respond_to? :model_class
         end
         @schema_not_created = false
       end
