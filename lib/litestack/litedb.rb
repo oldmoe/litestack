@@ -31,6 +31,10 @@ class Litedb < ::SQLite3::Database
     collect_metrics if @collecting_metrics
   end
 
+  def sqlite_version
+    SQLite3::SQLITE_VERSION_NUMBER
+  end
+
   def collecting_metrics?
     @collecting_metrics
   end

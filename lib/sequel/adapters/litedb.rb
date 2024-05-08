@@ -19,6 +19,7 @@ module Sequel
         sqlite3_opts = {}
         sqlite3_opts[:readonly] = typecast_value_boolean(opts[:readonly]) if opts.has_key?(:readonly)
         db = ::Litedb.new(opts[:database].to_s, sqlite3_opts)
+        @raw_db = db
 
         self.transaction_mode = :immediate
 
@@ -33,12 +34,19 @@ module Sequel
         end
 
         db.instance_variable_set(:@prepared_statements, {})
-        @raw_db = db
         db
       end
+      
+      def sqlite_version
+        @raw_db.sqlite_version
+      end
+      
     end
 
     class Dataset < Sequel::SQLite::Dataset
+      def supports_insert_select?
+        true
+      end
     end
   end
 end
