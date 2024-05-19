@@ -4,7 +4,7 @@ schema:
       CREATE TABLE IF NOT EXISTS queue(
         id TEXT PRIMARY KEY DEFAULT(hex(randomblob(32))) NOT NULL ON CONFLICT REPLACE,
         name TEXT DEFAULT('default') NOT NULL ON CONFLICT REPLACE,
-        fire_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE,
+        fire_at REAL DEFAULT(unixepoch('subsec')) NOT NULL ON CONFLICT REPLACE,
         value TEXT,
         created_at INTEGER DEFAULT(unixepoch()) NOT NULL ON CONFLICT REPLACE
       ) WITHOUT ROWID;
@@ -16,13 +16,28 @@ stmts:
 
   push: >
     INSERT INTO queue(id, name, fire_at, value)
-    VALUES (hex(randomblob(32)), $1, (unixepoch() + $2), $3)
+    VALUES (hex(randomblob(32)), $1, (unixepoch('subsec') + $2), $3)
     RETURNING id, name;
 
   repush: >
     INSERT INTO queue(id, name, fire_at, value)
-    VALUES (?, ?, (unixepoch() + ?), ?)
+    VALUES (?, ?, (unixepoch('subsec') + ?), ?)
     RETURNING name;
+
+  pop_in_place: >
+    UPDATE queue
+    SET 
+      name = '->:' || name,
+      fire_at = unixepoch('subsec')
+    WHERE (name, fire_at, id)
+    IN (
+      SELECT name, fire_at, id FROM queue
+      WHERE name = ifnull($1, 'default')
+        AND fire_at <= (unixepoch('subsec'))
+      ORDER BY fire_at ASC
+      LIMIT ifnull($2, 1)
+    )
+    RETURNING id, value;      
 
   pop: >
     DELETE FROM queue
@@ -30,7 +45,7 @@ stmts:
     IN (
       SELECT name, fire_at, id FROM queue
       WHERE name = ifnull($1, 'default')
-        AND fire_at <= (unixepoch())
+        AND fire_at <= (unixepoch('subsec'))
       ORDER BY fire_at ASC
       LIMIT ifnull($2, 1)
     )
