@@ -12,6 +12,8 @@ module Litesearch::Model
       klass.extend Litesearch::Model::ActiveRecordClassMethods
       ActiveRecord::Base.extend Litesearch::Model::BaseClassMethods
       Litesearch::Schema.prepend Litesearch::Model::ActiveRecordSchemaMethods
+      # ignore FTS5 virtual and shadow tables when dumping the schema
+      ActiveRecord::SchemaDumper.ignore_tables << /^#{klass.table_name}_search_idx.*$/
     end
   end
 

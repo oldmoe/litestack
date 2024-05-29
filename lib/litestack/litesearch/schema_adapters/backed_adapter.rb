@@ -30,7 +30,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       when_stmt = "NEW.#{filter} = TRUE"
       cols << filter
     end
-    update_filter = ""
+    update_filter = String.new
     if cols.length > 0
       " OF #{cols.join(', ')} " 
     end
@@ -82,7 +82,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
 
 
   def drop_secondary_triggers_sql
-    sql = ""
+    sql = String.new
     @schema[:fields].each do |name, field|
       if field[:trigger_sql]
         if field[:col]
@@ -96,7 +96,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
   end
 
   def create_secondary_triggers_sql
-    sql = ""
+    sql = String.new
     @schema[:fields].each do |name, field|
       if field[:trigger_sql]
         if field[:col]
@@ -145,7 +145,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
   end
 
   def filter_sql
-    sql = ""
+    sql = String.new
     sql << " WHERE #{@schema[:filter_column]} = TRUE " if @schema[:filter_column]
     sql
   end
@@ -166,7 +166,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     joins = [@schema[:table]]
     active_fields.each do |name, field|
       if field[:trigger_sql]
-        join_table = ""
+        join_table = String.new
         join_table << "#{field[:target_table]} AS #{field[:target_table_alias]} ON "
         if field[:col]
           join_table << "#{field[:target_table_alias]}.id = #{@schema[:table]}.#{field[:col]}" if field[:col]

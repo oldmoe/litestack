@@ -255,4 +255,10 @@ class TestActiveRecordLitesearch < Minitest::Test
     assert_equal 2, rs.length   
   end
   
+  def test_ignore_tables
+    assert_equal false, ActiveRecord::SchemaDumper.ignore_tables.empty?
+    # we have created 6 models, one ignore regex for each
+    assert_equal 6, ActiveRecord::SchemaDumper.ignore_tables.count
+  end
+  
 end
