@@ -184,7 +184,7 @@ module Litesearch::Model
       self.select(
         "#{table_name}.*"
       ).joins(
-        "INNER JOIN #{index_name} ON #{table_name}.#{@schema.get(:type) == :backed ? "rowid" : "id"} = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ", Arel.sql("'#{term}'")
+        "INNER JOIN #{index_name} ON #{table_name}.#{@schema.get(:type) == :backed ? "rowid" : primary_key} = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ", Arel.sql("'#{term}'")
       ).select(
         "-#{index_name}.rank AS search_rank"
       ).order(

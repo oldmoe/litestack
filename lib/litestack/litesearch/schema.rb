@@ -53,6 +53,10 @@ class Litesearch::Schema
     @schema[:table] = table_name
   end
 
+  def primary_key(new_primary_key)
+    @schema[:primary_key] = new_primary_key
+  end
+
   def fields(field_names)
     field_names.each { |f| field f }
   end
@@ -186,7 +190,7 @@ class Litesearch::Schema
   end
 
   def allowed_attributes
-    [:weight, :col, :target, :source, :conditions, :reference]
+    [:weight, :col, :target, :source, :conditions, :reference, :primary_key]
   end
 end
 

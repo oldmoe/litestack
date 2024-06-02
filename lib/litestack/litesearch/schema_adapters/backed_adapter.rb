@@ -118,10 +118,11 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       if field[:target] && !field[:target].start_with?("#{table}.")
         field[:target] = field[:target].downcase
         target_table, target_col = field[:target].split(".")
+        field[:primary_key] = :id unless field[:primary_key]
         field[:col] = :"#{name}_id" unless field[:col]
         field[:target_table] = target_table.to_sym
         field[:target_col] = target_col.to_sym
-        field[:sql] = "(SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE id = NEW.#{field[:col]})"
+        field[:sql] = "(SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE #{field[:primary_key]} = NEW.#{field[:col]})"
         field[:trigger_sql] = true # create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
         field[:target_table_alias] = "#{field[:target_table]}_#{name}"
       elsif field[:source]
@@ -169,7 +170,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
         join_table = String.new
         join_table << "#{field[:target_table]} AS #{field[:target_table_alias]} ON "
         if field[:col]
-          join_table << "#{field[:target_table_alias]}.id = #{@schema[:table]}.#{field[:col]}" if field[:col]
+          join_table << "#{field[:target_table_alias]}.#{field[:primary_key]} = #{@schema[:table]}.#{field[:col]}" if field[:col]
         elsif field[:source]
           join_table << "#{field[:target_table_alias]}.#{field[:reference]} = #{@schema[:table]}.id"
           if field[:conditions]

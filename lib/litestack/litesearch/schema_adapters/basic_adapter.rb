@@ -14,6 +14,10 @@ class Litesearch::Schema::BasicAdapter
     @schema[:table]
   end
 
+  def primary_key
+    @schema[:primary_key] || :id
+  end
+
   def fields
     @schema[:fields]
   end
