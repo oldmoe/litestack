@@ -32,7 +32,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     end
     update_filter = String.new
     if cols.length > 0
-      " OF #{cols.join(', ')} " 
+      " OF #{cols.join(', ')} "
     end
 
     <<-SQL
@@ -46,7 +46,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     DELETE FROM #{name} WHERE rowid = NEW.rowid;
   END;
   CREATE TRIGGER #{name}_delete AFTER DELETE ON #{table} BEGIN
-    DELETE FROM #{name} WHERE rowid = OLD.id;
+    DELETE FROM #{name} WHERE rowid = OLD.rowid;
   END;
     SQL
   end
@@ -110,7 +110,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
   end
 
   def rebuild_sql
-    "INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) SELECT #{table}.id, #{select_cols_sql} FROM #{joins_sql} #{filter_sql}"
+    "INSERT OR REPLACE INTO #{name}(rowid, #{active_field_names.join(", ")}) SELECT #{table}.rowid, #{select_cols_sql} FROM #{joins_sql} #{filter_sql}"
   end
 
   def enrich_schema
@@ -131,9 +131,9 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
         field[:target_col] = target_col.to_sym
         field[:conditions_sql] = field[:conditions].collect{|k, v| "#{k} = '#{v}'"}.join(" AND ") if field[:conditions]
         field[:sql] = "SELECT #{field[:target_col]} FROM #{field[:target_table]} WHERE #{field[:reference]} = NEW.id"
-        field[:sql] += " AND #{field[:conditions_sql]}" if field[:conditions_sql]       
+        field[:sql] += " AND #{field[:conditions_sql]}" if field[:conditions_sql]
         field[:sql] = "(#{field[:sql]})"
-        field[:trigger_sql] = true 
+        field[:trigger_sql] = true
         field[:target_table_alias] = "#{field[:target_table]}_#{name}"
       else
         field[:col] = name unless field[:col]
@@ -161,7 +161,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
       (!field[:trigger_sql].nil?) ? "#{field[:target_table_alias]}.#{field[:target_col]}" : field[:target]
     end.join(", ")
   end
-  
+
   def joins_sql
     joins = [@schema[:table]]
     active_fields.each do |name, field|
@@ -174,10 +174,10 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
           join_table << "#{field[:target_table_alias]}.#{field[:reference]} = #{@schema[:table]}.id"
           if field[:conditions]
             join_table << " AND "
-            join_table << field[:conditions].collect{|k, v| "#{field[:target_table_alias]}.#{k} = '#{v}'"}.join(" AND ") 
+            join_table << field[:conditions].collect{|k, v| "#{field[:target_table_alias]}.#{k} = '#{v}'"}.join(" AND ")
           end
         end
-        joins << join_table 
+        joins << join_table
       end
     end
     joins.join(" LEFT JOIN ")
