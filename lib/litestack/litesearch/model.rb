@@ -169,8 +169,8 @@ module Litesearch::Model
       connection.raw_connection
     end
 
-    def fetch_row(id)
-      find(id)
+    def fetch_row(rowid)
+      find_by("rowid = ?", rowid)
     end
 
     def search(term)
