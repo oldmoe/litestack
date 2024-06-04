@@ -59,10 +59,10 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     "DROP TRIGGER IF EXISTS #{target_table}_#{target_col}_#{name}_update;"
   end
 
-  def create_secondary_trigger_sql(target_table, target_col, col)
+  def create_secondary_trigger_sql(target_table, target_col, col, primary_key)
     <<~SQL
       CREATE TRIGGER IF NOT EXISTS #{target_table}_#{target_col}_#{col}_#{name}_update AFTER UPDATE OF #{target_col} ON #{target_table} BEGIN
-        #{rebuild_sql} AND #{table}.#{col} = NEW.id;
+        #{rebuild_sql} AND #{table}.#{col} = NEW.#{primary_key};
       END;
     SQL
   end
@@ -100,7 +100,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
     @schema[:fields].each do |name, field|
       if field[:trigger_sql]
         if field[:col]
-          sql << create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col])
+          sql << create_secondary_trigger_sql(field[:target_table], field[:target_col], field[:col], field[:primary_key])
         elsif field[:source]
           sql << create_secondary_trigger_poly_sql(field[:target_table], field[:target_col], name, field[:conditions])
         end
@@ -172,7 +172,7 @@ class Litesearch::Schema::BackedAdapter < Litesearch::Schema::ContentlessAdapter
         if field[:col]
           join_table << "#{field[:target_table_alias]}.#{field[:primary_key]} = #{@schema[:table]}.#{field[:col]}" if field[:col]
         elsif field[:source]
-          join_table << "#{field[:target_table_alias]}.#{field[:reference]} = #{@schema[:table]}.id"
+          join_table << "#{field[:target_table_alias]}.#{field[:reference]} = #{@schema[:table]}.rowid"
           if field[:conditions]
             join_table << " AND "
             join_table << field[:conditions].collect{|k, v| "#{field[:target_table_alias]}.#{k} = '#{v}'"}.join(" AND ")

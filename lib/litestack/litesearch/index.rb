@@ -103,21 +103,21 @@ class Litesearch::Index
     generate_results(rs)
   end
 
-  def similar(id, limit = 10)
+  def similar(rowid, limit = 10)
     #   pp term = @db.execute(@schema.sql_for(:similarity_query), id)
     rs = if @schema.schema[:tokenizer] == :trigram
       # just use the normal similarity approach for now
       # need to recondisder that for trigram indexes later
-      @stmts[:similar].execute(id, limit) # standard:disable Style/IdenticalConditionalBranches
+      @stmts[:similar].execute(rowid, limit) # standard:disable Style/IdenticalConditionalBranches
     else
-      @stmts[:similar].execute(id, limit) # standard:disable Style/IdenticalConditionalBranches
+      @stmts[:similar].execute(rowid, limit) # standard:disable Style/IdenticalConditionalBranches
     end
 
     generate_results(rs)
   end
 
   def clear!
-    @stmts[:delete_all].execute!(id)
+    @stmts[:delete_all].execute!(rowid)
   end
 
   def drop!
