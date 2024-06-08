@@ -130,7 +130,7 @@ class Litequeue
   end
 
   def create_connection
-    super("#{__dir__}/litequeue.sql.yml") do |conn|
+    super("#{__dir__}/sql/litequeue.sql.yml") do |conn|
       conn.wal_autocheckpoint = 10000
       # check if there is an old database and convert entries to the new format
       if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1

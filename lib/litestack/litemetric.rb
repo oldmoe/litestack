@@ -166,7 +166,7 @@ class Litemetric
   end
 
   def create_connection
-    super("#{__dir__}/litemetric.sql.yml") do |conn|
+    super("#{__dir__}/sql/litemetric.sql.yml") do |conn|
       conn.wal_autocheckpoint = 10000 # checkpoint after 10000 pages are written
     end
   end
@@ -297,7 +297,7 @@ class Litemetric
     end
 
     def create_connection
-      super("#{__dir__}/litemetric_collector.sql.yml") do |conn|
+      super("#{__dir__}/sql/litemetric_collector.sql.yml") do |conn|
         conn.execute("ATTACH ? as m", @options[:dbpath].to_s)
         conn.wal_autocheckpoint = 10000
       end

@@ -45,6 +45,7 @@ class Litejobqueue < Litequeue
   }
 
   @@queue = nil
+  @@mutex = Litescheduler::Mutex.new
 
   attr_reader :running
 
@@ -53,7 +54,7 @@ class Litejobqueue < Litequeue
   # a method that returns a single instance of the job queue
   # for use by Litejob
   def self.jobqueue(options = {})
-    @@queue ||= Litescheduler.synchronize { new(options) }
+    @@queue ||= @@mutex.synchronize { new(options) }
   end
 
   def self.new(options = {})
@@ -165,15 +166,15 @@ class Litejobqueue < Litequeue
     @jobs_in_flight = 0
     @workers = @options[:workers].times.collect { create_worker }
     @gc = create_garbage_collector
-    @mutex = Litesupport::Mutex.new
+    @mutex = Litescheduler::Mutex.new # reinitialize a mutex in setup as the environment could change after forking
   end
 
   def job_started
-    Litescheduler.synchronize(@mutex) { @jobs_in_flight += 1 }
+    @mutex.synchronize { @jobs_in_flight += 1 }
   end
 
   def job_finished
-    Litescheduler.synchronize(@mutex) { @jobs_in_flight -= 1 }
+    @mutex.synchronize { @jobs_in_flight -= 1 }
   end
 
   # optionally run a job in its own context

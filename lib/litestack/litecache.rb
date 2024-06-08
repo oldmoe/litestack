@@ -260,7 +260,7 @@ class Litecache
   end
 
   def create_connection
-    super("#{__dir__}/litecache.sql.yml") do |conn|
+    super("#{__dir__}/sql/litecache.sql.yml") do |conn|
       conn.cache_size = 2000
       conn.journal_size_limit = [(@options[:size] / 2).to_i, @options[:min_size]].min
       conn.max_page_count = (@options[:size] / conn.page_size).to_i
