@@ -72,12 +72,14 @@ class Litecache
   def set(key, value, expires_in = nil)
     key = key.to_s
     expires_in ||= @expires_in
-    @conn.acquire do |cache|
-      cache.stmts[:setter].execute!(key, value, expires_in)
+    begin
+      run_stmt(:setter, key, value, expires_in)
       capture(:set, key)
     rescue SQLite3::FullException
-      cache.stmts[:extra_pruner].execute!(0.2)
-      cache.execute("vacuum")
+      transaction do
+        run_stmt(extra_pruner, 0.2)
+        run_sql("vaccuum")
+      end
       retry
     end
     true
@@ -89,11 +91,11 @@ class Litecache
     transaction do |conn|
       keys_and_values.each_pair do |k, v|
         key = k.to_s
-        conn.stmts[:setter].execute!(key, v, expires_in)
+        run_stmt(:setter, key, v, expires_in)
         capture(:set, key)
       rescue SQLite3::FullException
-        conn.stmts[:extra_pruner].execute!(0.2)
-        conn.execute("vacuum")
+        run_stmt(extra_pruner, 0.2)
+        run_sql("vaccuum")
         retry
       end
     end
@@ -123,7 +125,7 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    if (record = @conn.acquire { |cache| cache.stmts[:getter].execute!(key)[0] })
+    if (record = run_stmt(:getter, key)[0]) 
       capture(:get, key, 1)
       return record[1]
     end
@@ -138,7 +140,7 @@ class Litecache
     transaction(:deferred) do |conn|
       keys.length.times do |i|
         key = keys[i].to_s
-        if (record = conn.stmts[:getter].execute!(key)[0])
+        if (record = run_stmt(:getter, key)[0])
           results[keys[i]] = record[1] # use the original key format
           capture(:get, key, 1)
         else
@@ -221,20 +223,7 @@ class Litecache
       }
     }
   end
-
-  # low level access to SQLite transactions, use with caution
-  def transaction(mode = :immediate)
-    @conn.acquire do |cache|
-      if cache.transaction_active?
-        yield
-      else
-        cache.transaction(mode) do
-          yield cache
-        end
-      end
-    end
-  end
-
+  
   private
 
   def setup

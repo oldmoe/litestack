@@ -25,19 +25,15 @@ module ActiveSupport
       def increment(key, amount = 1, options = nil)
         key = key.to_s
         options = merged_options(options)
-        # todo: fix me
-        # this is currently a hack to avoid dealing with Rails cache encoding and decoding
-        # and it can result in a race condition as it stands
-        # @cache.transaction(:immediate) do
-        # currently transactions are not compatible with acquiring connections
-        # this needs fixing by storing the connection to the context once acquired
-        if (value = read(key, options))
-          value = value.to_i + amount
-          write(key, value, options)
-        else
-          write(key, amount, options)
+
+        @cache.transaction do
+          if (value = read(key, options))
+            value = value.to_i + amount
+            write(key, value, options)
+          else
+            write(key, amount, options)
+          end
         end
-        # end
       end
 
       def decrement(key, amount = 1, options = nil)

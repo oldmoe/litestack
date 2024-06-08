@@ -32,6 +32,18 @@ module Litesupport
       run_method(:filename)
     end
 
+    def transaction(mode = :immediate)
+      with_connection do |conn|
+        if conn.transaction_active?
+          conn.transaction(mode) do
+            yield conn
+          end
+        else
+          yield conn
+        end
+      end
+    end
+
     private # all methods are private
 
     def init(options = {})
@@ -120,12 +132,14 @@ module Litesupport
       @conn.acquire do |conn| 
         begin
           @checked_out_conn = conn
-          yield self
+          yield conn
         ensure
           @checked_out_conn = nil
         end
       end
     end
+    
+
 
     def create_pooled_connection(count = 1)
       count = 1 unless count&.is_a?(Integer)
