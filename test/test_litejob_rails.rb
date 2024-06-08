@@ -1,5 +1,5 @@
 require "minitest/autorun"
-require 'active_job'
+require "active_job"
 require_relative "../lib/litestack/litejobqueue"
 
 ActiveJob::Base.logger = Logger.new(IO::NULL)
@@ -7,25 +7,22 @@ ActiveJob::Base.logger = Logger.new(IO::NULL)
 $ljq = nil
 
 class Job < ActiveJob::Base
-
   queue_as :test
-  
+
   SINK = {}
 
   def self.sink
     SINK
   end
-    
+
   def perform(key, time)
-    #puts "called with #{key} and time = #{time}. time now is #{Time.now}"
-    #puts caller
+    # puts "called with #{key} and time = #{time}. time now is #{Time.now}"
+    # puts caller
     SINK[key] = true
   end
-  
 end
 
 class TestLitejobRails < Minitest::Test
-    
   def setup
     if $ljq.nil?
       require_relative "../lib/litestack/litejobqueue"
@@ -38,19 +35,19 @@ class TestLitejobRails < Minitest::Test
 
   def teardown
   end
-  
+
   def test_job_is_peformed_now
     assert Job.perform_now(:now, Time.now)
     assert Job.sink[:now]
   end
-  
+
   def test_job_is_performed_later
     Job.perform_later(:later, Time.now)
-    assert Job.sink[:later] == nil
+    assert Job.sink[:later].nil?
     wait_for(Job.sink[:later].nil?, 1.0)
     assert Job.sink[:later]
   end
-  
+
   def test_job_is_performed_after_one_second
     Job.set(wait: 1.seconds).perform_later(:one_second, Time.now)
     assert Job.sink[:one_second].nil?
@@ -87,7 +84,4 @@ class TestLitejobRails < Minitest::Test
       slept += step
     end
   end
-
 end
-
-

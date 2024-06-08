@@ -12,7 +12,7 @@ class Liteboard
   @@res_mapping = {"hour" => "minute", "day" => "hour", "week" => "day", "year" => "week"}
   @@templates = {}
   @@app = proc do |env|
-    case path = env["PATH_INFO"]
+    case env["PATH_INFO"]
     when "/"
       Liteboard.new(env).call(:index)
     when "/topics/Litejob"
@@ -24,13 +24,12 @@ class Liteboard
     when "/topics/Litecable"
       Liteboard.new(env).call(:litecable)
     end
-
   end
 
   def initialize(env)
     @env = env
     @req = Rack::Request.new(@env)
-    @params = @req.params 
+    @params = @req.params
     @running = true
     @lm = Litemetric.instance
   end
@@ -224,7 +223,7 @@ class Liteboard
     @events.each do |event|
       data_points = @lm.event_data_points(@step, @count, @resolution, @topic, event[:name])
       event["counts"] = data_points.collect { |r| [r["rtime"], r["rcount"] || 0] }
-      event["values"] = data_points.collect { |r| [r["rtime"], (r["rtotal"] || 0.0)] }
+      event["values"] = data_points.collect { |r| [r["rtime"], r["rtotal"] || 0.0] }
     end
     @snapshot = read_snapshot(@topic)
     @size = begin

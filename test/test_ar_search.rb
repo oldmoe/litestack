@@ -1,6 +1,6 @@
 require "minitest/autorun"
 
-#require_relative "../lib/litestack/litedb"
+# require_relative "../lib/litestack/litedb"
 require "active_record"
 require "active_record/base"
 
@@ -13,7 +13,7 @@ ActiveRecord::Base.establish_connection(
   database: ":memory:"
 )
 
-#ActiveRecord::Base.logger = Logger.new(STDOUT)
+# ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 db = ActiveRecord::Base.connection.raw_connection
 db.execute("CREATE TABLE authors(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
@@ -66,13 +66,11 @@ class Book < ApplicationRecord
 end
 
 class RichText < ApplicationRecord
-  
   belongs_to :record, polymorphic: true
 
   def self.table_name
     "rich_texts"
   end
-
 end
 
 module ActionText
@@ -89,7 +87,6 @@ class Review < ApplicationRecord
   litesearch do |schema|
     schema.field :body, target: "rich_texts.body", as: :record
   end
-
 end
 
 class Comment < ApplicationRecord
@@ -101,7 +98,6 @@ class Comment < ApplicationRecord
   litesearch do |schema|
     schema.field :body, rich_text: true
   end
-
 end
 
 # no table items was created
@@ -112,7 +108,6 @@ class Item < ApplicationRecord
     schema.field :name
   end
 end
-
 
 class TestActiveRecordLitesearch < Minitest::Test
   def setup
@@ -144,10 +139,10 @@ class TestActiveRecordLitesearch < Minitest::Test
   def test_polymorphic
     review = Review.create(book_id: 1)
     rt = RichText.create(record: review, body: "a new review")
-    rs = Review.search("review")    
+    rs = Review.search("review")
     assert_equal 1, rs.length
     rt.destroy
-    review.destroy 
+    review.destroy
   end
 
   def test_rich_text
@@ -160,7 +155,7 @@ class TestActiveRecordLitesearch < Minitest::Test
     ct.destroy
     comment.destroy
     rt.destroy
-    review.destroy 
+    review.destroy
   end
 
   def test_similar
@@ -241,24 +236,23 @@ class TestActiveRecordLitesearch < Minitest::Test
     rs = Publisher.search("Penguin")
     assert_equal 1, rs.length
   end
-  
+
   def test_uncreated_table
     db = ActiveRecord::Base.connection.raw_connection
     db.execute("CREATE TABLE items(id INTEGER PRIMARY KEY, name TEXT, created_at TEXT, updated_at TEXT)")
-    rs = Item.search('some') 
-    assert_equal 0, rs.length   
-    Item.create(name: 'some item')
-    rs = Item.search('some') 
-    assert_equal 1, rs.length   
-    Item.create(name: 'another item')
-    rs = Item.search('item') 
-    assert_equal 2, rs.length   
+    rs = Item.search("some")
+    assert_equal 0, rs.length
+    Item.create(name: "some item")
+    rs = Item.search("some")
+    assert_equal 1, rs.length
+    Item.create(name: "another item")
+    rs = Item.search("item")
+    assert_equal 2, rs.length
   end
-  
+
   def test_ignore_tables
     assert_equal false, ActiveRecord::SchemaDumper.ignore_tables.empty?
     # we have created 6 models, one ignore regex for each
     assert_equal 6, ActiveRecord::SchemaDumper.ignore_tables.count
   end
-  
 end

@@ -125,7 +125,7 @@ class Litecache
   # if the key doesn't exist or it is expired then null will be returned
   def get(key)
     key = key.to_s
-    if (record = run_stmt(:getter, key)[0]) 
+    if (record = run_stmt(:getter, key)[0])
       capture(:get, key, 1)
       return record[1]
     end
@@ -223,7 +223,7 @@ class Litecache
       }
     }
   end
-  
+
   private
 
   def setup

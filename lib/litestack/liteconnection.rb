@@ -70,7 +70,7 @@ module Litesupport
       end
       @options = defaults.merge(options)
       config = begin
-        YAML.load(ERB.new(File.read(@options[:config_path])).result)
+        YAML.safe_load(ERB.new(File.read(@options[:config_path])).result)
       rescue
         {}
       end # an empty hash won't hurt
@@ -122,24 +122,20 @@ module Litesupport
       if @checked_out_conn
         yield @checked_out_conn
       else
-        @conn.acquire{ |conn| yield conn }
+        @conn.acquire { |conn| yield conn }
       end
     end
 
-    # this will force the other run_* methods to use the 
+    # this will force the other run_* methods to use the
     # checked out connection if one exists
     def with_connection
-      @conn.acquire do |conn| 
-        begin
-          @checked_out_conn = conn
-          yield conn
-        ensure
-          @checked_out_conn = nil
-        end
+      @conn.acquire do |conn|
+        @checked_out_conn = conn
+        yield conn
+      ensure
+        @checked_out_conn = nil
       end
     end
-    
-
 
     def create_pooled_connection(count = 1)
       count = 1 unless count&.is_a?(Integer)

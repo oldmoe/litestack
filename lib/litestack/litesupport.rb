@@ -9,7 +9,7 @@ require "fileutils"
 require "erb"
 
 require_relative "litescheduler"
-require_relative 'liteconnection'
+require_relative "liteconnection"
 
 module Litesupport
   class Error < StandardError; end
@@ -77,9 +77,4 @@ module Litesupport
       result
     end
   end
-
-
 end
-
-
-

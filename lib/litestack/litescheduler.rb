@@ -78,7 +78,7 @@ module Litescheduler
       end
     end
   end
-  
+
   module ForkListener
     def self.listeners
       @listeners ||= []
@@ -99,7 +99,6 @@ module Litescheduler
       result
     end
   end
-
 end
 
 Process.singleton_class.prepend(Litescheduler::Forkable)

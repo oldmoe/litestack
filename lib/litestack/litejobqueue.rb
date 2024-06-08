@@ -137,14 +137,14 @@ class Litejobqueue < Litequeue
     # @@queue = nil
     close
   end
-  
+
   private
-  
+
   def prepare_search_options(opts)
     sql_opts = super(opts)
     sql_opts[:klass] = opts[:klass]
     sql_opts[:params] = opts[:params]
-    sql_opts  
+    sql_opts
   end
 
   def exit_callback
@@ -189,7 +189,7 @@ class Litejobqueue < Litequeue
   # create a worker according to environment
   def create_worker
     # temporarily stop this feature until a better solution is implemented
-    #return if defined?(Rails) && !defined?(Rails::Server)
+    # return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0
       while @running
@@ -197,7 +197,7 @@ class Litejobqueue < Litequeue
         @queues.each do |priority, queues| # iterate through the levels
           queues.each do |queue, spawns| # iterate through the queues in the level
             batched = 0
-            
+
             while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
               capture(:dequeue, queue)
               processed += 1

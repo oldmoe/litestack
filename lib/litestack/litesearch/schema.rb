@@ -1,7 +1,6 @@
 require_relative "schema_adapters"
 
 class Litesearch::Schema
-
   TOKENIZERS = {
     porter: "porter unicode61 remove_diacritics 2",
     unicode: "unicode61 remove_diacritics 2",

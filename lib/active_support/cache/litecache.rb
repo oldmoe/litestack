@@ -6,7 +6,6 @@ require_relative "../../litestack/litecache"
 
 module ActiveSupport
   module Cache
-
     self.format_version = 7.0
 
     class Litecache < Store

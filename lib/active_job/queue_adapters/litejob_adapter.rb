@@ -30,7 +30,7 @@ module ActiveJob
       end
 
       def enqueue_at(job, time) # :nodoc:
-        time  = time.from_now if time.respond_to?(:from_now) #is_a?(ActiveSupport::Duration)
+        time = time.from_now if time.respond_to?(:from_now) # is_a?(ActiveSupport::Duration)
         Job.queue = job.queue_name
         Job.perform_at(time, job.serialize)
       end
