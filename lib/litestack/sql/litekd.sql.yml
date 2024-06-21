@@ -1,0 +1,77 @@
+schema:
+  1:
+    
+    create_table_scalars: >
+      CREATE TABLE scalars (
+        key TEXT PRIMARY KEY,
+        value ANY,
+        expires_in REAL
+      ) STRICT, WITHOUT ROWID;
+      
+    create_table_composites: >
+      CREATE TABLE composites (
+        key TEXT,
+        pos ANY default(0),
+        value ANY,
+        expires_in REAL,
+        primary key(key, pos, value)
+      ) STRICT, WITHOUT ROWID;
+    
+    create_key_value_index_on_composites: >
+      CREATE INDEX direct_value_index ON composites(key, value) 
+      
+stmts:
+  write_scalar_value: >
+    INSERT OR REPLACE INTO scalars(key, value, expires_in)
+    VALUES (:key, :value, unixepoch('subsec') + :expires_in);
+    
+  read_scalar_value: >
+    SELECT value FROM scalars WHERE key = :key AND iif(expires_in IS NOT NULL, (expires_in > unixepoch('subsec')), true);
+
+  delete_scalar_value: >
+    DELETE FROM scalars WHERE key = :key;
+
+  increment_scalar_value: >
+    UPDATE scalars SET value = 
+      iif( iif( expires_in IS NOT NULL, ( expires_in > unixepoch( 'subsec' ) ), true ), value + :step, :step ) WHERE key = :key
+
+  debug_scalar: >
+    SELECT * FROM scalars WHERE key = :key;
+
+  write_composite_member: >
+    INSERT OR REPLACE INTO composites(key, pos, value, expires_in)
+    VALUES (:key, :pos, :value, unixepoch('subsec') + :expires_in);
+
+  rpush_composite_member: >
+    INSERT OR REPLACE INTO composites(key, pos, value, expires_in)
+    VALUES (:key, (SELECT max(pos)+1 FROM composites WHERE key = :key), :value, :expires_in);
+
+  lpush_composite_member: >
+    INSERT OR REPLACE INTO composites(key, pos, value, expires_in)
+    VALUES (:key, (SELECT min(pos)-1 FROM composites WHERE key = :key), :value, :expires_in);
+  
+  delete_composite_member_by_value: >
+    DELETE FROM composites WHERE key = :key AND value = :value
+
+  delete_composite_member_by_pos: >
+    DELETE FROM composites WHERE key = :key AND pos = :pos
+    
+  read_composite_member: >
+    SELECT value FROM composites WHERE key = :key AND pos = :pos;
+
+  read_composite_members: >
+    SELECT value FROM composites WHERE key = :key ORDER BY pos ASC;
+
+  read_composite_positions: >
+    SELECT pos FROM composites WHERE key = :key ORDER BY pos ASC;  
+
+  read_composite_positions_and_members: >
+    SELECT pos, value FROM composites WHERE key = :key ORDER BY pos ASC;  
+
+  count_composite_members: >
+    SELECT count(*) AS count FROM composites WHERE key = :key;
+  
+  delete_composite_structure: >
+    DELETE FROM composites WHERE key = :key;
+    
+     

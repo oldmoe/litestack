@@ -33,8 +33,9 @@ module Litesupport
     end
 
     def transaction(mode = :immediate)
+      return yield conn = @checked_out_conn if @checked_out_conn && @checked_out_conn.transaction_active?
       with_connection do |conn|
-        if conn.transaction_active?
+        if !conn.transaction_active?
           conn.transaction(mode) do
             yield conn
           end
