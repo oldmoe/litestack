@@ -50,5 +50,6 @@ require_relative './litekd/unique_list'
 require_relative './litekd/set'
 require_relative './litekd/ordered_set'
 require_relative './litekd/hash'
+require_relative './litekd/model_attributes'
 
 

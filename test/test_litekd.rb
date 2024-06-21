@@ -5,6 +5,30 @@ require 'active_support/core_ext'
 
 Kredis = Litekd
 
+class Person 
+
+  include Litekd::Attributes
+  
+  litekd_list :names
+  litekd_list :names_with_custom_key_via_lambda, key: ->(p) { "person:#{p.id}:names_customized" }
+  litekd_list :names_with_custom_key_via_method, key: :generate_names_key
+  litekd_unique_list :skills, limit: 2
+  litekd_enum :morning, values: %w[ bright blue black ], default: "bright"
+  litekd_counter :steps, expires_in: 1.hour
+
+  def id
+    self.object_id
+  end
+  
+  private
+
+  def generate_names_key
+    "key-generated-from-private-method"
+  end
+
+end
+
+
 class TestLitekd < Minitest::Test
 
   def setup
@@ -215,4 +239,19 @@ class TestLitekd < Minitest::Test
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
     assert_equal false, limiter.exceeded?      # => GET "limiter"
   end
+  
+  def test_attributes
+
+    person = Person.new
+    person.names.append "David", "Heinemeier", "Hansson" # => RPUSH people:5:names "David" "Heinemeier" "Hansson"
+    assert_equal true, person.morning.bright?                       # => GET people:5:morning
+    person.morning.value = "blue"                        # => SET people:5:morning
+    assert_equal true, person.morning.blue?                         # => GET people:5:morning  
+    assert_equal "names-Person-#{person.id}", person.names.key
+    assert_equal "morning-Person-#{person.id}", person.morning.key
+    assert_equal "person:#{person.id}:names_customized", person.names_with_custom_key_via_lambda.key
+    assert_equal "key-generated-from-private-method", person.names_with_custom_key_via_method.key
+    
+  end
+
 end
