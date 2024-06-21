@@ -6,8 +6,8 @@ module Litekd
       self.value = default  
     end
     
-    def increment(by: 1) = conn.increment_scalar_value(by, @key)
-    def decrement(by: 1) = conn.increment_scalar_value(by * -1, @key)
+    def increment(by: 1) = change_and_callback(conn, :increment_scalar_value, by, @key)
+    def decrement(by: 1) = increment(by: -1*by)
     
   end  
 end

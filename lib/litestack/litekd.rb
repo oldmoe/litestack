@@ -36,6 +36,7 @@ module Litekd
 end 
 
 require_relative './litekd/type_serializer'
+require_relative './litekd/callbacks'
 require_relative './litekd/connection'
 require_relative './litekd/scalar'
 require_relative './litekd/counter'

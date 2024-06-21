@@ -14,7 +14,7 @@ class Person
   litekd_list :names_with_custom_key_via_method, key: :generate_names_key
   litekd_unique_list :skills, limit: 2
   litekd_enum :morning, values: %w[ bright blue black ], default: "bright"
-  litekd_counter :steps, expires_in: 1.hour
+  litekd_counter :steps, expires_in: 0.01.seconds
 
   def id
     self.object_id
@@ -215,17 +215,17 @@ class TestLitekd < Minitest::Test
 
   def test_flag_expiry
     flag = Kredis.flag "myflag"
-    assert_equal true, flag.mark(expires_in: 0.1.second, force: false)    #=> SET myflag 1 EX 1 NX
+    assert_equal true, flag.mark(expires_in: 0.01.second, force: false)    #=> SET myflag 1 EX 1 NX
     assert_equal false, flag.mark(expires_in: 10.seconds, force: false) #=> SET myflag 10 EX 1 NX
     assert_equal true, flag.marked?            #=> EXISTS myflag
-    sleep 0.05.seconds
+    sleep 0.002.seconds
     assert_equal true, flag.marked?            #=> EXISTS myflag
-    sleep 0.06.seconds
+    sleep 0.01.seconds
     assert_equal false, flag.marked?           #=> EXISTS myflag
   end
   
   def test_limiter
-    limiter = Kredis.limiter "mylimit", limit: 3, expires_in: 0.05.seconds
+    limiter = Kredis.limiter "mylimit", limit: 3, expires_in: 0.02.seconds
     assert_equal 0, limiter.value              # => GET "limiter"
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
@@ -233,7 +233,7 @@ class TestLitekd < Minitest::Test
     assert_equal false, limiter.exceeded?      # => GET "limiter"
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
     assert_equal  true, limiter.exceeded?       # => GET "limiter"
-    sleep 0.06
+    sleep 0.02
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
     limiter.poke                    # => SET limiter 0 NX + INCRBY limiter 1
@@ -241,7 +241,6 @@ class TestLitekd < Minitest::Test
   end
   
   def test_attributes
-
     person = Person.new
     person.names.append "David", "Heinemeier", "Hansson" # => RPUSH people:5:names "David" "Heinemeier" "Hansson"
     assert_equal true, person.morning.bright?                       # => GET people:5:morning
@@ -251,7 +250,11 @@ class TestLitekd < Minitest::Test
     assert_equal "morning-Person-#{person.id}", person.morning.key
     assert_equal "person:#{person.id}:names_customized", person.names_with_custom_key_via_lambda.key
     assert_equal "key-generated-from-private-method", person.names_with_custom_key_via_method.key
-    
+    assert_equal 0, person.steps.value
+    person.steps.increment(by: 3)
+    assert_equal 3, person.steps.value
+    sleep 0.01
+    assert_equal 0, person.steps.value    
   end
 
 end

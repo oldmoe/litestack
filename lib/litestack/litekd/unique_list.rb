@@ -5,6 +5,7 @@ module Litekd
       conn.transaction do
         conn.delete_composite_member_by_value(@key, member)
         conn.rpush_composite_member(@key, member)
+        _after_change
       end
     end
     
@@ -12,6 +13,7 @@ module Litekd
       conn.transaction do
         conn.delete_composite_member_by_value(@key, member)
         conn.lpush_composite_member(@key, member)
+        _after_change
       end
     end
 
