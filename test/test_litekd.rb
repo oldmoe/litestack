@@ -5,6 +5,8 @@ require 'active_support/core_ext'
 
 Kredis = Litekd
 
+Litekd.configure({path: ":memory:"})
+
 class Person 
 
   include Litekd::Attributes

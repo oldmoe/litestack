@@ -13,9 +13,17 @@ module Litekd
     mmap_size: 32 * 1024 * 1024, # 32MB
   }
   
-  def self.connection(options = {})
+  def self.connection()
     # configuration should be loaded here
     @@connection ||= Litekd::Connection.new(DEFAULT_OPTIONS.merge(options))
+  end
+  
+  def self.options
+    @@options ||= {}
+  end
+  
+  def self.configure(options = {})
+    @@options = options
   end
   
   # scalars
