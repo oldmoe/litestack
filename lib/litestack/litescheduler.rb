@@ -59,31 +59,46 @@ module Litescheduler
     end
   end
 
-  # bold assumption, we will only synchronize threaded code!
-  # If some code explicitly wants to synchronize a fiber
-  # they must send (true) as a parameter to this method
-  # else it is a no-op for fibers
-  def self.synchronize(fiber_sync = false, &block)
-    if fiber_backed?
-      yield # do nothing, just run the block as is
-    else
-      mutex.synchronize(&block)
-    end
-  end
-
-  def self.max_contexts
-    return 50 if fiber_backed?
-    5
-  end
-
-  # mutex initialization
-  def self.mutex
-    # a single mutex per process (is that ok?)
-    @@mutex ||= Mutex.new
-  end
-
   def self.fiber_backed?
     backend == :fiber || backend == :polyphony
   end
+
   private_class_method :fiber_backed?
+
+  class Mutex
+    def initialize
+      @mutex = Thread::Mutex.new
+    end
+
+    def synchronize(&block)
+      if Litescheduler.backend == :threaded || Litescheduler.backend == :iodine
+        @mutex.synchronize { block.call }
+      else
+        block.call
+      end
+    end
+  end
+
+  module ForkListener
+    def self.listeners
+      @listeners ||= []
+    end
+
+    def self.listen(&block)
+      listeners << block
+    end
+  end
+
+  module Forkable
+    def _fork(*args)
+      ppid = Process.pid
+      result = super
+      if Process.pid != ppid && [:threaded, :iodine].include?(Litescheduler.backend)
+        ForkListener.listeners.each { |l| l.call }
+      end
+      result
+    end
+  end
 end
+
+Process.singleton_class.prepend(Litescheduler::Forkable)

@@ -45,6 +45,7 @@ class Litejobqueue < Litequeue
   }
 
   @@queue = nil
+  @@mutex = Litescheduler::Mutex.new
 
   attr_reader :running
 
@@ -53,7 +54,7 @@ class Litejobqueue < Litequeue
   # a method that returns a single instance of the job queue
   # for use by Litejob
   def self.jobqueue(options = {})
-    @@queue ||= Litescheduler.synchronize { new(options) }
+    @@queue ||= @@mutex.synchronize { new(options) }
   end
 
   def self.new(options = {})
@@ -136,14 +137,14 @@ class Litejobqueue < Litequeue
     # @@queue = nil
     close
   end
-  
+
   private
-  
+
   def prepare_search_options(opts)
     sql_opts = super(opts)
     sql_opts[:klass] = opts[:klass]
     sql_opts[:params] = opts[:params]
-    sql_opts  
+    sql_opts
   end
 
   def exit_callback
@@ -165,15 +166,15 @@ class Litejobqueue < Litequeue
     @jobs_in_flight = 0
     @workers = @options[:workers].times.collect { create_worker }
     @gc = create_garbage_collector
-    @mutex = Litesupport::Mutex.new
+    @mutex = Litescheduler::Mutex.new # reinitialize a mutex in setup as the environment could change after forking
   end
 
   def job_started
-    Litescheduler.synchronize(@mutex) { @jobs_in_flight += 1 }
+    @mutex.synchronize { @jobs_in_flight += 1 }
   end
 
   def job_finished
-    Litescheduler.synchronize(@mutex) { @jobs_in_flight -= 1 }
+    @mutex.synchronize { @jobs_in_flight -= 1 }
   end
 
   # optionally run a job in its own context
@@ -188,7 +189,7 @@ class Litejobqueue < Litequeue
   # create a worker according to environment
   def create_worker
     # temporarily stop this feature until a better solution is implemented
-    #return if defined?(Rails) && !defined?(Rails::Server)
+    # return if defined?(Rails) && !defined?(Rails::Server)
     Litescheduler.spawn do
       worker_sleep_index = 0
       while @running
@@ -196,7 +197,7 @@ class Litejobqueue < Litequeue
         @queues.each do |priority, queues| # iterate through the levels
           queues.each do |queue, spawns| # iterate through the queues in the level
             batched = 0
-            
+
             while (batched < priority) && (payload = pop(queue, 1)) # fearlessly use the same queue object
               capture(:dequeue, queue)
               processed += 1

@@ -152,22 +152,26 @@ module Litesearch::Model
     def field(name, attributes = {})
       keys = attributes.keys
       if keys.include?(:action_text) || keys.include?(:rich_text)
-        attributes[:source] = "#{ActionText::RichText.table_name}.body" rescue "action_text_rich_texts.body"
-        attributes[:reference] =  :record_id
-        attributes[:conditions] = { record_type:  model_class.name }
+        attributes[:source] = begin
+          "#{ActionText::RichText.table_name}.body"
+        rescue
+          "action_text_rich_texts.body"
+        end
+        attributes[:reference] = :record_id
+        attributes[:conditions] = {record_type: model_class.name}
         attributes[:target] = nil
       elsif keys.include? :as
         attributes[:source] = attributes[:target] unless attributes[:source]
         attributes[:reference] = "#{attributes[:as]}_id"
-        attributes[:conditions] = {"#{attributes[:as]}_type".to_sym => model_class.name }
+        attributes[:conditions] = {"#{attributes[:as]}_type": model_class.name}
         attributes[:target] = nil
       end
       super(name, attributes)
     end
 
-  def allowed_attributes
-    super + [:polymorphic, :as, :action_text]
-  end
+    def allowed_attributes
+      super + [:polymorphic, :as, :action_text]
+    end
 
   end
 

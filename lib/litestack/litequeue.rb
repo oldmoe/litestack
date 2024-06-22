@@ -111,7 +111,7 @@ class Litequeue
       queues: queues
     }
   end
-  
+
   def find(opts = {})
     run_stmt(:search, prepare_search_options(opts))
   end
@@ -120,17 +120,33 @@ class Litequeue
 
   def prepare_search_options(opts)
     sql_opts = {}
-    sql_opts[:fire_at_from] = opts[:fire_at][0] rescue nil
-    sql_opts[:fire_at_to] = opts[:fire_at][1] rescue nil
-    sql_opts[:created_at_from] = opts[:created_at][0] rescue nil
-    sql_opts[:created_at_to] = opts[:created_at][1] rescue nil
+    sql_opts[:fire_at_from] = begin
+      opts[:fire_at][0]
+    rescue
+      nil
+    end
+    sql_opts[:fire_at_to] = begin
+      opts[:fire_at][1]
+    rescue
+      nil
+    end
+    sql_opts[:created_at_from] = begin
+      opts[:created_at][0]
+    rescue
+      nil
+    end
+    sql_opts[:created_at_to] = begin
+      opts[:created_at][1]
+    rescue
+      nil
+    end
     sql_opts[:name] = opts[:queue]
-    sql_opts[:dir] = opts[:dir] == :desc ? -1 : 1
+    sql_opts[:dir] = (opts[:dir] == :desc) ? -1 : 1
     sql_opts
   end
 
   def create_connection
-    super("#{__dir__}/litequeue.sql.yml") do |conn|
+    super("#{__dir__}/sql/litequeue.sql.yml") do |conn|
       conn.wal_autocheckpoint = 10000
       # check if there is an old database and convert entries to the new format
       if conn.get_first_value("select count(*) from sqlite_master where name = '_ul_queue_'") == 1

@@ -56,7 +56,7 @@ require 'litestack'
 db = Litedb.new(path_to_db)
 db.execute("create table users(id integer primary key, name text)")
 db.execute("insert into users(name) values (?)", "Hamada")
-db.get_first_value("select count(*) from users") # => 1
+db.query("select count(*) from users") # => [[1]]
 ```
 
 #### ActiveRecord

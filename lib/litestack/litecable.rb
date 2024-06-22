@@ -125,7 +125,7 @@ class Litecable
   end
 
   def create_connection
-    super("#{__dir__}/litecable.sql.yml") do |conn|
+    super("#{__dir__}/sql/litecable.sql.yml") do |conn|
       conn.wal_autocheckpoint = 10000
     end
   end

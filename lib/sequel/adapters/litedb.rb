@@ -36,11 +36,10 @@ module Sequel
         db.instance_variable_set(:@prepared_statements, {})
         db
       end
-      
+
       def sqlite_version
         @raw_db.sqlite_version
       end
-      
     end
 
     class Dataset < Sequel::SQLite::Dataset

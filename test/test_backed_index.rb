@@ -294,7 +294,7 @@ class TestBackedIndex < Minitest::Test
       schema.rebuild_on_modify true
     end
 
-#pp @db.execute("SELECT email.id, email.body, person_sender.name, person_receiver.name, attachement_data.data, email.subject FROM email CROSS JOIN person AS person_sender, person AS person_receiver, attachement AS attachement_data  ON person_sender.id = email.sender_id AND person_receiver.id = email.receiver_id AND attachement_data.attachee_id = email.id AND attachement_data.attachee_type = 'email'")
+    # pp @db.execute("SELECT email.id, email.body, person_sender.name, person_receiver.name, attachement_data.data, email.subject FROM email CROSS JOIN person AS person_sender, person AS person_receiver, attachement AS attachement_data  ON person_sender.id = email.sender_id AND person_receiver.id = email.receiver_id AND attachement_data.attachee_id = email.id AND attachement_data.attachee_type = 'email'")
     assert_equal 2, @idx.search("computer").length
     @db.execute("INSERT INTO email(sender_id, receiver_id, subject, body) VALUES (1, 2, 'How are the girls?', 'I wanted to ask about the girls and the computer')")
     assert_equal 3, @idx.search("puter").length

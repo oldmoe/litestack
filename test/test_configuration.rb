@@ -11,11 +11,11 @@ end
 
 class TestConfiguration < Minitest::Test
   def test_yaml_with_no_erb
-    config_file = Tempfile.new(['litecomponent', '.yml'])
+    config_file = Tempfile.new(["litecomponent", ".yml"])
     config_file.write('path: ":memory:"')
-    
+
     config_file.read
-    
+
     sample_component = SampleLiteComponent.new({config_path: config_file.path})
 
     assert_equal sample_component.options[:path], ":memory:"
@@ -24,11 +24,11 @@ class TestConfiguration < Minitest::Test
   end
 
   def test_yaml_with_erb
-    config_file = Tempfile.new(['litecomponent', '.yml'])
+    config_file = Tempfile.new(["litecomponent", ".yml"])
     config_file.write('path: "<%= ":memory:" %>"')
-    
+
     config_file.read
-    
+
     sample_component = SampleLiteComponent.new({config_path: config_file.path})
 
     assert_equal sample_component.options[:path], ":memory:"
