@@ -20,8 +20,8 @@ class TestStandaloneIndex < Minitest::Test
     id4 = @idx.add(sender: "Hamada", receiver: "Anwar", subject: "Re: Computer is broken", body: "broken, it is in a thousand and one pieces")
     rs = @idx.similar(@id1, 2)
     assert_equal 2, rs.length
-    assert_equal id3, rs[0]["id"]
-    assert_equal id4, rs[1]["id"]
+    assert_equal id3, rs[0]["rowid"]
+    assert_equal id4, rs[1]["rowid"]
   end
 
   def test_search
@@ -139,7 +139,7 @@ class TestStandaloneIndex < Minitest::Test
   end
 
   def test_update_document
-    @idx.add(id: @id1, sender: "Hamada", receiver: "Zaher", subject: "Computer is broken", body: "Really broken, it is in million pieces")
+    @idx.add(rowid: @id1, sender: "Hamada", receiver: "Zaher", subject: "Computer is broken", body: "Really broken, it is in million pieces")
     assert_equal @idx.search("Anwar").length, 0
     assert_equal @idx.search("Zaher").length, 1
   end

@@ -23,6 +23,9 @@ db.execute("CREATE TABLE reviews(id INTEGER PRIMARY KEY, book_id INTEGER)")
 db.execute("CREATE TABLE comments(id INTEGER PRIMARY KEY, review_id INTEGER)")
 # simulate action text
 db.execute("CREATE TABLE rich_texts(id INTEGER PRIMARY KEY, body TEXT, record_id INTEGER, record_type TEXT, created_at TEXT, updated_at TEXT) ")
+# custom primary and foreing key columns
+db.execute("CREATE TABLE users(user_id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))), name TEXT, created_at TEXT, updated_at TEXT)")
+db.execute("CREATE TABLE posts(post_id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))), author_id TEXT, title TEXT, content TEXT, created_at TEXT, updated_at TEXT)")
 
 class ApplicationRecord < ActiveRecord::Base
   primary_abstract_class
@@ -109,12 +112,39 @@ class Item < ApplicationRecord
   end
 end
 
+class User < ApplicationRecord
+  self.primary_key = "user_id"
+
+  has_many :posts, foreign_key: :author_id
+
+  include Litesearch::Model
+  litesearch do |schema|
+      schema.fields %w[ name ]
+      schema.primary_key :user_id
+  end
+end
+
+class Post < ApplicationRecord
+  self.primary_key = "post_id"
+
+  belongs_to :author, class_name: "User", primary_key: :user_id
+
+  include Litesearch::Model
+  litesearch do |schema|
+      schema.fields %w[ title content ]
+      schema.field :author, target: "users.name", primary_key: :user_id
+      schema.primary_key :post_id
+  end
+end
+
 class TestActiveRecordLitesearch < Minitest::Test
   def setup
     Book.drop_index!
     Book.delete_all
     Author.delete_all
     Publisher.delete_all
+    User.delete_all
+    Post.delete_all
     Book.litesearch do |schema|
       schema.fields [:description, :state]
       schema.field :publishing_year, col: :published_on
@@ -134,6 +164,9 @@ class TestActiveRecordLitesearch < Minitest::Test
     Author.create(name: "Osama Penguin")
     Book.create(title: "In a middle of a night", description: "A tale of sleep", published_on: "2008-10-01", state: "available", active: true, publisher_id: 1, author_id: 1)
     Book.create(title: "In a start of a night", description: "A tale of watching TV", published_on: "2006-08-08", state: "available", active: false, publisher_id: 2, author_id: 1)
+    u = User.create(name: "Gabriel")
+    Post.create(author: u, title: "Post #1", content: "Whenever you create a table without specifying the WITHOUT ROWID option, you get an implicit auto-increment column called rowid. The rowid column store 64-bit signed integer that uniquely identifies a row in the table.")
+    Post.create(author: u, title: "Post #2", content: "If a table has the primary key that consists of one column, and that column is defined as INTEGER then this primary key column becomes an alias for the rowid column.")
   end
 
   def test_polymorphic
@@ -173,16 +206,34 @@ class TestActiveRecordLitesearch < Minitest::Test
     assert_equal Author, rs[0].class
   end
 
+  def test_search_custom_primary_key
+    rs = User.search("gabriel")
+    assert_equal 1, rs.length
+    assert_equal User, rs[0].class
+  end
+
   def test_search_field
     rs = Book.search("author: Hanna")
     assert_equal 1, rs.length
     assert_equal Book, rs[0].class
   end
 
+  def test_search_field_custom_primary_key
+    rs = Post.search("author: gabriel")
+    assert_equal 2, rs.length
+    assert_equal true, [Post, Post] - [rs[0].class, rs[1].class] == []
+  end
+
   def test_search_all
     rs = Book.search_all("Hanna", {models: [Author, Book]})
     assert_equal 2, rs.length
     assert_equal true, [Author, Book] - [rs[0].class, rs[1].class] == []
+  end
+
+  def test_search_all_custom_primary_key
+    rs = Post.search_all("gabriel", {models: [Post, User]})
+    assert_equal 3, rs.length
+    assert_equal true, [Post, User, Post] - [rs[0].class, rs[1].class, rs[2].class] == []
   end
 
   def test_modify_schema
@@ -252,7 +303,7 @@ class TestActiveRecordLitesearch < Minitest::Test
 
   def test_ignore_tables
     assert_equal false, ActiveRecord::SchemaDumper.ignore_tables.empty?
-    # we have created 6 models, one ignore regex for each
-    assert_equal 6, ActiveRecord::SchemaDumper.ignore_tables.count
+    # we have created 8 models, one ignore regex for each
+    assert_equal 8, ActiveRecord::SchemaDumper.ignore_tables.count
   end
 end

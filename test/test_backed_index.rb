@@ -38,7 +38,7 @@ class TestBackedIndex < Minitest::Test
     @db.execute("INSERT INTO email(subject, sender_id, receiver_id, body) VALUES ('hi again', 3, 2, 'hello there')")
     rs = @idx.similar(3, 2)
     assert_equal 2, rs.length
-    assert_equal 5, rs[0]["id"]
+    assert_equal 5, rs[0]["rowid"]
   end
 
   def test_search
@@ -53,13 +53,13 @@ class TestBackedIndex < Minitest::Test
   def test_search_ranking
     rs = @idx.search("hi")
     assert_equal 3, rs.length
-    assert_equal 3, rs[0]["id"]
+    assert_equal 3, rs[0]["rowid"]
   end
 
   def test_search_field
     rs = @idx.search("body: hello")
     assert_equal 2, rs.length
-    assert_equal 3, rs[0]["id"]
+    assert_equal 3, rs[0]["rowid"]
   end
 
   def test_search_with_array_output
@@ -241,7 +241,7 @@ class TestBackedIndex < Minitest::Test
       schema.tokenizer :porter
     end
     rs = @idx.search("hi")
-    assert_equal rs[0]["id"], 3
+    assert_equal rs[0]["rowid"], 3
   end
 
   def test_count
