@@ -10,9 +10,9 @@ module Litekd
       @key = key.to_s
       @conn = Litekd.connection
       @typed = typed || :string
+      @default = default
       @after_change = after_change
       @expires_in = expires_in&.to_f
-      @default = default
       add(default) if default
     end
     

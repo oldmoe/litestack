@@ -7,8 +7,15 @@ require 'bigdecimal'
   
 module Litekd
   
-  def self.connection
-    @@connection ||= Litekd::Connection.new(path: ":memory:")
+  DEFAULT_OPTIONS = {
+    path: Litesupport.root.join("kd.sqlite3"),
+    sync: 1,
+    mmap_size: 32 * 1024 * 1024, # 32MB
+  }
+  
+  def self.connection(options = {})
+    # configuration should be loaded here
+    @@connection ||= Litekd::Connection.new(DEFAULT_OPTIONS.merge(options))
   end
   
   # scalars
