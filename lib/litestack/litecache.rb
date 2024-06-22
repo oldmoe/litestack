@@ -78,7 +78,7 @@ class Litecache
     rescue SQLite3::FullException
       transaction do
         run_stmt(extra_pruner, 0.2)
-        run_sql("vaccuum")
+        run_sql("vacuum")
       end
       retry
     end
@@ -95,7 +95,7 @@ class Litecache
         capture(:set, key)
       rescue SQLite3::FullException
         run_stmt(extra_pruner, 0.2)
-        run_sql("vaccuum")
+        run_sql("vacuum")
         retry
       end
     end
