@@ -9,6 +9,7 @@ require_relative "litestack/litedb"
 require_relative "litestack/litecache"
 require_relative "litestack/litejob"
 require_relative "litestack/litecable"
+require_relative "litestack/litekd"
 
 # conditionally load integration with other libraries
 require_relative "sequel/adapters/litedb" if defined? Sequel
