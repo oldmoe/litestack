@@ -77,9 +77,8 @@ stmts:
     SET
       value = CAST(value AS int) + CAST(EXCLUDED.value AS int),
       last_used = EXCLUDED.last_used,
-      expires_in = EXCLUDED.expires_in;
-  
-      
+      expires_in = EXCLUDED.expires_in
+    RETURNING value;
   
   counter: >
     SELECT count(*) FROM data;

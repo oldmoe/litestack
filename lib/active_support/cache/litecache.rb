@@ -24,15 +24,13 @@ module ActiveSupport
       def increment(key, amount = 1, options = nil)
         key = key.to_s
         options = merged_options(options)
-
         @cache.transaction do
           if (value = read(key, options))
-            value = value.to_i + amount
-            write(key, value, options)
-          else
-            write(key, amount, options)
+            amount += value.to_i
           end
+          write(key, amount, options)
         end
+        amount
       end
 
       def decrement(key, amount = 1, options = nil)

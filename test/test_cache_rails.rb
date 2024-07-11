@@ -51,11 +51,14 @@ class TestCacheRails < Minitest::Test
   end
 
   def test_increment_decrement
-    @cache.increment("key")
+    res = @cache.increment("key")
+    assert_equal 1, res
     assert_equal 1, @cache.read("key")
-    @cache.increment("key", 5)
+    res = @cache.increment("key", 5)
+    assert_equal 6, res
     assert_equal 6, @cache.read("key")
-    @cache.decrement("key", 4)
+    res = @cache.decrement("key", 4)
+    assert_equal 2, res
     assert_equal 2, @cache.read("key")
   end
 
