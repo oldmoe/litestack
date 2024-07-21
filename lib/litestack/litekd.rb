@@ -26,6 +26,13 @@ module Litekd
     @@options = options
   end
   
+  def self.clear!
+    connection.transaction(:immediate) do
+      connection.clear_all_scalars
+      connection.clear_all_composites
+    end
+  end
+  
   # scalars
   def self.string(key, **args) = Scalar.new(key, typed: :string, **args)
   def self.integer(key, **args) = Scalar.new(key, typed: :integer, **args)

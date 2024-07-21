@@ -34,6 +34,7 @@ end
 class TestLitekd < Minitest::Test
 
   def setup
+    Kredis.clear!
   end
 
   def test_string

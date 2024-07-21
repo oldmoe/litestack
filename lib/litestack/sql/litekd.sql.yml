@@ -21,6 +21,13 @@ schema:
       CREATE INDEX direct_value_index ON composites(key, value) 
       
 stmts:
+
+  clear_all_scalars: >
+    DELETE FROM scalars;
+    
+  clear_all_composites: >
+    DELETE FROM composites;
+
   write_scalar_value: >
     INSERT OR REPLACE INTO scalars(key, value, expires_in)
     VALUES (:key, :value, unixepoch('subsec') + :expires_in);
