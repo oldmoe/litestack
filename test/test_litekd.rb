@@ -101,6 +101,16 @@ class TestLitekd < Minitest::Test
     unique_list.remove(3)                          # => LREM myuniquelist 0, "3"
     assert_equal [ "4", "2", "1", "5" ] , unique_list.elements # => LRANGE myuniquelist 0, -1
   end
+
+  def test_typed_unique_list
+    unique_list = Kredis.unique_list "mytypeduniquelist", typed: :integer
+    unique_list.append([ 2, '3', 4 ])                # => LREM myuniquelist 0, 2 + LREM myuniquelist 0, 3 + LREM myuniquelist 0, 4  + RPUSH myuniquelist 2, 3, 4
+    unique_list.prepend([ 1, 2, '3', 4 ])            # => LREM myuniquelist 0, 1  + LREM myuniquelist 0, 2 + LREM myuniquelist 0, 3 + LREM myuniquelist 0, 4  + LPUSH myuniquelist 1, 2, 3, 4
+    unique_list.append([])
+    unique_list << 5                               # => LREM myuniquelist 0, "5" + RPUSH myuniquelist 5
+    unique_list.remove(3)                          # => LREM myuniquelist 0, 3
+    assert_equal [ 4, 2, 1, 5 ] , unique_list.elements # => LRANGE myuniquelist 0, -1
+  end
   
   def test_ordered_set
     ordered_set = Kredis.ordered_set "myorderedset"
