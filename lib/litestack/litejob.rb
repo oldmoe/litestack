@@ -41,40 +41,30 @@ require_relative "litejobqueue"
 module Litejob
   def self.included(klass)
     klass.extend(ClassMethods)
-    klass.get_jobqueue
+    klass.get_jobqueue unless klass.defer_litejob_start?
   end
 
   module ClassMethods
-    def perform_async(*params)
-      get_jobqueue.push(name, params, 0, queue)
-    end
 
-    def perform_at(time, *params)
-      delay = time.to_i - Time.now.to_i
-      get_jobqueue.push(name, params, delay, queue)
-    end
+    def perform_async(*params) = get_jobqueue.push(name, params, 0, queue)
 
-    def perform_in(delay, *params)
-      get_jobqueue.push(name, params, delay, queue)
-    end
+    def perform_at(time, *params) = get_jobqueue.push(name, params, time.to_i - Time.now.to_i, queue)
 
-    def perform_after(delay, *params)
-      perform_in(delay, *params)
-    end
+    def perform_in(delay, *params) = get_jobqueue.push(name, params, delay, queue)
 
-    def process_jobs
-      get_jobqueue
-    end
+    def perform_after(delay, *params) = perform_in(delay, *params)
 
-    def delete(id)
-      get_jobqueue.delete(id)
-    end
+    def process_jobs = get_jobqueue
 
-    def queue
-      @queue_name ||= "default"
-    end
+    def delete(id) = get_jobqueue.delete(id)
 
-    def queue=(queue_name)
+    def queue = @queue_name ||= "default"
+    
+    def get_jobqueue = Litejobqueue.jobqueue(options)
+    
+    def defer_litejob_start? = false
+    
+    def queue=(queue_name) 
       @queue_name = queue_name.to_s
     end
 
@@ -85,9 +75,6 @@ module Litejob
         {}
       end
     end
-
-    def get_jobqueue
-      Litejobqueue.jobqueue(options)
-    end
+    
   end
 end

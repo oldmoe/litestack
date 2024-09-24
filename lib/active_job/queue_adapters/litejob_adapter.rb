@@ -13,16 +13,15 @@ module ActiveJob
     #
     #
     #   Rails.application.config.active_job.queue_adapter = :litejob
-    class LitejobAdapter
-      def initialize(options = {})
-        # we currently don't honour individual options per job class
-        # possible in the future?
-        # Job.options = DEFAULT_OPTIONS.merge(options)
-      end
 
-      def enqueue_after_transaction_commit?
-        Job.options[:enqueue_after_transaction_commit]
-      end
+    class LitejobAdapter
+
+      # we currently don't honour individual options per job class
+      # possible in the future?
+      # Job.options = DEFAULT_OPTIONS.merge(options)
+      def initialize(options = {}) = Job.get_jobqueue
+
+      def enqueue_after_transaction_commit? = Job.options[:enqueue_after_transaction_commit]
 
       def enqueue(job) # :nodoc:
         Job.queue = job.queue_name
@@ -36,17 +35,18 @@ module ActiveJob
       end
 
       class Job # :nodoc:
+
         DEFAULT_OPTIONS = {
           config_path: "./config/litejob.yml",
           logger: nil, # Rails performs its logging already
           enqueue_after_transaction_commit: true
         }
-
+        # ensure litejob is not started unless the LitejobAdapter is initialized
+        def self.defer_litejob_start? = true
         include ::Litejob
 
-        def perform(job_data)
-          Base.execute job_data
-        end
+        def perform(job_data) = Base.execute job_data
+
       end
     end
   end

@@ -4,6 +4,8 @@
 require_relative "litestack/version"
 require_relative "litestack/litescheduler"
 require_relative "litestack/litesupport"
+
+# auto load each of thease when/if needed
 require_relative "litestack/litemetric"
 require_relative "litestack/litedb"
 require_relative "litestack/litecache"
