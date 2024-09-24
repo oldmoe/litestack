@@ -159,7 +159,7 @@ class Litemetric
     super
     @metrics = {}
     @registered = {}
-    @mutex = Litesupport::Mutex.new
+    @mutex = Litescheduler::Mutex.new
     @collector = Litemetric::Collector.new({dbpath: @options[:path]})
     @summarizer = create_summarizer
     @flusher = create_flusher
