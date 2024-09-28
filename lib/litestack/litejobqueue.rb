@@ -249,13 +249,13 @@ class Litejobqueue < Litequeue
         # we can retry the failed job now
         capture(:fail, queue)
         if job["retries"] == 0
-          @logger.error "[litejob]:[ERR] queue:#{queue} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue"
+          @logger.error "[litejob]:[ERR] queue:#{queue} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retries exhausted, moved to _dead queue.\nBacktrace: #{e.backtrace.join("\n")}"
           repush(id, job, @options[:dead_job_retention], "_dead")
         else
           capture(:retry, queue)
           retry_delay = @options[:retry_delay_multiplier].pow(@options[:retries] - job["retries"]) * @options[:retry_delay]
           job["retries"] -= 1
-          @logger.error "[litejob]:[ERR] queue:#{queue} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retrying in #{retry_delay} seconds"
+          @logger.error "[litejob]:[ERR] queue:#{queue} class:#{job["klass"]} job:#{id} failed with #{e}:#{e.message}, retrying in #{retry_delay} seconds.\nBacktrace: #{e.backtrace.join("\n")}"
           repush(id, job, retry_delay, queue)
         end
       end
