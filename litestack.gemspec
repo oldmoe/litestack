@@ -32,8 +32,8 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "sqlite3", [">= 1.6.0", "< 2.0.0"]
   spec.add_dependency "oj", "~> 3"
-  spec.add_dependency "rack", "~> 3"
-  spec.add_dependency "rackup", "~> 2"
+  spec.add_dependency "rack", ">= 2"
+  spec.add_dependency "rackup"
   spec.add_dependency "tilt", "~> 2"
   spec.add_dependency "erubi", "~> 1"
 
