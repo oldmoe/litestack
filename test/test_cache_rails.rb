@@ -7,7 +7,7 @@ class TestCacheRails < Minitest::Test
     @cache.clear
   end
 
-  def test_caceh_write
+  def test_cache_write
     @cache.write("key", "value")
     assert_equal "value", @cache.read("key")
     @cache.write("key", "new_value")
