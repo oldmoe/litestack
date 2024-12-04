@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
   spec.executables = ["liteboard"]
   spec.require_paths = ["lib", "lib/litestack"]
 
-  spec.add_dependency "sqlite3", [">= 1.6.0", "< 2.0.0"]
+  spec.add_dependency "sqlite3", [">= 1.6.0", "< 3.0.0"]
   spec.add_dependency "oj", "~> 3"
   spec.add_dependency "rack", "~> 3"
   spec.add_dependency "rackup", "~> 2"
