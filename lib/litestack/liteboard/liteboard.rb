@@ -15,6 +15,8 @@ class Liteboard
     case env["PATH_INFO"]
     when "/"
       Liteboard.new(env).call(:index)
+    when "/favicon.ico"
+      [204, {"cache-control" => "no-cache"}, []]
     when "/topics/Litejob"
       Liteboard.new(env).call(:litejob)
     when "/topics/Litecache"
@@ -23,6 +25,8 @@ class Liteboard
       Liteboard.new(env).call(:litedb)
     when "/topics/Litecable"
       Liteboard.new(env).call(:litecable)
+    else
+      [404, {"content-type" => "text/plain; charset=utf-8", "cache-control" => "no-cache"}, ["Not Found"]]
     end
   end
 
@@ -45,7 +49,7 @@ class Liteboard
   end
 
   def after(body = nil)
-    [200, {"Cache-Control" => "no-cache"}, [body]]
+    [200, {"cache-control" => "no-cache", "content-type" => "text/html; charset=utf-8"}, [body]]
   end
 
   def before
