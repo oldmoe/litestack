@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Litesearch::Model
   def self.included(klass)
     klass.include InstanceMethods
@@ -35,30 +37,27 @@ module Litesearch::Model
   end
 
   module ClassMethods
-
     def litesearch
       # it is possible that this code is running when there is no table created yet
-      if !defined?(ActiveRecord::Base).nil? && ancestors.include?(ActiveRecord::Base)
-        unless table_exists?
-          # capture the schema block
-          @schema = ::Litesearch::Schema.new
-          @schema.model_class = self if @schema.respond_to? :model_class
-          @schema.type :backed
-          @schema.table table_name.to_sym
-          yield @schema
-          @schema.post_init
-          @schema_not_created = true
-          after_initialize do
-            if self.class.instance_variable_get(:@schema_not_created)
-              self.class.get_connection.search_index(self.class.index_name) do |schema|
-                @schema.model_class = self.class if @schema.respond_to? :model_class
-                schema.merge(self.class.instance_variable_get(:@schema))
-              end
-              self.class.instance_variable_set(:@schema_not_created, false)
+      if !defined?(ActiveRecord::Base).nil? && ancestors.include?(ActiveRecord::Base) && !table_exists?
+        # capture the schema block
+        @schema = ::Litesearch::Schema.new
+        @schema.model_class = self if @schema.respond_to? :model_class
+        @schema.type :backed
+        @schema.table table_name.to_sym
+        yield @schema
+        @schema.post_init
+        @schema_not_created = true
+        after_initialize do
+          if self.class.instance_variable_get(:@schema_not_created)
+            self.class.get_connection.search_index(self.class.index_name) do |schema|
+              @schema.model_class = self.class if @schema.respond_to? :model_class
+              schema.merge(self.class.instance_variable_get(:@schema))
             end
+            self.class.instance_variable_set(:@schema_not_created, false)
           end
-          return nil
         end
+        return nil
       end
       idx = get_connection.search_index(index_name) do |schema|
         schema.type :backed
@@ -93,8 +92,8 @@ module Litesearch::Model
       conn.results_as_hash = r_a_h
       result = []
       rs.each do |row|
-        obj = fetch_row(row["rowid"])
-        obj.search_rank = row["search_rank"]
+        obj = fetch_row(row['rowid'])
+        obj.search_rank = row['search_rank']
         result << obj
       end
       result
@@ -119,12 +118,12 @@ module Litesearch::Model
         selects << "SELECT '#{name}' AS model, rowid, -rank AS search_rank FROM #{index_name_for_table(klass.table_name)}(:term)"
       end
       conn = get_connection
-      sql = selects.join(" UNION ") << " ORDER BY search_rank DESC LIMIT :limit OFFSET :offset"
+      sql = selects.join(' UNION ') << ' ORDER BY search_rank DESC LIMIT :limit OFFSET :offset'
       result = []
       rs = conn.query(sql, options) # , options[:limit], options[:offset])
       rs.each_hash do |row|
-        obj = models_hash[row["model"]].fetch_row(row["rowid"])
-        obj.search_rank = row["search_rank"]
+        obj = models_hash[row['model']].fetch_row(row['rowid'])
+        obj.search_rank = row['search_rank']
         result << obj
       end
       rs.close
@@ -146,7 +145,6 @@ module Litesearch::Model
   end
 
   module ActiveRecordSchemaMethods
-
     attr_accessor :model_class
 
     def field(name, attributes = {})
@@ -154,25 +152,24 @@ module Litesearch::Model
       if keys.include?(:action_text) || keys.include?(:rich_text)
         attributes[:source] = begin
           "#{ActionText::RichText.table_name}.body"
-        rescue
-          "action_text_rich_texts.body"
+        rescue StandardError
+          'action_text_rich_texts.body'
         end
         attributes[:reference] = :record_id
-        attributes[:conditions] = {record_type: model_class.name}
+        attributes[:conditions] = { record_type: model_class.name }
         attributes[:target] = nil
       elsif keys.include? :as
         attributes[:source] = attributes[:target] unless attributes[:source]
         attributes[:reference] = "#{attributes[:as]}_id"
-        attributes[:conditions] = {"#{attributes[:as]}_type": model_class.name}
+        attributes[:conditions] = { "#{attributes[:as]}_type": model_class.name }
         attributes[:target] = nil
       end
       super(name, attributes)
     end
 
     def allowed_attributes
-      super + [:polymorphic, :as, :action_text]
+      super + %i[polymorphic as action_text]
     end
-
   end
 
   module ActiveRecordInstanceMethods
@@ -191,7 +188,7 @@ module Litesearch::Model
     end
 
     def fetch_row(rowid)
-      find_by("rowid = ?", rowid)
+      find_by('rowid = ?', rowid)
     end
 
     def search(term)
@@ -202,15 +199,32 @@ module Litesearch::Model
         end
         @schema_not_created = false
       end
-      self.select(
-        "#{table_name}.*"
+
+      # Create a search relation with custom count method
+      search_relation = self.select(
+        "#{table_name}.*, -#{index_name}.rank AS search_rank"
       ).joins(
         "INNER JOIN #{index_name} ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ", Arel.sql("'#{term}'")
-      ).select(
-        "-#{index_name}.rank AS search_rank"
       ).order(
         Arel.sql("#{index_name}.rank")
       )
+
+      # Override count method to handle search results properly
+      search_relation.define_singleton_method(:count) do |column_name = nil|
+        if column_name.nil?
+          # For search results, use a simple count without the complex SELECT
+          # Use the model class directly to create a new relation
+          model_class = klass
+          base_relation = model_class.joins(
+            "INNER JOIN #{index_name} ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ", Arel.sql("'#{term}'")
+          )
+          base_relation.count
+        else
+          super(column_name)
+        end
+      end
+
+      search_relation
     end
 
     def create_instance(row)
@@ -238,7 +252,7 @@ module Litesearch::Model
     end
 
     def fetch_row(rowid)
-      self[rowid]  # where(Sequel.lit("rowid = ?", rowid)).first
+      self[rowid] # where(Sequel.lit("rowid = ?", rowid)).first
     end
 
     def get_connection
@@ -249,9 +263,9 @@ module Litesearch::Model
       dataset.select(
         Sequel.lit("#{table_name}.*, -#{index_name}.rank AS search_rank")
       ).inner_join(
-        Sequel.lit("#{index_name}(:term) ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0", {term: term})
+        Sequel.lit("#{index_name}(:term) ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0", { term: term })
       ).order(
-        Sequel.lit("rank")
+        Sequel.lit('rank')
       )
     end
 
@@ -259,6 +273,7 @@ module Litesearch::Model
       # we need to convert keys to symbols first!
       row.keys.each do |k|
         next if k.is_a? Symbol
+
         row[k.to_sym] = row[k]
         row.delete(k)
       end
