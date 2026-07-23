@@ -202,16 +202,36 @@ module Litesearch::Model
         end
         @schema_not_created = false
       end
-      self.select(
-        "#{table_name}.*"
-      ).joins(
-        "INNER JOIN #{index_name} ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ", Arel.sql("'#{term}'")
-      ).select(
-        "-#{index_name}.rank AS search_rank"
-      ).order(
-        Arel.sql("#{index_name}.rank")
-      )
+      # Never interpolate the user term into SQL (issue #143).
+      # sanitize_sql_array quotes the value as a SQL literal so input cannot
+      # break out of MATCH '…'. FTS5 operators remain available inside the
+      # bound query; apostrophes are normalized because unquoted FTS5 tokens
+      # cannot contain raw "'" (see SQLite FTS5 syntax / issue discussion).
+      fts_query = prepare_fts_match_query(term)
+      match_join = sanitize_sql_array([
+        "INNER JOIN #{index_name} ON #{table_name}.rowid = #{index_name}.rowid AND rank != 0 AND #{index_name} MATCH ?",
+        fts_query
+      ])
+      select("#{table_name}.*")
+        .joins(match_join)
+        .select("-#{index_name}.rank AS search_rank")
+        .order(Arel.sql("#{index_name}.rank"))
     end
+
+    # Normalize user text into an FTS5 MATCH query string (not SQL).
+    # SQL safety is handled separately via sanitize_sql_array in #search.
+    def prepare_fts_match_query(term)
+      s = term.to_s.tr("'", " ")
+      # Keep letters (incl. CJK via \p{L}), digits, and common FTS5 operators.
+      s = s.gsub(/[^\p{L}\p{N}_\+\*\^\(\):"\s]/u, " ")
+      s = s.delete('"') if s.count('"').odd?
+      tokens = s.split(/\s+/).reject(&:empty?)
+      boolean = %w[AND OR NOT]
+      tokens.pop while tokens.last && boolean.include?(tokens.last.upcase)
+      tokens.shift while tokens.first && boolean.include?(tokens.first.upcase)
+      tokens.join(" ")
+    end
+    private :prepare_fts_match_query
 
     def create_instance(row)
       instantiate(row)
